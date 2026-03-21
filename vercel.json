@@ -5,10 +5,10 @@
   "env": {
     "VITE_API_URL": "@vite_api_url"
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
