@@ -1,200 +1,571 @@
-import { useState } from "react";
-import { CalendarIcon, Clock, Users, User, Phone, MessageSquare, ArrowRight } from "lucide-react";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import ScrollReveal from "@/components/ScrollReveal";
-import { toast } from "sonner";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Check, MapPin, Film, PartyPopper, Calendar, Clock, User, Cake, Sparkles, CreditCard } from "lucide-react";
+import {
+  BookingData, INITIAL_BOOKING,
+  OCCASIONS, CAKE_OPTIONS,
+  EXTRA_DECORATIONS, TIME_SLOTS, BASE_PRICES, DECORATION_PRICE,
+  type CakeOption, type ExtraDecoration, type TimeSlot,
+} from "@/lib/booking-data";
+import { api, type Branch } from "@/lib/api";
 
-const timeSlots = [
-  "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM",
-  "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
-  "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM",
+const STEPS = [
+  "Select Branch & Service",
+  "Date & Time",
+  "Your Details",
+  "Occasion",
+  "Cake Selection",
+  "Extra Decorations",
+  "Summary",
+  "Payment",
 ];
 
-const serviceOptions = [
-  { value: "private", label: "Private Theatre – ₹1,499" },
-  { value: "experience", label: "Theatre Experience – ₹1,999" },
-  { value: "party", label: "Party Theatre – ₹2,499" },
-];
+const STEP_ICONS = [MapPin, Calendar, User, PartyPopper, Cake, Sparkles, Check, CreditCard];
 
 const BookingPage = () => {
-  const [date, setDate] = useState<Date>();
-  const [time, setTime] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [people, setPeople] = useState("");
-  const [service, setService] = useState("");
-  const [requests, setRequests] = useState("");
+  const [step, setStep] = useState(0);
+  const [booking, setBooking] = useState<BookingData>({ ...INITIAL_BOOKING });
+  const [bookedSlots] = useState<string[]>(["slot-2", "slot-4"]); // mock booked slots (by slot id)
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [occasions, setOccasions] = useState<string[]>([]);
+  const [cakes, setCakes] = useState<CakeOption[]>([]);
+  const [decorations, setDecorations] = useState<ExtraDecoration[]>([]);
+  const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
+  const [decorationPrice, setDecorationPrice] = useState(DECORATION_PRICE);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!date || !time || !name || !phone || !service) {
-      toast.error("Please fill all required fields");
-      return;
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [branchesData, occasionsData, cakesData, decorationsData, pricingData, decorPriceData] = await Promise.all([
+          api.getBranches(),
+          api.getOccasions(),
+          api.getCakes(),
+          api.getDecorations(),
+          api.getPricing(),
+          api.getDecorationPrice(),
+        ]);
+        setBranches(branchesData);
+        setOccasions(occasionsData);
+        setCakes(cakesData);
+        setDecorations(decorationsData);
+        setPricing(pricingData);
+        setDecorationPrice(decorPriceData);
+      } catch (error) {
+        console.error("Failed to load booking data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (booking.branch && booking.date && booking.service) {
+      const loadSlots = async () => {
+        try {
+          const slots = await api.getAvailableSlots(booking.branch, booking.date, booking.service);
+          setAvailableSlots(slots);
+        } catch (error) {
+          console.error("Failed to load available slots:", error);
+        }
+      };
+      loadSlots();
     }
-    toast.success("Booking request submitted! We'll confirm shortly via WhatsApp.");
+  }, [booking.branch, booking.date, booking.service]);
+
+  const update = (partial: Partial<BookingData>) => setBooking((prev) => ({ ...prev, ...partial }));
+
+  const totalPrice = useMemo(() => {
+    let total = 0;
+    if (booking.service && booking.duration) {
+      total += pricing[booking.service]?.[booking.duration] || 0;
+    }
+    if (booking.decorationRequired) total += decorationPrice;
+    if (booking.selectedCake) total += booking.selectedCake.price;
+    booking.extraDecorations.forEach((d) => (total += d.price));
+    return total;
+  }, [booking, pricing, decorationPrice]);
+
+  const canNext = (): boolean => {
+    switch (step) {
+      case 0: return !!booking.branch && !!booking.service;
+      case 1: return !!booking.date && !!booking.duration && !!booking.timeSlot;
+      case 2: return !!booking.name && !!booking.phone && !!booking.email;
+      case 3: return !!booking.occasion;
+      default: return true;
+    }
+  };
+
+  const handlePayment = async (paymentMethod: 'phonepe' | 'mock' = 'phonepe') => {
+    try {
+      setPaymentLoading(true);
+      const bookingData = { 
+        ...booking, 
+        totalPrice, 
+        paymentStatus: "pending",
+        phone: `+91 ${booking.phone}`
+      };
+      
+      // First create the booking
+      const createdBooking = await api.createBooking(bookingData);
+      
+      if (paymentMethod === 'mock') {
+        // Use mock payment for testing
+        const paymentResponse = await api.processMockPayment(
+          createdBooking.id,
+          totalPrice
+        );
+        
+        if (paymentResponse.success) {
+          navigate("/booking-confirmed", { state: { booking: { ...createdBooking, paymentStatus: 'paid' } } });
+        }
+      } else {
+        // Try PhonePe payment
+        const paymentResponse = await api.initiatePhonePePayment(
+          createdBooking.id,
+          totalPrice,
+          `91${booking.phone}` // PhonePe expects country code without +
+        );
+
+        if (paymentResponse.redirectUrl) {
+          // Redirect to PhonePe payment page
+          window.location.href = paymentResponse.redirectUrl;
+        } else {
+          throw new Error("Failed to get payment redirect URL");
+        }
+      }
+    } catch (error) {
+      console.error("Payment failed:", error);
+      alert(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setPaymentLoading(false);
+    }
   };
 
   return (
-    <main className="pt-20">
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <ScrollReveal className="text-center mb-12">
-            <span className="text-sm font-semibold tracking-widest uppercase text-gold">Reserve Your Spot</span>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 text-balance">
-              Book Your Experience
-            </h1>
-            <p className="text-muted-foreground mt-4">
-              Select your preferred date, time, and package to get started.
-            </p>
-          </ScrollReveal>
-
-          <ScrollReveal delay={150}>
-            <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 md:p-10 shadow-xl shadow-black/20 space-y-6">
-              {/* Service */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Service *</label>
-                <select
-                  value={service}
-                  onChange={(e) => setService(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select a package</option>
-                  {serviceOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Date */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Date *</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "w-full bg-secondary border border-border rounded-lg px-4 py-3 text-sm text-left flex items-center gap-2",
-                        !date && "text-muted-foreground"
-                      )}
+    <div className="min-h-screen pt-24 pb-16">
+      <div className="container mx-auto max-w-3xl px-4">
+        {loading ? (
+          <div className="flex items-center justify-center min-h-screen">
+            <p className="text-lg text-muted-foreground font-body">Loading booking data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Progress */}
+            <div className="mb-10 flex items-center justify-between overflow-x-auto pb-2">
+              {STEPS.map((s, i) => {
+                const Icon = STEP_ICONS[i];
+                return (
+                  <div key={s} className="flex flex-col items-center gap-1 min-w-[60px]">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm transition-all ${
+                        i < step
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : i === step
+                          ? "border-primary text-primary glow-gold"
+                          : "border-border text-muted-foreground"
+                      }`}
                     >
-                      <CalendarIcon className="w-4 h-4 text-gold" />
-                      {date ? format(date, "PPP") : "Pick a date"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(d) => d < new Date()}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                      {i < step ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    </div>
+                    <span className="hidden text-[10px] text-muted-foreground md:block font-body">{s}</span>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Time */}
+            <div className="rounded-2xl border border-border bg-card p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">{STEPS[step]}</h2>
+              {step < 6 && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground font-body">Current Total</p>
+                  <p className="text-lg font-bold text-primary font-display">₹{totalPrice.toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Step 0: Branch & Service */}
+            {step === 0 && (
+            <div className="space-y-6">
               <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Time Slot *</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {timeSlots.map((t) => (
+                <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Branch</label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {branches.map((b) => (
                     <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTime(t)}
-                      className={cn(
-                        "text-xs py-2.5 px-2 rounded-lg border transition-all active:scale-95",
-                        time === t
-                          ? "gradient-gold text-primary-foreground border-transparent font-semibold"
-                          : "bg-secondary border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      )}
+                      key={b.id}
+                      onClick={() => update({ branch: b.id })}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        booking.branch === b.id ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
+                      }`}
                     >
-                      {t}
+                      <p className="font-semibold text-foreground text-sm font-body">{b.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground font-body">{b.address}</p>
+                      {b.mapLink && (
+                        <a
+                          href={b.mapLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline font-body"
+                        >
+                          <MapPin className="h-3 w-3" />
+                          View on Maps
+                        </a>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Service</label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[
+                    { id: "party-hall" as const, label: "Party Hall", icon: PartyPopper },
+                    { id: "private-theatre" as const, label: "Private Theatre", icon: Film },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => update({ service: s.id })}
+                      className={`flex items-center gap-3 rounded-xl border p-4 transition-all ${
+                        booking.service === s.id ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
+                      }`}
+                    >
+                      <s.icon className="h-5 w-5 text-primary" />
+                      <span className="font-semibold text-foreground text-sm font-body">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
-              {/* Name & Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Step 1: Date & Time */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground font-body">Select Date</label>
+                <input
+                  type="date"
+                  value={booking.date}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => update({ date: e.target.value, timeSlot: "" })}
+                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground font-body">Duration</label>
+                <div className="flex gap-3">
+                  {[1, 2, 3].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => update({ duration: d, timeSlot: "" })}
+                      className={`flex-1 rounded-xl border py-3 text-sm font-medium transition-all font-body ${
+                        booking.duration === d ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      {d} Hour{d > 1 ? "s" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {booking.duration > 0 && (
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Full Name *</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your name"
-                      className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
+                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Available Time Slots</label>
+                  <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+                    {availableSlots.map((slot) => (
+                      <button
+                        key={slot}
+                        onClick={() => update({ timeSlot: slot })}
+                        className={`rounded-lg border py-2.5 text-xs font-medium transition-all font-body ${
+                          booking.timeSlot === slot
+                            ? "border-primary bg-muted text-primary"
+                            : "border-border text-foreground hover:border-primary"
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Phone Number *</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+          )}
+
+          {/* Step 2: User Info */}
+          {step === 2 && (
+            <div className="space-y-4">
+              {[
+                { key: "name", label: "Full Name", type: "text", placeholder: "Enter your name" },
+                { key: "phone", label: "Phone Number", type: "tel", placeholder: "XXXXX XXXXX" },
+                { key: "email", label: "Email", type: "email", placeholder: "you@example.com" },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="mb-2 block text-sm font-medium text-foreground font-body">{field.label}</label>
+                  {field.key === "phone" ? (
+                    <div className="flex items-center rounded-xl border border-border bg-muted overflow-hidden">
+                      <span className="px-4 py-3 text-foreground font-body">+91</span>
+                      <input
+                        type={field.type}
+                        placeholder={field.placeholder}
+                        value={(booking as any)[field.key]}
+                        onChange={(e) => update({ [field.key]: e.target.value })}
+                        className="flex-1 bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:outline-none"
+                        maxLength="10"
+                      />
+                    </div>
+                  ) : (
                     <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 XXXXX XXXXX"
-                      className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={(booking as any)[field.key]}
+                      onChange={(e) => update({ [field.key]: e.target.value })}
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
                     />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Step 3: Occasion */}
+          {step === 3 && (
+            <div className="space-y-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground font-body">Need Decoration?</label>
+                <div className="flex gap-3">
+                  {[true, false].map((val) => (
+                    <button
+                      key={String(val)}
+                      onClick={() => update({ decorationRequired: val })}
+                      className={`flex-1 rounded-xl border py-3 text-sm font-medium transition-all font-body ${
+                        booking.decorationRequired === val ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
+                      }`}
+                    >
+                      {val ? `Yes (+₹${decorationPrice})` : "No"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Occasion</label>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {occasions.map((o) => (
+                    <button
+                      key={o}
+                      onClick={() => update({ occasion: o })}
+                      className={`rounded-xl border py-3 text-xs font-medium transition-all font-body ${
+                        booking.occasion === o ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
+                      }`}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Cake */}
+          {step === 4 && (
+            <div className="space-y-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground font-body">Would you like a cake?</label>
+                <div className="flex gap-3">
+                  {[true, false].map((val) => (
+                    <button
+                      key={String(val)}
+                      onClick={() => update({ cakeRequired: val, selectedCake: val ? booking.selectedCake : null })}
+                      className={`flex-1 rounded-xl border py-3 text-sm font-medium transition-all font-body ${
+                        booking.cakeRequired === val ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      {val ? "Yes" : "No, thanks"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {booking.cakeRequired && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {cakes.map((cake) => (
+                    <button
+                      key={cake.id}
+                      onClick={() => update({ selectedCake: cake })}
+                      className={`rounded-xl border overflow-hidden transition-all ${
+                        booking.selectedCake?.id === cake.id ? "border-primary bg-muted" : "border-border hover:border-primary"
+                      }`}
+                    >
+                      <div className="aspect-square bg-muted overflow-hidden">
+                        <img
+                          src={cake.image}
+                          alt={cake.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <p className="font-semibold text-foreground text-sm font-body">{cake.name}</p>
+                        <p className="text-xs text-muted-foreground font-body mt-1">{cake.description}</p>
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="text-sm font-bold text-primary font-body">₹{cake.price}</span>
+                          {booking.selectedCake?.id === cake.id && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 5: Extra Decorations */}
+          {step === 5 && (
+            <div className="space-y-2">
+              <p className="mb-4 text-sm text-muted-foreground font-body">Select any extras you'd like to add:</p>
+              {decorations.map((item) => {
+                const selected = booking.extraDecorations.some((d) => d.id === item.id);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      const extras = selected
+                        ? booking.extraDecorations.filter((d) => d.id !== item.id)
+                        : [...booking.extraDecorations, item];
+                      update({ extraDecorations: extras });
+                    }}
+                    className={`w-full rounded-xl border p-4 text-left transition-all ${
+                      selected ? "border-primary bg-muted" : "border-border hover:border-primary"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-primary bg-primary" : "border-border"}`}>
+                          {selected && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm font-body">{item.name}</p>
+                          <p className="text-xs text-muted-foreground font-body">{item.description}</p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-primary font-body">₹{item.price}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Step 6: Summary */}
+          {step === 6 && (
+            <div className="space-y-4">
+              {[
+                { label: "Branch", value: branches.find((b) => b.id === booking.branch)?.name },
+                { label: "Service", value: booking.service === "party-hall" ? "Party Hall" : "Private Theatre" },
+                { label: "Date", value: booking.date },
+                { label: "Time", value: `${booking.timeSlot} (${booking.duration}hr)` },
+                { label: "Name", value: booking.name },
+                { label: "Phone", value: booking.phone },
+                { label: "Email", value: booking.email },
+                { label: "Occasion", value: booking.occasion },
+                { label: "Decoration", value: booking.decorationRequired ? `Yes (+₹${decorationPrice})` : "No" },
+                { label: "Cake", value: booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
+              ].map((item) => (
+                <div key={item.label} className="flex justify-between border-b border-border pb-2">
+                  <span className="text-sm text-muted-foreground font-body">{item.label}</span>
+                  <span className="text-sm font-medium text-foreground font-body">{item.value}</span>
+                </div>
+              ))}
+              {booking.extraDecorations.length > 0 && (
+                <div className="border-b border-border pb-2">
+                  <span className="text-sm text-muted-foreground font-body">Extras</span>
+                  <div className="mt-1 space-y-1">
+                    {booking.extraDecorations.map((d) => (
+                      <div key={d.id} className="flex justify-between">
+                        <span className="text-xs text-foreground font-body">{d.name}</span>
+                        <span className="text-xs text-primary font-body">₹{d.price}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
+              <div className="flex justify-between pt-2">
+                <span className="text-lg font-bold text-foreground font-display">Total</span>
+                <span className="text-lg font-bold text-primary font-display">₹{totalPrice.toLocaleString()}</span>
               </div>
-
-              {/* Number of people */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Number of People</label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={people}
-                    onChange={(e) => setPeople(e.target.value)}
-                    placeholder="How many guests?"
-                    className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-              </div>
-
-              {/* Special requests */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">Special Requests</label>
-                <div className="relative">
-                  <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <textarea
-                    value={requests}
-                    onChange={(e) => setRequests(e.target.value)}
-                    rows={3}
-                    placeholder="Decorations, cake, surprise setup..."
-                    className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                  />
-                </div>
-              </div>
-
               <button
-                type="submit"
-                className="w-full gradient-gold text-primary-foreground py-3.5 rounded-lg font-semibold text-base inline-flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.97] transition-all shadow-lg shadow-primary/20"
+                onClick={() => setStep(7)}
+                className="w-full mt-6 rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] glow-gold font-body"
               >
-                Confirm Booking <ArrowRight className="w-4 h-4" />
+                Proceed to Payment
               </button>
+            </div>
+          )}
 
-              <p className="text-xs text-center text-muted-foreground">
-                You'll receive a confirmation via WhatsApp within 15 minutes.
+          {/* Step 7: Payment */}
+          {step === 7 && (
+            <div className="space-y-6 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-primary glow-gold">
+                <CreditCard className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground font-display">₹{totalPrice.toLocaleString()}</p>
+                <p className="mt-1 text-sm text-muted-foreground font-body">Total amount to pay</p>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => handlePayment('phonepe')}
+                  disabled={paymentLoading}
+                  className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 glow-gold font-body"
+                >
+                  {paymentLoading ? "Processing..." : `Pay ₹${totalPrice.toLocaleString()} with PhonePe`}
+                </button>
+                
+                <button
+                  onClick={() => handlePayment('mock')}
+                  disabled={paymentLoading}
+                  className="w-full rounded-xl border border-border py-4 text-sm font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 font-body"
+                >
+                  {paymentLoading ? "Processing..." : "Test Payment (Mock)"}
+                </button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground font-body">
+                Secure payment powered by PhonePe • Use mock payment for testing
               </p>
-            </form>
-          </ScrollReveal>
+            </div>
+          )}
+
+          {/* Navigation */}
+          {step < 6 && (
+            <div className="mt-8 flex justify-between">
+              <button
+                onClick={() => setStep(Math.max(0, step - 1))}
+                disabled={step === 0}
+                className="flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary disabled:opacity-30 font-body"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              {step < 6 && (
+                <button
+                  onClick={() => setStep(Math.min(7, step + 1))}
+                  disabled={!canNext()}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 disabled:opacity-30 disabled:hover:scale-100 font-body"
+                >
+                  Next <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      </section>
-    </main>
+        </>
+        )}
+      </div>
+    </div>
   );
 };
 

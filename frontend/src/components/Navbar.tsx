@@ -1,84 +1,88 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone } from "lucide-react";
-
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/services", label: "Services" },
-  { to: "/gallery", label: "Gallery" },
-  { to: "/booking", label: "Book Now" },
-  { to: "/contact", label: "Contact" },
-];
+import { Menu, X, Phone, Settings } from "lucide-react";
 
 const Navbar = () => {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
+  const links = [
+    { href: "/", label: "Home" },
+    { href: "/gallery", label: "Gallery" },
+    { href: "/booking", label: "Book Now", highlight: true },
+    { href: "/contact", label: "Contact" },
+  ];
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="container mx-auto px-4 flex items-center justify-between h-16 md:h-20">
-        <Link to="/" className="font-display text-xl md:text-2xl font-bold text-gold tracking-tight">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4">
+        <Link to="/" className="font-display text-2xl italic text-primary">
           Friends & Memories
         </Link>
 
         {/* Desktop */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+        <div className="hidden items-center gap-6 md:flex">
+          {links.map((link) => (
             <Link
-              key={link.to}
-              to={link.to}
-              className={`text-sm font-medium transition-colors duration-200 ${
-                location.pathname === link.to
+              key={link.href}
+              to={link.href}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${
+                link.highlight
+                  ? "bg-gradient-gold text-primary-foreground glow-gold"
+                  : location.pathname === link.href
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              } ${link.to === "/booking" ? "gradient-gold text-primary-foreground px-5 py-2 rounded-lg font-semibold hover:opacity-90" : ""}`}
+                  : "text-foreground hover:text-primary"
+              }`}
             >
               {link.label}
             </Link>
           ))}
-          <a
-            href="tel:+919912710932"
-            className="flex items-center gap-2 text-sm text-gold hover:text-gold-light transition-colors"
-          >
-            <Phone className="w-4 h-4" />
-            <span className="hidden lg:inline">+91 99127 10932</span>
+          <a href="tel:+919912710932" className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors">
+            <Phone className="h-4 w-4" />
+            +91 99127 10932
           </a>
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            title="Admin Dashboard"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
         </div>
 
         {/* Mobile toggle */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="md:hidden p-2 text-foreground active:scale-95 transition-transform"
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        <button onClick={() => setIsOpen(!isOpen)} className="text-foreground md:hidden">
+          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {/* Mobile menu */}
-      {open && (
-        <div className="md:hidden bg-background/95 backdrop-blur-lg border-b border-border animate-fade-in">
-          <div className="container mx-auto px-4 py-4 flex flex-col gap-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setOpen(false)}
-                className={`text-base py-2 transition-colors ${
-                  location.pathname === link.to ? "text-primary font-semibold" : "text-muted-foreground"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <a
-              href="tel:+919912710932"
-              className="flex items-center gap-2 text-gold py-2"
+      {isOpen && (
+        <div className="border-t border-border bg-background px-4 pb-4 md:hidden">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              to={link.href}
+              onClick={() => setIsOpen(false)}
+              className={`block py-3 text-sm font-medium ${
+                link.highlight ? "text-primary" : "text-foreground"
+              }`}
             >
-              <Phone className="w-4 h-4" />
-              +91 99127 10932
-            </a>
-          </div>
+              {link.label}
+            </Link>
+          ))}
+          <a href="tel:+919912710932" className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
+            <Phone className="h-4 w-4" />
+            +91 99127 10932
+          </a>
+          <Link
+            to="/admin"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 py-3 text-sm text-muted-foreground hover:text-primary"
+          >
+            <Settings className="h-4 w-4" />
+            Admin Dashboard
+          </Link>
         </div>
       )}
     </nav>

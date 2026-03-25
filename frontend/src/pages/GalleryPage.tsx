@@ -1,75 +1,163 @@
-import gallery1 from "@/assets/gallery-1.jpg";
-import gallery2 from "@/assets/gallery-2.jpg";
-import gallery3 from "@/assets/gallery-3.jpg";
-import gallery4 from "@/assets/gallery-4.jpg";
-import servicePrivate from "@/assets/service-private-theatre.jpg";
-import serviceExperience from "@/assets/service-theatre-experience.jpg";
-import serviceParty from "@/assets/service-party-theatre.jpg";
-import heroImage from "@/assets/hero-theatre.jpg";
-import ScrollReveal from "@/components/ScrollReveal";
 import { useState } from "react";
-import { X } from "lucide-react";
-
-const images = [
-  { src: heroImage, alt: "Premium theatre interior" },
-  { src: gallery1, alt: "Friends celebrating together" },
-  { src: gallery2, alt: "Romantic couple screening" },
-  { src: servicePrivate, alt: "Private theatre room" },
-  { src: gallery3, alt: "Kids birthday celebration" },
-  { src: serviceExperience, alt: "Theatre experience setup" },
-  { src: gallery4, alt: "Corporate event" },
-  { src: serviceParty, alt: "Party decorations" },
-];
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const GalleryPage = () => {
-  const [lightbox, setLightbox] = useState<number | null>(null);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+
+  // Sample gallery data - replace with actual images
+  const galleryImages = [
+    {
+      id: 1,
+      src: "/placeholder.svg",
+      alt: "Past Event 1",
+      title: "Wedding Celebration",
+      date: "March 2024",
+    },
+    {
+      id: 2,
+      src: "/placeholder.svg",
+      alt: "Past Event 2",
+      title: "Corporate Event",
+      date: "February 2024",
+    },
+    {
+      id: 3,
+      src: "/placeholder.svg",
+      alt: "Past Event 3",
+      title: "Birthday Party",
+      date: "January 2024",
+    },
+    {
+      id: 4,
+      src: "/placeholder.svg",
+      alt: "Past Event 4",
+      title: "Anniversary Bash",
+      date: "December 2023",
+    },
+    {
+      id: 5,
+      src: "/placeholder.svg",
+      alt: "Past Event 5",
+      title: "Family Gathering",
+      date: "November 2023",
+    },
+    {
+      id: 6,
+      src: "/placeholder.svg",
+      alt: "Past Event 6",
+      title: "Engagement Party",
+      date: "October 2023",
+    },
+  ];
+
+  const handlePrevious = () => {
+    if (selectedImage !== null) {
+      setSelectedImage(
+        selectedImage === 0 ? galleryImages.length - 1 : selectedImage - 1
+      );
+    }
+  };
+
+  const handleNext = () => {
+    if (selectedImage !== null) {
+      setSelectedImage(
+        selectedImage === galleryImages.length - 1 ? 0 : selectedImage + 1
+      );
+    }
+  };
 
   return (
-    <main className="pt-20">
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <ScrollReveal className="text-center mb-14">
-            <span className="text-sm font-semibold tracking-widest uppercase text-gold">Our Gallery</span>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 text-balance">
-              Moments Worth Reliving
-            </h1>
-          </ScrollReveal>
+    <div className="min-h-screen bg-background pt-24 pb-12">
+      <div className="container mx-auto px-4">
+        <div className="mb-12 text-center">
+          <h1 className="font-display text-4xl italic text-primary mb-4">
+            Gallery
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Explore memories from our past events
+          </p>
+        </div>
 
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-            {images.map((img, i) => (
-              <ScrollReveal key={i} delay={i * 80}>
-                <button
-                  onClick={() => setLightbox(i)}
-                  className="block w-full rounded-xl overflow-hidden shadow-lg shadow-black/30 hover:shadow-xl transition-shadow active:scale-[0.98] cursor-pointer break-inside-avoid"
+        {/* Gallery Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {galleryImages.map((image, index) => (
+            <div
+              key={image.id}
+              onClick={() => setSelectedImage(index)}
+              className="group relative overflow-hidden rounded-lg cursor-pointer bg-muted aspect-square"
+            >
+              <img
+                src={image.src}
+                alt={image.alt}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end p-4">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <h3 className="font-semibold">{image.title}</h3>
+                  <p className="text-sm text-gray-200">{image.date}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Lightbox Modal */}
+        {selectedImage !== null && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            <div className="relative max-w-4xl w-full">
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+              >
+                <X className="h-8 w-8" />
+              </button>
+
+              {/* Image */}
+              <img
+                src={galleryImages[selectedImage].src}
+                alt={galleryImages[selectedImage].alt}
+                className="w-full h-auto rounded-lg"
+              />
+
+              {/* Image info */}
+              <div className="mt-4 text-center text-white">
+                <h3 className="text-xl font-semibold">
+                  {galleryImages[selectedImage].title}
+                </h3>
+                <p className="text-gray-300">{galleryImages[selectedImage].date}</p>
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex justify-between items-center mt-6">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/10 border-white/20 hover:bg-white/20"
                 >
-                  <img src={img.src} alt={img.alt} className="w-full h-auto hover:scale-105 transition-transform duration-500" loading="lazy" />
-                </button>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </Button>
 
-      {/* Lightbox */}
-      {lightbox !== null && (
-        <div
-          className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setLightbox(null)}
-        >
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-6 right-6 text-foreground hover:text-primary transition-colors"
-          >
-            <X className="w-8 h-8" />
-          </button>
-          <img
-            src={images[lightbox].src}
-            alt={images[lightbox].alt}
-            className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl animate-reveal-up"
-          />
-        </div>
-      )}
-    </main>
+                <span className="text-white text-sm">
+                  {selectedImage + 1} / {galleryImages.length}
+                </span>
+
+                <Button
+                  onClick={handleNext}
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/10 border-white/20 hover:bg-white/20"
+                >
+                  <ChevronRight className="h-6 w-6 text-white" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
