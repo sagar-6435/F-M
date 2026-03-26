@@ -125,21 +125,17 @@ const AdminDashboard = () => {
 
   const fetchPricing = async () => {
     try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const [pricingRes, cakesRes, decorationsRes, decorationPriceRes] = await Promise.all([
-        fetch("/api/pricing", { headers }),
-        fetch("/api/cakes", { headers }),
-        fetch("/api/decorations", { headers }),
-        fetch("/api/decoration-price", { headers }),
+      const [pricingData, cakesData, decorationsData, decorationPriceData] = await Promise.all([
+        api.getPricing(),
+        api.getCakes(),
+        api.getDecorations(),
+        api.getDecorationPrice(),
       ]);
 
-      if (pricingRes.ok) setPricing(await pricingRes.json());
-      if (cakesRes.ok) setCakes(await cakesRes.json());
-      if (decorationsRes.ok) setDecorations(await decorationsRes.json());
-      if (decorationPriceRes.ok) {
-        const data = await decorationPriceRes.json();
-        setDecorationPrice(data.decorationPrice);
-      }
+      setPricing(pricingData);
+      setCakes(cakesData);
+      setDecorations(decorationsData);
+      setDecorationPrice(decorationPriceData);
     } catch (error) {
       console.error("Error fetching pricing:", error);
     }
