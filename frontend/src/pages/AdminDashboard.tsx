@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BRANCHES } from "@/lib/booking-data";
 import { api } from "@/lib/api";
-import { Eye, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus } from "lucide-react";
+import { Eye, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -17,6 +17,8 @@ interface Booking {
   occasion: string;
   totalPrice: number;
   paymentStatus: "pending" | "paid";
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface DashboardStats {
@@ -39,6 +41,12 @@ interface ManualBookingForm {
   totalPrice: number;
 }
 
+const formatServiceName = (serviceId: string) =>
+  serviceId
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 const AdminDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
@@ -50,7 +58,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing">("bookings");
+  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
     service: "party-hall",
@@ -64,6 +72,7 @@ const AdminDashboard = () => {
     totalPrice: 0,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [pricingTab, setPricingTab] = useState<"services" | "cakes" | "decorations">("services");
   const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
   const [cakes, setCakes] = useState<any[]>([]);
@@ -71,6 +80,13 @@ const AdminDashboard = () => {
   const [decorationPrice, setDecorationPrice] = useState(1500);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0 });
+  const [newCake, setNewCake] = useState({ name: "", description: "", price: 0, image: "" });
+  const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "" });
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [newTestimonialTitle, setNewTestimonialTitle] = useState("");
+  const [uploadingTestimonial, setUploadingTestimonial] = useState(false);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -103,12 +119,16 @@ const AdminDashboard = () => {
   }, [isLoggedIn, token, selectedBranch]);
 
   const fetchData = async () => {
+    if (!token) {
+      console.error("No token available");
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
       const [bookingsData, statsData] = await Promise.all([
-        api.getBookings(token!, selectedBranch),
-        api.getDashboardStats(token!, selectedBranch),
+        api.getBookings(token, selectedBranch),
+        api.getDashboardStats(token, selectedBranch),
       ]);
       setBookings(bookingsData);
       setStats(statsData);
@@ -126,16 +146,17 @@ const AdminDashboard = () => {
   const fetchPricing = async () => {
     try {
       const [pricingData, cakesData, decorationsData, decorationPriceData] = await Promise.all([
-        api.getPricing(),
-        api.getCakes(),
-        api.getDecorations(),
-        api.getDecorationPrice(),
+        api.getPricing(selectedBranch),
+        api.getCakes(selectedBranch),
+        api.getDecorations(selectedBranch),
+        api.getDecorationPrice(selectedBranch),
       ]);
 
       setPricing(pricingData);
       setCakes(cakesData);
       setDecorations(decorationsData);
       setDecorationPrice(decorationPriceData);
+      setTestimonials(await api.getTestimonials(selectedBranch));
     } catch (error) {
       console.error("Error fetching pricing:", error);
     }
@@ -148,6 +169,19 @@ const AdminDashboard = () => {
     setBookings([]);
     setStats(null);
     localStorage.removeItem("adminToken");
+  };
+
+  const handleDownloadExcel = async () => {
+    if (!token) return;
+    try {
+      setDownloadingExcel(true);
+      await api.downloadBookingsExcel(token, selectedBranch);
+    } catch (error) {
+      console.error("Error downloading Excel:", error);
+      alert("Failed to download bookings file");
+    } finally {
+      setDownloadingExcel(false);
+    }
   };
 
   const handleManualBookingSubmit = async (e: React.FormEvent) => {
@@ -192,10 +226,13 @@ const AdminDashboard = () => {
 
   const handleSaveService = async () => {
     try {
-      const response = await fetch("/api/pricing", {
+      const response = await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -209,13 +246,17 @@ const AdminDashboard = () => {
 
   const handleSaveCake = async () => {
     try {
-      const url = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const baseUrl = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("cake-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -229,13 +270,17 @@ const AdminDashboard = () => {
 
   const handleSaveDecoration = async () => {
     try {
-      const url = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const baseUrl = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("extra-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -249,10 +294,13 @@ const AdminDashboard = () => {
 
   const handleSaveDecorationPrice = async () => {
     try {
-      const response = await fetch("/api/decoration-price", {
+      const response = await fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price: decorationPrice }),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ price: decorationPrice, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -266,7 +314,10 @@ const AdminDashboard = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`/api/cakes/${id}`, { method: "DELETE" });
+        const response = await fetch(`/api/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (response.ok) {
           await fetchPricing();
         }
@@ -279,7 +330,10 @@ const AdminDashboard = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`/api/decorations/${id}`, { method: "DELETE" });
+        const response = await fetch(`/api/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (response.ok) {
           await fetchPricing();
         }
@@ -302,6 +356,136 @@ const AdminDashboard = () => {
   const handleEditDecoration = (decoration: any) => {
     setEditingId(decoration.id || "");
     setEditValues(decoration);
+  };
+
+  const handleGalleryImageUpload = async (type: "cake" | "decoration", id: string, file?: File | null) => {
+    if (!file || !token) return;
+    try {
+      setUploadingImageId(`${type}-${id}`);
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(file);
+      });
+      await api.updateGalleryImage(token, selectedBranch, type, id, image);
+      await fetchPricing();
+    } catch (error) {
+      console.error("Error uploading gallery image:", error);
+      setError("Failed to upload image");
+    } finally {
+      setUploadingImageId(null);
+    }
+  };
+
+  const readFileAsDataUrl = (file?: File | null) =>
+    new Promise<string>((resolve, reject) => {
+      if (!file) {
+        resolve("");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleCreateService = async () => {
+    if (!token || !newService.name.trim()) return;
+    const service = newService.name.trim().toLowerCase().replace(/\s+/g, "-");
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      };
+      const updates = [
+        { duration: 1, price: newService.oneHour },
+        { duration: 2, price: newService.twoHours },
+        { duration: 3, price: newService.threeHours },
+      ];
+      for (const update of updates) {
+        await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ service, duration: update.duration, price: update.price, branch: selectedBranch }),
+        });
+      }
+      setNewService({ name: "", oneHour: 0, twoHours: 0, threeHours: 0 });
+      await fetchPricing();
+    } catch (error) {
+      console.error("Error creating service:", error);
+      setError("Failed to create service");
+    }
+  };
+
+  const handleCreateCake = async () => {
+    if (!token || !newCake.name.trim()) return;
+    try {
+      await fetch(`/api/cakes?branch=${encodeURIComponent(selectedBranch)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...newCake, branch: selectedBranch }),
+      });
+      setNewCake({ name: "", description: "", price: 0, image: "" });
+      await fetchPricing();
+    } catch (error) {
+      console.error("Error creating cake:", error);
+      setError("Failed to create cake");
+    }
+  };
+
+  const handleCreateDecoration = async () => {
+    if (!token || !newDecoration.name.trim()) return;
+    try {
+      await fetch(`/api/decorations?branch=${encodeURIComponent(selectedBranch)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...newDecoration, branch: selectedBranch }),
+      });
+      setNewDecoration({ name: "", description: "", price: 0, image: "" });
+      await fetchPricing();
+    } catch (error) {
+      console.error("Error creating decoration:", error);
+      setError("Failed to create decoration");
+    }
+  };
+
+  const handleUploadTestimonial = async (file?: File | null) => {
+    if (!token || !file) return;
+    try {
+      setUploadingTestimonial(true);
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(file);
+      });
+      await api.addTestimonialImage(token, selectedBranch, image, newTestimonialTitle || undefined);
+      setNewTestimonialTitle("");
+      setTestimonials(await api.getTestimonials(selectedBranch));
+    } catch (error) {
+      console.error("Error uploading testimonial:", error);
+      setError("Failed to upload testimonial image");
+    } finally {
+      setUploadingTestimonial(false);
+    }
+  };
+
+  const handleDeleteTestimonial = async (id: string) => {
+    if (!token) return;
+    try {
+      await api.deleteTestimonialImage(token, selectedBranch, id);
+      setTestimonials(await api.getTestimonials(selectedBranch));
+    } catch (error) {
+      console.error("Error deleting testimonial:", error);
+      setError("Failed to delete testimonial image");
+    }
   };
 
   if (!isLoggedIn) {
@@ -405,6 +589,17 @@ const AdminDashboard = () => {
             <Settings className="inline h-4 w-4 mr-2" />
             Pricing
           </button>
+          <button
+            onClick={() => setActiveTab("gallery")}
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
+              activeTab === "gallery"
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Eye className="inline h-4 w-4 mr-2" />
+            Gallery
+          </button>
         </div>
 
         {error && (
@@ -416,7 +611,7 @@ const AdminDashboard = () => {
         {/* Bookings Tab */}
         {activeTab === "bookings" && (
           <>
-            <div className="flex gap-2 mb-8">
+            <div className="flex gap-2 mb-8 flex-wrap">
               {(["all", "pending", "paid"] as const).map((f) => (
                 <button
                   key={f}
@@ -431,6 +626,14 @@ const AdminDashboard = () => {
                   {f}
                 </button>
               ))}
+              <button
+                onClick={handleDownloadExcel}
+                disabled={downloadingExcel}
+                className="flex items-center gap-1.5 rounded-full border border-primary bg-muted px-4 py-2 text-xs font-medium text-primary transition-all hover:bg-primary/10 disabled:opacity-50 font-body"
+              >
+                <Download className="h-3 w-3" />
+                {downloadingExcel ? "Downloading..." : "Download Excel"}
+              </button>
             </div>
 
             {/* Stats */}
@@ -469,8 +672,8 @@ const AdminDashboard = () => {
                 <table className="w-full text-sm font-body">
                   <thead className="border-b border-border bg-muted">
                     <tr>
-                      {["ID", "Name", "Service", "Date", "Status", "Amount", ""].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">{h}</th>
+                      {["ID", "Name", "Service", "Date", "Time", "Duration", "Status", "Amount", "Booked At", ""].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -479,16 +682,21 @@ const AdminDashboard = () => {
                       <tr key={b.id} className="border-b border-border hover:bg-muted transition-colors">
                         <td className="px-4 py-3 text-foreground font-medium">{b.id}</td>
                         <td className="px-4 py-3 text-foreground">{b.name}</td>
-                        <td className="px-4 py-3 text-foreground">{b.service}</td>
+                        <td className="px-4 py-3 text-foreground capitalize">{b.service.replace('-', ' ')}</td>
                         <td className="px-4 py-3 text-muted-foreground">{b.date}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{b.timeSlot}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{b.duration}h</td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${
                             b.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                           }`}>
                             {b.paymentStatus}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-semibold text-foreground">₹{b.totalPrice.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}
+                        </td>
                         <td className="px-4 py-3">
                           <button onClick={() => setSelectedBooking(b)} className="text-primary hover:text-primary transition-colors">
                             <Eye className="h-4 w-4" />
@@ -500,6 +708,129 @@ const AdminDashboard = () => {
                 </table>
               )}
             </div>
+
+            {/* Booking Details Modal */}
+            {selectedBooking && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-8">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="font-display text-2xl font-bold text-foreground">Booking Details</h2>
+                    <button
+                      onClick={() => setSelectedBooking(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Booking Info */}
+                    <div className="rounded-xl border border-border bg-muted p-4">
+                      <h3 className="mb-4 font-semibold text-foreground">Booking Information</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Booking ID</p>
+                          <p className="font-mono font-semibold text-foreground">{selectedBooking.id}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                            selectedBooking.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                            {selectedBooking.paymentStatus}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Booked At</p>
+                          <p className="text-sm text-foreground">
+                            {selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Last Updated</p>
+                          <p className="text-sm text-foreground">
+                            {selectedBooking.updatedAt ? new Date(selectedBooking.updatedAt).toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Slot Info */}
+                    <div className="rounded-xl border border-border bg-muted p-4">
+                      <h3 className="mb-4 font-semibold text-foreground">Slot Information</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Service</p>
+                          <p className="font-semibold text-foreground capitalize">{selectedBooking.service.replace('-', ' ')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Date</p>
+                          <p className="font-semibold text-foreground">{selectedBooking.date}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Time Slot</p>
+                          <p className="font-semibold text-foreground">{selectedBooking.timeSlot}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Duration</p>
+                          <p className="font-semibold text-foreground">{selectedBooking.duration} hour(s)</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="rounded-xl border border-border bg-muted p-4">
+                      <h3 className="mb-4 font-semibold text-foreground">Customer Information</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Name:</span>
+                          <p className="font-semibold text-foreground">{selectedBooking.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-sm text-foreground">{selectedBooking.phone}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-sm text-foreground">{selectedBooking.email}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Occasion</p>
+                          <p className="text-sm text-foreground">{selectedBooking.occasion}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Info */}
+                    <div className="rounded-xl border border-border bg-muted p-4">
+                      <h3 className="mb-4 font-semibold text-foreground">Payment Information</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Amount</p>
+                          <p className="text-2xl font-bold text-primary">₹{selectedBooking.totalPrice.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Payment Status</p>
+                          <p className={`text-lg font-semibold ${
+                            selectedBooking.paymentStatus === "paid" ? "text-green-600" : "text-yellow-600"
+                          }`}>
+                            {selectedBooking.paymentStatus.toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Close Button */}
+                    <button
+                      onClick={() => setSelectedBooking(null)}
+                      className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-all hover:scale-105"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -531,8 +862,11 @@ const AdminDashboard = () => {
                   onChange={(e) => setManualBooking({ ...manualBooking, service: e.target.value })}
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                 >
-                  <option value="party-hall">Party Hall</option>
-                  <option value="private-theatre">Private Theatre</option>
+                  {Object.keys(pricing).map((serviceId) => (
+                    <option key={serviceId} value={serviceId}>
+                      {formatServiceName(serviceId)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -683,6 +1017,42 @@ const AdminDashboard = () => {
             {/* Services */}
             {pricingTab === "services" && (
               <div className="space-y-4">
+                <div className="border border-border rounded-lg p-6 space-y-3">
+                  <h3 className="font-semibold text-lg">Add New Service</h3>
+                  <input
+                    type="text"
+                    placeholder="Service name (e.g. Couple Dining)"
+                    value={newService.name}
+                    onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="number"
+                      placeholder="1 Hour Price"
+                      value={newService.oneHour}
+                      onChange={(e) => setNewService({ ...newService, oneHour: Number(e.target.value) })}
+                      className="px-3 py-2 border border-border rounded text-foreground bg-background"
+                    />
+                    <input
+                      type="number"
+                      placeholder="2 Hour Price"
+                      value={newService.twoHours}
+                      onChange={(e) => setNewService({ ...newService, twoHours: Number(e.target.value) })}
+                      className="px-3 py-2 border border-border rounded text-foreground bg-background"
+                    />
+                    <input
+                      type="number"
+                      placeholder="3 Hour Price"
+                      value={newService.threeHours}
+                      onChange={(e) => setNewService({ ...newService, threeHours: Number(e.target.value) })}
+                      className="px-3 py-2 border border-border rounded text-foreground bg-background"
+                    />
+                  </div>
+                  <button onClick={handleCreateService} className="px-4 py-2 bg-primary text-primary-foreground rounded">
+                    Add Service
+                  </button>
+                </div>
                 {Object.entries(pricing).map(([service, durations]) => (
                   <div key={service} className="border border-border rounded-lg p-6">
                     <h3 className="font-semibold text-lg mb-4 capitalize">{service.replace("-", " ")}</h3>
@@ -699,7 +1069,7 @@ const AdminDashboard = () => {
                                   type="number"
                                   value={editValues.price}
                                   onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                  className="w-24 px-2 py-1 border border-border rounded"
+                                  className="w-24 px-2 py-1 border border-border rounded bg-background text-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                                 <button
                                   onClick={handleSaveService}
@@ -737,6 +1107,42 @@ const AdminDashboard = () => {
             {/* Cakes */}
             {pricingTab === "cakes" && (
               <div className="space-y-4">
+                <div className="border border-border rounded-lg p-6 space-y-3">
+                  <h3 className="font-semibold text-lg">Add New Cake</h3>
+                  <input
+                    type="text"
+                    placeholder="Cake name"
+                    value={newCake.name}
+                    onChange={(e) => setNewCake({ ...newCake, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={newCake.description}
+                    onChange={(e) => setNewCake({ ...newCake, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={newCake.price}
+                    onChange={(e) => setNewCake({ ...newCake, price: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const image = await readFileAsDataUrl(e.target.files?.[0]);
+                      setNewCake({ ...newCake, image });
+                    }}
+                    className="w-full text-xs text-muted-foreground"
+                  />
+                  <button onClick={handleCreateCake} className="px-4 py-2 bg-primary text-primary-foreground rounded">
+                    Add Cake
+                  </button>
+                </div>
                 {cakes.map((cake) => {
                   const isEditing = editingId === cake.id;
                   return (
@@ -748,14 +1154,14 @@ const AdminDashboard = () => {
                             placeholder="Cake name"
                             value={editValues.name || ""}
                             onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded"
+                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                           />
                           <input
                             type="text"
                             placeholder="Description"
                             value={editValues.description || ""}
                             onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded"
+                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                           />
                           <div className="flex gap-2">
                             <span>₹</span>
@@ -763,9 +1169,18 @@ const AdminDashboard = () => {
                               type="number"
                               value={editValues.price}
                               onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                              className="flex-1 px-3 py-2 border border-border rounded"
+                              className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background"
                             />
                           </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleGalleryImageUpload("cake", cake.id, e.target.files?.[0])}
+                            className="w-full text-xs text-muted-foreground"
+                          />
+                          {uploadingImageId === `cake-${cake.id}` && (
+                            <p className="text-xs text-primary">Uploading image...</p>
+                          )}
                           <div className="flex gap-2">
                             <button onClick={handleSaveCake} className="px-4 py-2 bg-primary text-primary-foreground rounded">
                               Save
@@ -807,6 +1222,42 @@ const AdminDashboard = () => {
             {/* Decorations */}
             {pricingTab === "decorations" && (
               <div className="space-y-4">
+                <div className="border border-border rounded-lg p-6 space-y-3">
+                  <h3 className="font-semibold text-lg">Add New Decoration</h3>
+                  <input
+                    type="text"
+                    placeholder="Decoration name"
+                    value={newDecoration.name}
+                    onChange={(e) => setNewDecoration({ ...newDecoration, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={newDecoration.description}
+                    onChange={(e) => setNewDecoration({ ...newDecoration, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={newDecoration.price}
+                    onChange={(e) => setNewDecoration({ ...newDecoration, price: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const image = await readFileAsDataUrl(e.target.files?.[0]);
+                      setNewDecoration({ ...newDecoration, image });
+                    }}
+                    className="w-full text-xs text-muted-foreground"
+                  />
+                  <button onClick={handleCreateDecoration} className="px-4 py-2 bg-primary text-primary-foreground rounded">
+                    Add Decoration
+                  </button>
+                </div>
                 <div className="border border-border rounded-lg p-6 mb-6">
                   <h3 className="font-semibold text-lg mb-4">Base Decoration Price</h3>
                   {editingId === "decoration-price" ? (
@@ -816,7 +1267,7 @@ const AdminDashboard = () => {
                         type="number"
                         value={decorationPrice}
                         onChange={(e) => setDecorationPrice(Number(e.target.value))}
-                        className="flex-1 px-3 py-2 border border-border rounded"
+                        className="flex-1 px-3 py-2 border border-border rounded bg-background text-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <button onClick={handleSaveDecorationPrice} className="px-4 py-2 bg-primary text-primary-foreground rounded">
                         Save
@@ -849,14 +1300,14 @@ const AdminDashboard = () => {
                             placeholder="Decoration name"
                             value={editValues.name || ""}
                             onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded"
+                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                           />
                           <input
                             type="text"
                             placeholder="Description"
                             value={editValues.description || ""}
                             onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded"
+                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                           />
                           <div className="flex gap-2">
                             <span>₹</span>
@@ -864,9 +1315,18 @@ const AdminDashboard = () => {
                               type="number"
                               value={editValues.price}
                               onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                              className="flex-1 px-3 py-2 border border-border rounded"
+                              className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background"
                             />
                           </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleGalleryImageUpload("decoration", decoration.id, e.target.files?.[0])}
+                            className="w-full text-xs text-muted-foreground"
+                          />
+                          {uploadingImageId === `decoration-${decoration.id}` && (
+                            <p className="text-xs text-primary">Uploading image...</p>
+                          )}
                           <div className="flex gap-2">
                             <button onClick={handleSaveDecoration} className="px-4 py-2 bg-primary text-primary-foreground rounded">
                               Save
@@ -904,6 +1364,44 @@ const AdminDashboard = () => {
                 })}
               </div>
             )}
+
+          </div>
+        )}
+
+        {activeTab === "gallery" && (
+          <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
+            <h2 className="font-display text-2xl font-bold text-foreground">Gallery Management</h2>
+            <p className="text-sm text-muted-foreground font-body">
+              Upload testimonial images for this branch. These images are shown on the public gallery page.
+            </p>
+            <input
+              type="text"
+              placeholder="Optional title (e.g. Birthday Celebration)"
+              value={newTestimonialTitle}
+              onChange={(e) => setNewTestimonialTitle(e.target.value)}
+              className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleUploadTestimonial(e.target.files?.[0])}
+              className="w-full text-xs text-muted-foreground"
+            />
+            {uploadingTestimonial && <p className="text-xs text-primary">Uploading testimonial image...</p>}
+            <div className="grid gap-3 md:grid-cols-2">
+              {testimonials.map((item) => (
+                <div key={item.id} className="rounded-xl border border-border p-3 space-y-2">
+                  <img src={item.image} alt={item.title || "Testimonial"} className="h-32 w-full rounded-lg object-cover" />
+                  <p className="text-sm font-medium text-foreground">{item.title || "Customer Memory"}</p>
+                  <button
+                    onClick={() => handleDeleteTestimonial(item.id)}
+                    className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

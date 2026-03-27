@@ -74,8 +74,8 @@ const Index = () => {
           </h2>
           <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
             {[
-              { img: partyImg, title: "Party Hall", desc: "Spacious, elegant halls for up to 50 guests. Perfect for birthdays, anniversaries, and celebrations.", features: ["50+ guest capacity", "Custom decorations", "Sound system included", "Catering available"] },
-              { img: theatreImg, title: "Private Theatre", desc: "Intimate cinema experience with recliner seats, Dolby sound, and 4K projection for your group.", features: ["4K projection", "Dolby Atmos sound", "Recliner seating", "Snacks & beverages"] },
+              { id: "party-hall", img: partyImg, title: "Party Hall", desc: "Spacious, elegant halls for up to 50 guests. Perfect for birthdays, anniversaries, and celebrations.", features: ["50+ guest capacity", "Custom decorations", "Sound system included", "Catering available"] },
+              { id: "private-theatre", img: theatreImg, title: "Private Theatre", desc: "Intimate cinema experience with recliner seats, Dolby sound, and 4K projection for your group.", features: ["4K projection", "Dolby Atmos sound", "Recliner seating", "Snacks & beverages"] },
             ].map((service) => (
               <div
                 key={service.title}
@@ -96,7 +96,7 @@ const Index = () => {
                     ))}
                   </ul>
                   <Link
-                    to="/booking"
+                    to={`/booking?service=${service.id}`}
                     className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 font-body"
                   >
                     Book Now <ArrowRight className="h-4 w-4" />

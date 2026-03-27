@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_URL ;
 
 export interface Branch {
   id: string;
@@ -23,6 +23,13 @@ export interface ExtraDecoration {
   description: string;
 }
 
+export interface TestimonialImage {
+  id: string;
+  image: string;
+  title?: string;
+  date?: string;
+}
+
 export const api = {
   async getBranches(): Promise<Branch[]> {
     const res = await fetch(`${API_BASE}/branches`);
@@ -36,29 +43,96 @@ export const api = {
     return res.json();
   },
 
-  async getCakes(): Promise<CakeOption[]> {
-    const res = await fetch(`${API_BASE}/cakes`);
+  async getCakes(branch?: string): Promise<CakeOption[]> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/cakes${query}`);
     if (!res.ok) throw new Error("Failed to fetch cakes");
     return res.json();
   },
 
-  async getDecorations(): Promise<ExtraDecoration[]> {
-    const res = await fetch(`${API_BASE}/decorations`);
+  async getDecorations(branch?: string): Promise<ExtraDecoration[]> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/decorations${query}`);
     if (!res.ok) throw new Error("Failed to fetch decorations");
     return res.json();
   },
 
-  async getPricing(): Promise<Record<string, Record<number, number>>> {
-    const res = await fetch(`${API_BASE}/pricing`);
+  async getPricing(branch?: string): Promise<Record<string, Record<number, number>>> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/pricing${query}`);
     if (!res.ok) throw new Error("Failed to fetch pricing");
     return res.json();
   },
 
-  async getDecorationPrice(): Promise<number> {
-    const res = await fetch(`${API_BASE}/decoration-price`);
+  async getDecorationPrice(branch?: string): Promise<number> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/decoration-price${query}`);
     if (!res.ok) throw new Error("Failed to fetch decoration price");
     const data = await res.json();
     return data.decorationPrice;
+  },
+
+  async getAdminGallery(token: string, branch: string, type?: "cake" | "decoration"): Promise<any[]> {
+    const params = new URLSearchParams({ branch });
+    if (type) params.append("type", type);
+    const res = await fetch(`${API_BASE}/admin/gallery?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to fetch gallery");
+    return res.json();
+  },
+
+  async updateGalleryImage(
+    token: string,
+    branch: string,
+    type: "cake" | "decoration",
+    id: string,
+    image: string
+  ): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/gallery/${type}/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ image, branch }),
+    });
+    if (!res.ok) throw new Error("Failed to update gallery image");
+    return res.json();
+  },
+
+  async getTestimonials(branch?: string): Promise<TestimonialImage[]> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/gallery/testimonials${query}`);
+    if (!res.ok) throw new Error("Failed to fetch testimonials");
+    return res.json();
+  },
+
+  async addTestimonialImage(
+    token: string,
+    branch: string,
+    image: string,
+    title?: string,
+    date?: string
+  ): Promise<TestimonialImage> {
+    const res = await fetch(`${API_BASE}/admin/gallery/testimonials?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ branch, image, title, date }),
+    });
+    if (!res.ok) throw new Error("Failed to add testimonial image");
+    return res.json();
+  },
+
+  async deleteTestimonialImage(token: string, branch: string, id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/admin/gallery/testimonials/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to delete testimonial image");
   },
 
   async createBooking(booking: any) {
@@ -71,11 +145,11 @@ export const api = {
     return res.json();
   },
 
-  async getAvailableSlots(branchId: string, date: string, service: string): Promise<string[]> {
-    const res = await fetch(`${API_BASE}/availability/${branchId}/${date}/${service}`);
+  async getAvailableSlots(branchId: string, date: string, service: string, duration: number): Promise<{ availableSlots: string[], bookedSlots: string[] }> {
+    const res = await fetch(`${API_BASE}/availability/${branchId}/${date}/${service}?duration=${duration}`);
     if (!res.ok) throw new Error("Failed to fetch available slots");
     const data = await res.json();
-    return data.availableSlots;
+    return { availableSlots: data.availableSlots, bookedSlots: data.bookedSlots };
   },
 
   async adminLogin(password: string): Promise<{ token: string }> {
@@ -167,5 +241,25 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to process mock payment");
     return res.json();
+  },
+
+  async downloadBookingsExcel(token: string, branch?: string): Promise<void> {
+    let url = `${API_BASE}/admin/bookings/download`;
+    if (branch) url += `?branch=${branch}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to download bookings file");
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `bookings_${branch || 'all'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
   },
 };

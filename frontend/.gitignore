@@ -51,3 +51,9 @@ coverage/
 # Misc
 .cache/
 .turbo/
+
+# Project specific
+*.xlsx
+*.xls
+*.csv
+.DS_Store

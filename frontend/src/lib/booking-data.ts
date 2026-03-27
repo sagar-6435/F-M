@@ -32,6 +32,7 @@ export interface BookingData {
   email: string;
   decorationRequired: boolean;
   occasion: string;
+  customOccasion?: string;
   cakeRequired: boolean;
   selectedCake: CakeOption | null;
   extraDecorations: ExtraDecoration[];

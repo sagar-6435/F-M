@@ -4,6 +4,8 @@ import { verifyAdmin } from '../middleware/auth.js';
 import { mongoConnections } from '../config/database.js';
 import { Booking, TimeSlot } from '../models/schemas.js';
 import { branchDbs, getBranchDb } from '../data/globalDb.js';
+import { exportBookingToExcel } from '../utils/excelExport.js';
+import { saveBookings, saveTimeSlots } from '../utils/persistence.js';
 
 const router = express.Router();
 
@@ -49,6 +51,23 @@ router.post('/', async (req, res) => {
         bookingId: booking.id,
         createdAt: new Date(),
       });
+    }
+    
+    // Export booking to Excel
+    try {
+      await exportBookingToExcel(booking);
+    } catch (exportError) {
+      console.error('Failed to export booking to Excel:', exportError);
+      // Don't fail the booking creation if export fails
+    }
+    
+    // Save bookings and time slots to file
+    try {
+      await saveBookings(branchDbs);
+      await saveTimeSlots(branchDbs);
+    } catch (saveError) {
+      console.error('Failed to save booking data:', saveError);
+      // Don't fail the booking creation if save fails
     }
     
     res.status(201).json(booking);
@@ -172,6 +191,14 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
         
         const slotIndex = branchDb.timeSlots.findIndex(s => s.bookingId === booking.id);
         if (slotIndex !== -1) branchDb.timeSlots.splice(slotIndex, 1);
+        
+        // Save changes to file
+        try {
+          await saveBookings(branchDbs);
+          await saveTimeSlots(branchDbs);
+        } catch (saveError) {
+          console.error('Failed to save booking data:', saveError);
+        }
         
         return res.json({ message: 'Booking cancelled' });
       }

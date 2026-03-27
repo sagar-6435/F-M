@@ -23,7 +23,8 @@
     "uuid": "^9.0.0",
     "jsonwebtoken": "^9.0.0",
     "bcryptjs": "^2.4.3",
-    "mongoose": "^7.0.0"
+    "mongoose": "^7.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

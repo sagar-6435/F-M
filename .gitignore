@@ -53,3 +53,11 @@ coverage/
 # Misc
 .cache/
 .turbo/
+
+# Project specific
+data/bookings.json
+data/timeSlots.json
+data/branchPricingData.json
+*.xlsx
+*.xls
+.DS_Store

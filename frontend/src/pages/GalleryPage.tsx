@@ -1,55 +1,53 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api, type Branch } from "@/lib/api";
+import { useSearchParams } from "react-router-dom";
 
 const GalleryPage = () => {
+  const [searchParams] = useSearchParams();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>(searchParams.get("branch") || "branch-1");
+  const [loading, setLoading] = useState(true);
 
-  // Sample gallery data - replace with actual images
-  const galleryImages = [
-    {
-      id: 1,
-      src: "/placeholder.svg",
-      alt: "Past Event 1",
-      title: "Wedding Celebration",
-      date: "March 2024",
-    },
-    {
-      id: 2,
-      src: "/placeholder.svg",
-      alt: "Past Event 2",
-      title: "Corporate Event",
-      date: "February 2024",
-    },
-    {
-      id: 3,
-      src: "/placeholder.svg",
-      alt: "Past Event 3",
-      title: "Birthday Party",
-      date: "January 2024",
-    },
-    {
-      id: 4,
-      src: "/placeholder.svg",
-      alt: "Past Event 4",
-      title: "Anniversary Bash",
-      date: "December 2023",
-    },
-    {
-      id: 5,
-      src: "/placeholder.svg",
-      alt: "Past Event 5",
-      title: "Family Gathering",
-      date: "November 2023",
-    },
-    {
-      id: 6,
-      src: "/placeholder.svg",
-      alt: "Past Event 6",
-      title: "Engagement Party",
-      date: "October 2023",
-    },
-  ];
+  const [galleryImages, setGalleryImages] = useState<
+    { id: string; src: string; alt: string; title: string; date: string }[]
+  >([]);
+
+  useEffect(() => {
+    const loadBranches = async () => {
+      try {
+        const data = await api.getBranches();
+        setBranches(data);
+      } catch (error) {
+        console.error("Failed to load branches:", error);
+      }
+    };
+    loadBranches();
+  }, []);
+
+  useEffect(() => {
+    const loadGallery = async () => {
+      try {
+        setLoading(true);
+        const testimonials = await api.getTestimonials(selectedBranch);
+        const mapped = testimonials.map((item) => ({
+          id: item.id,
+          src: item.image || "",
+          alt: item.title || "Testimonial",
+          title: item.title || "Customer Memory",
+          date: item.date || "Recent",
+        }));
+        setGalleryImages(mapped);
+      } catch (error) {
+        console.error("Failed to load gallery images:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadGallery();
+  }, [selectedBranch]);
 
   const handlePrevious = () => {
     if (selectedImage !== null) {
@@ -77,9 +75,27 @@ const GalleryPage = () => {
           <p className="text-lg text-muted-foreground">
             Explore memories from our past events
           </p>
+          <div className="mt-4 flex justify-center">
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="rounded-full border border-border bg-muted px-4 py-2 text-xs font-medium text-foreground focus:border-primary focus:outline-none"
+            >
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Gallery Grid */}
+        {loading ? (
+          <div className="text-center text-muted-foreground">Loading gallery...</div>
+        ) : galleryImages.length === 0 ? (
+          <div className="text-center text-muted-foreground">No images uploaded yet for this branch.</div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleryImages.map((image, index) => (
             <div
@@ -101,6 +117,7 @@ const GalleryPage = () => {
             </div>
           ))}
         </div>
+        )}
 
         {/* Lightbox Modal */}
         {selectedImage !== null && (

@@ -10,7 +10,13 @@ const router = express.Router();
 // Admin Login
 router.post('/login', (req, res) => {
   const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  // Trim whitespace from both sides
+  const trimmedPassword = password ? password.trim() : '';
+  const trimmedAdminPassword = adminPassword ? adminPassword.trim() : '';
+  
+  if (trimmedPassword === trimmedAdminPassword) {
     const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, message: 'Login successful' });
   } else {

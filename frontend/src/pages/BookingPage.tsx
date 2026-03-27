@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, MapPin, Film, PartyPopper, Calendar, Clock, User, Cake, Sparkles, CreditCard } from "lucide-react";
 import {
   BookingData, INITIAL_BOOKING,
@@ -21,11 +21,39 @@ const STEPS = [
 ];
 
 const STEP_ICONS = [MapPin, Calendar, User, PartyPopper, Cake, Sparkles, Check, CreditCard];
+const formatServiceName = (serviceId: string) =>
+  serviceId
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+const parse12HourTime = (timeString: string) => {
+  const match = timeString.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3].toUpperCase();
+  if (hours === 12) hours = 0;
+  if (period === "PM") hours += 12;
+  return hours * 60 + minutes;
+};
+const to12HourTime = (minutes: number) => {
+  const normalized = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const period = normalized >= 12 * 60 ? "PM" : "AM";
+  const hour24 = Math.floor(normalized / 60);
+  const hour12 = hour24 % 12 || 12;
+  const mins = normalized % 60;
+  return `${hour12}:${String(mins).padStart(2, "0")} ${period}`;
+};
+const formatSlotRange = (startTime: string, durationHours: number) => {
+  const startMinutes = parse12HourTime(startTime);
+  if (startMinutes === null) return startTime;
+  const endMinutes = startMinutes + durationHours * 60;
+  return `${startTime} - ${to12HourTime(endMinutes)}`;
+};
 
 const BookingPage = () => {
   const [step, setStep] = useState(0);
   const [booking, setBooking] = useState<BookingData>({ ...INITIAL_BOOKING });
-  const [bookedSlots] = useState<string[]>(["slot-2", "slot-4"]); // mock booked slots (by slot id)
   const [branches, setBranches] = useState<Branch[]>([]);
   const [occasions, setOccasions] = useState<string[]>([]);
   const [cakes, setCakes] = useState<CakeOption[]>([]);
@@ -33,27 +61,28 @@ const BookingPage = () => {
   const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
   const [decorationPrice, setDecorationPrice] = useState(DECORATION_PRICE);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const serviceParam = searchParams.get("service");
+    if (serviceParam === "party-hall" || serviceParam === "private-theatre") {
+      setBooking((prev) => ({ ...prev, service: serviceParam }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [branchesData, occasionsData, cakesData, decorationsData, pricingData, decorPriceData] = await Promise.all([
+        const [branchesData, occasionsData] = await Promise.all([
           api.getBranches(),
           api.getOccasions(),
-          api.getCakes(),
-          api.getDecorations(),
-          api.getPricing(),
-          api.getDecorationPrice(),
         ]);
         setBranches(branchesData);
         setOccasions(occasionsData);
-        setCakes(cakesData);
-        setDecorations(decorationsData);
-        setPricing(pricingData);
-        setDecorationPrice(decorPriceData);
       } catch (error) {
         console.error("Failed to load booking data:", error);
       } finally {
@@ -64,11 +93,33 @@ const BookingPage = () => {
   }, []);
 
   useEffect(() => {
+    const loadBranchPricing = async () => {
+      try {
+        const branchId = booking.branch || "branch-1";
+        const [cakesData, decorationsData, pricingData, decorPriceData] = await Promise.all([
+          api.getCakes(branchId),
+          api.getDecorations(branchId),
+          api.getPricing(branchId),
+          api.getDecorationPrice(branchId),
+        ]);
+        setCakes(cakesData);
+        setDecorations(decorationsData);
+        setPricing(pricingData);
+        setDecorationPrice(decorPriceData);
+      } catch (error) {
+        console.error("Failed to load branch pricing:", error);
+      }
+    };
+    loadBranchPricing();
+  }, [booking.branch]);
+
+  useEffect(() => {
     if (booking.branch && booking.date && booking.service) {
       const loadSlots = async () => {
         try {
-          const slots = await api.getAvailableSlots(booking.branch, booking.date, booking.service);
-          setAvailableSlots(slots);
+          const { availableSlots, bookedSlots } = await api.getAvailableSlots(booking.branch, booking.date, booking.service, booking.duration || 1);
+          setAvailableSlots(availableSlots);
+          setBookedSlots(bookedSlots);
         } catch (error) {
           console.error("Failed to load available slots:", error);
         }
@@ -223,19 +274,20 @@ const BookingPage = () => {
               <div>
                 <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Service</label>
                 <div className="grid gap-3 md:grid-cols-2">
-                  {[
-                    { id: "party-hall" as const, label: "Party Hall", icon: PartyPopper },
-                    { id: "private-theatre" as const, label: "Private Theatre", icon: Film },
-                  ].map((s) => (
+                  {Object.keys(pricing).map((serviceId) => (
                     <button
-                      key={s.id}
-                      onClick={() => update({ service: s.id })}
+                      key={serviceId}
+                      onClick={() => update({ service: serviceId as any })}
                       className={`flex items-center gap-3 rounded-xl border p-4 transition-all ${
-                        booking.service === s.id ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
+                        booking.service === serviceId ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
                       }`}
                     >
-                      <s.icon className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-foreground text-sm font-body">{s.label}</span>
+                      {serviceId === "party-hall" ? (
+                        <PartyPopper className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Film className="h-5 w-5 text-primary" />
+                      )}
+                      <span className="font-semibold text-foreground text-sm font-body">{formatServiceName(serviceId)}</span>
                     </button>
                   ))}
                 </div>
@@ -276,19 +328,29 @@ const BookingPage = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Available Time Slots</label>
                   <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => update({ timeSlot: slot })}
-                        className={`rounded-lg border py-2.5 text-xs font-medium transition-all font-body ${
-                          booking.timeSlot === slot
-                            ? "border-primary bg-muted text-primary"
-                            : "border-border text-foreground hover:border-primary"
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                    {(() => {
+                      const allSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
+                      return allSlots.map((slot) => {
+                        const isBooked = bookedSlots.includes(slot);
+                        const isAvailable = availableSlots.includes(slot);
+                        return isAvailable || isBooked ? (
+                          <button
+                            key={slot}
+                            onClick={() => !isBooked && update({ timeSlot: slot })}
+                            disabled={isBooked}
+                            className={`rounded-lg border py-2.5 text-xs font-medium transition-all font-body ${
+                              isBooked
+                                ? "border-border bg-muted text-muted-foreground line-through cursor-not-allowed opacity-60"
+                                : booking.timeSlot === slot
+                                ? "border-primary bg-muted text-primary"
+                                : "border-border text-foreground hover:border-primary"
+                            }`}
+                          >
+                            {formatSlotRange(slot, booking.duration || 1)}
+                          </button>
+                        ) : null;
+                      });
+                    })()}
                   </div>
                 </div>
               )}
@@ -365,6 +427,18 @@ const BookingPage = () => {
                     </button>
                   ))}
                 </div>
+                {booking.occasion === "Other" && (
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-medium text-foreground font-body">Please specify your occasion</label>
+                    <input
+                      type="text"
+                      placeholder="Enter your occasion"
+                      value={booking.customOccasion || ""}
+                      onChange={(e) => update({ customOccasion: e.target.value })}
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -399,11 +473,17 @@ const BookingPage = () => {
                       }`}
                     >
                       <div className="aspect-square bg-muted overflow-hidden">
-                        <img
-                          src={cake.image}
-                          alt={cake.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {cake.image ? (
+                          <img
+                            src={cake.image}
+                            alt={cake.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">
+                            No image
+                          </div>
+                        )}
                       </div>
                       <div className="p-4">
                         <p className="font-semibold text-foreground text-sm font-body">{cake.name}</p>
@@ -441,8 +521,11 @@ const BookingPage = () => {
                       selected ? "border-primary bg-muted" : "border-border hover:border-primary"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="h-12 w-12 rounded-lg object-cover" />
+                        ) : null}
                         <div className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-primary bg-primary" : "border-border"}`}>
                           {selected && <Check className="h-3 w-3 text-primary-foreground" />}
                         </div>
@@ -464,13 +547,13 @@ const BookingPage = () => {
             <div className="space-y-4">
               {[
                 { label: "Branch", value: branches.find((b) => b.id === booking.branch)?.name },
-                { label: "Service", value: booking.service === "party-hall" ? "Party Hall" : "Private Theatre" },
+                { label: "Service", value: formatServiceName(booking.service || "") },
                 { label: "Date", value: booking.date },
                 { label: "Time", value: `${booking.timeSlot} (${booking.duration}hr)` },
                 { label: "Name", value: booking.name },
                 { label: "Phone", value: booking.phone },
                 { label: "Email", value: booking.email },
-                { label: "Occasion", value: booking.occasion },
+                { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
                 { label: "Decoration", value: booking.decorationRequired ? `Yes (+₹${decorationPrice})` : "No" },
                 { label: "Cake", value: booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
               ].map((item) => (

@@ -31,7 +31,7 @@ const AdminPricing = () => {
     if (isLoggedIn && token) {
       fetchPricing();
     }
-  }, [isLoggedIn, token]);
+  }, [isLoggedIn, token, selectedBranch]);
 
   const handleLogin = async () => {
     try {
@@ -89,10 +89,10 @@ const AdminPricing = () => {
       setLoading(true);
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [pricingRes, cakesRes, decorationsRes, decorationPriceRes] = await Promise.all([
-        fetch("/api/pricing", { headers }),
-        fetch("/api/cakes", { headers }),
-        fetch("/api/decorations", { headers }),
-        fetch("/api/decoration-price", { headers }),
+        fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`/api/cakes?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`/api/decorations?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
       ]);
 
       if (pricingRes.ok) setPricing(await pricingRes.json());
@@ -126,10 +126,10 @@ const AdminPricing = () => {
 
   const handleSaveService = async () => {
     try {
-      const response = await fetch("/api/pricing", {
+      const response = await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -143,13 +143,14 @@ const AdminPricing = () => {
 
   const handleSaveCake = async () => {
     try {
-      const url = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const baseUrl = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("cake-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -163,13 +164,14 @@ const AdminPricing = () => {
 
   const handleSaveDecoration = async () => {
     try {
-      const url = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const baseUrl = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("extra-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editValues),
+        body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -183,10 +185,10 @@ const AdminPricing = () => {
 
   const handleSaveDecorationPrice = async () => {
     try {
-      const response = await fetch("/api/decoration-price", {
+      const response = await fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price: decorationPrice }),
+        body: JSON.stringify({ price: decorationPrice, branch: selectedBranch }),
       });
 
       if (response.ok) {
@@ -200,7 +202,7 @@ const AdminPricing = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`/api/cakes/${id}`, { method: "DELETE" });
+        const response = await fetch(`/api/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { method: "DELETE" });
         if (response.ok) {
           await fetchPricing();
         }
@@ -213,7 +215,7 @@ const AdminPricing = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`/api/decorations/${id}`, { method: "DELETE" });
+        const response = await fetch(`/api/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { method: "DELETE" });
         if (response.ok) {
           await fetchPricing();
         }
@@ -296,10 +298,12 @@ const AdminPricing = () => {
                           <div className="flex items-center gap-2">
                             <span>₹</span>
                             <input
-                              type="number"
-                              value={editValues.price}
-                              onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                              className="w-24 px-2 py-1 border border-border rounded"
+                            type="number"
+                            value={editValues.price}
+                            onChange={(e) =>
+                           setEditValues({ ...editValues, price: Number(e.target.value) })
+                             }
+                            className="w-24 px-2 py-1 border border-primary rounded bg-card text-foreground placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                             <Button
                               size="sm"
@@ -351,14 +355,14 @@ const AdminPricing = () => {
                         placeholder="Cake name"
                         value={editValues.name || ""}
                         onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-border rounded"
+                        className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <input
                         type="text"
                         placeholder="Description"
                         value={editValues.description || ""}
                         onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                        className="w-full px-3 py-2 border border-border rounded"
+                        className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <div className="flex gap-2">
                         <span>₹</span>
@@ -366,7 +370,7 @@ const AdminPricing = () => {
                           type="number"
                           value={editValues.price}
                           onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                          className="flex-1 px-3 py-2 border border-border rounded"
+                          className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
                       <div className="flex gap-2">
@@ -422,14 +426,14 @@ const AdminPricing = () => {
                   placeholder="Cake name"
                   value={editValues.name || ""}
                   onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded"
+                  className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={editValues.description || ""}
                   onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded"
+                  className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex gap-2">
                   <span>₹</span>
@@ -437,7 +441,7 @@ const AdminPricing = () => {
                     type="number"
                     value={editValues.price}
                     onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                    className="flex-1 px-3 py-2 border border-border rounded"
+                    className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -465,7 +469,7 @@ const AdminPricing = () => {
                     type="number"
                     value={decorationPrice}
                     onChange={(e) => setDecorationPrice(Number(e.target.value))}
-                    className="flex-1 px-3 py-2 border border-border rounded"
+                    className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <Button onClick={handleSaveDecorationPrice} className="bg-primary text-primary-foreground">
                     <Save className="h-4 w-4" />
@@ -499,14 +503,14 @@ const AdminPricing = () => {
                         placeholder="Decoration name"
                         value={editValues.name || ""}
                         onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-border rounded"
+                        className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <input
                         type="text"
                         placeholder="Description"
                         value={editValues.description || ""}
                         onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                        className="w-full px-3 py-2 border border-border rounded"
+                        className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <div className="flex gap-2">
                         <span>₹</span>
@@ -514,7 +518,7 @@ const AdminPricing = () => {
                           type="number"
                           value={editValues.price}
                           onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                          className="flex-1 px-3 py-2 border border-border rounded"
+                          className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
                       <div className="flex gap-2">
@@ -570,14 +574,14 @@ const AdminPricing = () => {
                   placeholder="Decoration name"
                   value={editValues.name || ""}
                   onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded"
+                  className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={editValues.description || ""}
                   onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded"
+                  className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex gap-2">
                   <span>₹</span>
@@ -585,7 +589,7 @@ const AdminPricing = () => {
                     type="number"
                     value={editValues.price}
                     onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                    className="flex-1 px-3 py-2 border border-border rounded"
+                    className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div className="flex gap-2">
