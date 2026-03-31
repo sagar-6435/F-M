@@ -26,23 +26,23 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative flex min-h-screen items-center overflow-hidden">
+      <section className="relative flex min-h-[90vh] md:min-h-screen items-center overflow-hidden">
         <div className="absolute inset-0">
           <img src={heroImg} alt="Premium private theatre" className="h-full w-full object-cover" width={1920} height={1080} />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
         </div>
 
-        <div className="container relative z-10 mx-auto px-4 pt-24">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">
+        <div className="container relative z-10 mx-auto px-4 pt-32 pb-12 md:pt-24 md:pb-0">
+          <p className="mb-4 text-[10px] md:text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">
             Private Theatre & Party Hall
           </p>
-          <h1 className="mb-6 max-w-2xl font-display text-5xl font-bold leading-tight text-foreground md:text-7xl">
+          <h1 className="mb-6 max-w-4xl 3xl:max-w-6xl font-display text-4xl font-bold leading-tight text-foreground md:text-7xl 3xl:text-9xl">
             Create{" "}
             <span className="text-gradient-gold">Unforgettable</span>{" "}
             Memories
           </h1>
-          <p className="mb-10 max-w-xl text-lg leading-relaxed text-muted-foreground font-body">
+          <p className="mb-8 md:mb-10 max-w-xl 3xl:max-w-4xl text-base md:text-lg 3xl:text-3xl leading-relaxed text-muted-foreground font-body">
             Book your private theatre for birthdays, anniversaries, proposals, or just a night out with friends. Premium experience, zero compromises.
           </p>
           <div className="flex flex-wrap items-center gap-4">

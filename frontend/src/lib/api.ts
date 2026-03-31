@@ -162,11 +162,13 @@ export const api = {
     return res.json();
   },
 
-  async getBookings(token: string, branch?: string, status?: string): Promise<any[]> {
+  async getBookings(token: string, branch?: string, status?: string, startDate?: string, endDate?: string): Promise<any[]> {
     let url = `${API_BASE}/bookings`;
     const params = new URLSearchParams();
     if (branch) params.append("branch", branch);
     if (status) params.append("status", status);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
     if (params.toString()) url += `?${params.toString()}`;
 
     const res = await fetch(url, {
@@ -176,14 +178,18 @@ export const api = {
     return res.json();
   },
 
-  async getDashboardStats(token: string, branch?: string): Promise<any> {
+  async getDashboardStats(token: string, branch?: string, startDate?: string, endDate?: string): Promise<any> {
     let url = `${API_BASE}/admin/dashboard/stats`;
-    if (branch) url += `?branch=${branch}`;
+    const params = new URLSearchParams();
+    if (branch) params.append("branch", branch);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    if (params.toString()) url += `?${params.toString()}`;
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+    if (!res.ok) throw new Error("Failed to fetch statistics");
     return res.json();
   },
 

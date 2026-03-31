@@ -58,12 +58,25 @@ const BookingConfirmed = () => {
             <div className="mb-8 space-y-3 text-left">
               {[
                 { label: "Booking ID", value: booking.id },
-                { label: "Branch", value: BRANCHES.find((b) => b.id === booking.branch)?.name },
+                { 
+                  label: "Branch/Location", 
+                  value: (() => {
+                    const b = BRANCHES.find((br) => br.id === booking.branch);
+                    return b ? `${b.name} (${b.address})` : booking.branch;
+                  })()
+                },
                 { label: "Service", value: booking.service === "party-hall" ? "Party Hall" : "Private Theatre" },
                 { label: "Date", value: booking.date },
                 { label: "Time", value: booking.timeSlot },
                 { label: "Duration", value: `${booking.duration} hour${booking.duration > 1 ? "s" : ""}` },
-                { label: "Occasion", value: booking.occasion },
+                { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
+                { label: "Cake", value: booking.cakeRequired && booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
+                { 
+                  label: "Extra Decorations", 
+                  value: booking.extraDecorations && booking.extraDecorations.length > 0 
+                    ? booking.extraDecorations.map((d: any) => d.name).join(", ") 
+                    : "None" 
+                },
                 { label: "Total Paid", value: `₹${booking.totalPrice?.toLocaleString()}` },
                 { label: "Payment Status", value: booking.paymentStatus === "paid" ? "✓ Paid" : "Pending" },
               ].map((item) => (

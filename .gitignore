@@ -55,9 +55,19 @@ coverage/
 .turbo/
 
 # Project specific
-data/bookings.json
-data/timeSlots.json
-data/branchPricingData.json
+backend/src/data/bookings.json
+backend/src/data/timeSlots.json
+backend/src/data/branchPricingData.json
+backend/src/data/*.bak
+frontend/dist/
+frontend/node_modules/
+backend/node_modules/
 *.xlsx
 *.xls
+.env
+.env.local
+.env.*.local
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/

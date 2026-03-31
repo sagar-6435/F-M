@@ -74,6 +74,8 @@ const BookingPage = () => {
     }
   }, [searchParams]);
 
+
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -114,10 +116,10 @@ const BookingPage = () => {
   }, [booking.branch]);
 
   useEffect(() => {
-    if (booking.branch && booking.date && booking.service) {
+    if (booking.branch && booking.date && booking.service && booking.duration) {
       const loadSlots = async () => {
         try {
-          const { availableSlots, bookedSlots } = await api.getAvailableSlots(booking.branch, booking.date, booking.service, booking.duration || 1);
+          const { availableSlots, bookedSlots } = await api.getAvailableSlots(booking.branch, booking.date, booking.service, booking.duration);
           setAvailableSlots(availableSlots);
           setBookedSlots(bookedSlots);
         } catch (error) {
@@ -126,7 +128,7 @@ const BookingPage = () => {
       };
       loadSlots();
     }
-  }, [booking.branch, booking.date, booking.service]);
+  }, [booking.branch, booking.date, booking.service, booking.duration]);
 
   const update = (partial: Partial<BookingData>) => setBooking((prev) => ({ ...prev, ...partial }));
 
@@ -329,26 +331,42 @@ const BookingPage = () => {
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Available Time Slots</label>
                   <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
                     {(() => {
-                      const allSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
-                      return allSlots.map((slot) => {
+                      const slotsByDuration: Record<number, string[]> = {
+                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
+                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
+                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
+                      };
+                      
+                      const slotsToDisplay = slotsByDuration[booking.duration] || [];
+
+                      return slotsToDisplay.map((slot) => {
                         const isBooked = bookedSlots.includes(slot);
                         const isAvailable = availableSlots.includes(slot);
-                        return isAvailable || isBooked ? (
+                        
+                        const startTime = slot;
+                        const startMinutes = parse12HourTime(startTime);
+                        const endMinutes = startMinutes! + booking.duration * 60;
+                        const endTime = to12HourTime(endMinutes);
+                        const displaySlot = `${startTime} - ${endTime}`;
+
+                        return (
                           <button
                             key={slot}
-                            onClick={() => !isBooked && update({ timeSlot: slot })}
-                            disabled={isBooked}
-                            className={`rounded-lg border py-2.5 text-xs font-medium transition-all font-body ${
-                              isBooked
-                                ? "border-border bg-muted text-muted-foreground line-through cursor-not-allowed opacity-60"
-                                : booking.timeSlot === slot
-                                ? "border-primary bg-muted text-primary"
-                                : "border-border text-foreground hover:border-primary"
+                            disabled={!isAvailable || isBooked}
+                            onClick={() => update({ timeSlot: slot })}
+                            className={`rounded-xl border p-3 text-center transition-all ${
+                              booking.timeSlot === slot
+                                ? "border-primary bg-primary/10 text-primary glow-gold shadow-sm"
+                                : isBooked
+                                ? "cursor-not-allowed border-border bg-muted/50 text-muted-foreground line-through opacity-50"
+                                : !isAvailable
+                                ? "cursor-not-allowed border-dashed border-border bg-muted/30 text-muted-foreground opacity-50"
+                                : "border-border text-foreground hover:border-primary/50 hover:bg-muted"
                             }`}
                           >
-                            {formatSlotRange(slot, booking.duration || 1)}
+                            <span className="block text-[10px] font-bold md:text-sm font-body">{displaySlot}</span>
                           </button>
-                        ) : null;
+                        );
                       });
                     })()}
                   </div>
@@ -376,7 +394,7 @@ const BookingPage = () => {
                         value={(booking as any)[field.key]}
                         onChange={(e) => update({ [field.key]: e.target.value })}
                         className="flex-1 bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:outline-none"
-                        maxLength="10"
+                        maxLength={10}
                       />
                     </div>
                   ) : (

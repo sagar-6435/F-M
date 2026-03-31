@@ -58,6 +58,8 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "specific" | "all">("all");
+  const [customDate, setCustomDate] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
@@ -87,6 +89,8 @@ const AdminDashboard = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [newTestimonialTitle, setNewTestimonialTitle] = useState("");
   const [uploadingTestimonial, setUploadingTestimonial] = useState(false);
+  const [manualAvailableSlots, setManualAvailableSlots] = useState<string[]>([]);
+  const [manualBookedSlots, setManualBookedSlots] = useState<string[]>([]);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -111,12 +115,46 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch bookings and stats when logged in or branch changes
+  // Fetch bookings and stats when logged in or branch/filter changes
   useEffect(() => {
     if (isLoggedIn && token) {
       fetchData();
     }
-  }, [isLoggedIn, token, selectedBranch]);
+  }, [isLoggedIn, token, selectedBranch, filter, dateFilter, customDate]);
+
+  useEffect(() => {
+    setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
+  }, [selectedBranch]);
+
+  // Check availability for manual booking
+  useEffect(() => {
+    if (manualBooking.date && manualBooking.branch && manualBooking.duration && manualBooking.service) {
+      checkManualAvailability();
+    }
+  }, [manualBooking.date, manualBooking.branch, manualBooking.duration, manualBooking.service]);
+
+  const checkManualAvailability = async () => {
+    try {
+      const data = await api.getAvailableSlots(
+        manualBooking.branch,
+        manualBooking.date,
+        manualBooking.service,
+        manualBooking.duration
+      );
+      setManualAvailableSlots(data.availableSlots);
+      setManualBookedSlots(data.bookedSlots);
+      
+      // If currently selected slot is not available, reset to first available
+      if (!data.availableSlots.includes(manualBooking.timeSlot) || data.bookedSlots.includes(manualBooking.timeSlot)) {
+        const firstAvailable = data.availableSlots.find(s => !data.bookedSlots.includes(s));
+        if (firstAvailable) {
+          setManualBooking(prev => ({ ...prev, timeSlot: firstAvailable }));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking manual availability:", error);
+    }
+  };
 
   const fetchData = async () => {
     if (!token) {
@@ -126,9 +164,33 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      
+      const getLocalIDODate = (date: Date) => {
+        const offset = date.getTimezoneOffset();
+        const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
+        return adjustedDate.toISOString().split('T')[0];
+      };
+
+      const todayDoc = new Date();
+      if (dateFilter === "today") {
+        startDate = getLocalIDODate(todayDoc);
+        endDate = startDate;
+      } else if (dateFilter === "yesterday") {
+        const yesterdayDoc = new Date(todayDoc);
+        yesterdayDoc.setDate(yesterdayDoc.getDate() - 1);
+        startDate = getLocalIDODate(yesterdayDoc);
+        endDate = startDate;
+      } else if (dateFilter === "specific" && customDate) {
+        startDate = customDate;
+        endDate = customDate;
+      }
+
       const [bookingsData, statsData] = await Promise.all([
-        api.getBookings(token, selectedBranch),
-        api.getDashboardStats(token, selectedBranch),
+        api.getBookings(token, selectedBranch, filter === "all" ? undefined : filter, startDate, endDate),
+        api.getDashboardStats(token, selectedBranch, startDate, endDate),
       ]);
       setBookings(bookingsData);
       setStats(statsData);
@@ -520,7 +582,9 @@ const AdminDashboard = () => {
     );
   }
 
-  const filtered = bookings.filter((b) => filter === "all" || b.paymentStatus === filter);
+  const filtered = bookings.filter((b) => 
+    b.branch === selectedBranch && (filter === "all" || b.paymentStatus === filter)
+  );
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -659,6 +723,52 @@ const AdminDashboard = () => {
             )}
 
             {/* Bookings Table */}
+            {/* Date Filters */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setDateFilter("all")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  dateFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => setDateFilter("today")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  dateFilter === "today" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setDateFilter("yesterday")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  dateFilter === "yesterday" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Yesterday
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDateFilter("specific")}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                    dateFilter === "specific" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  Specific Date
+                </button>
+                {dateFilter === "specific" && (
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    className="rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                )}
+              </div>
+            </div>
+
             <div className="overflow-x-auto rounded-xl border border-border">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -891,16 +1001,39 @@ const AdminDashboard = () => {
                     onChange={(e) => setManualBooking({ ...manualBooking, timeSlot: e.target.value })}
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                   >
-                    {["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM", "8:00 PM"].map((slot) => (
-                      <option key={slot} value={slot}>{slot}</option>
-                    ))}
+                    {(() => {
+                      const slotsByDuration: Record<number, string[]> = {
+                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
+                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
+                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
+                      };
+                      const allPotentialSlots = slotsByDuration[manualBooking.duration] || [];
+                      return allPotentialSlots.map((slot) => {
+                        const isBooked = manualBookedSlots.includes(slot);
+                        const isAvailable = manualAvailableSlots.includes(slot);
+                        return (
+                          <option key={slot} value={slot} disabled={isBooked || !isAvailable}>
+                            {slot} {isBooked ? "(Booked)" : !isAvailable ? "(Unavailable)" : ""}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Duration (hours)</label>
                   <select
                     value={manualBooking.duration}
-                    onChange={(e) => setManualBooking({ ...manualBooking, duration: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const newDuration = parseInt(e.target.value);
+                      const slotsByDuration: Record<number, string[]> = {
+                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
+                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
+                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
+                      };
+                      const firstSlot = slotsByDuration[newDuration][0];
+                      setManualBooking({ ...manualBooking, duration: newDuration, timeSlot: firstSlot });
+                    }}
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                   >
                     <option value="1">1 Hour</option>
@@ -932,7 +1065,7 @@ const AdminDashboard = () => {
                       value={manualBooking.phone}
                       onChange={(e) => setManualBooking({ ...manualBooking, phone: e.target.value })}
                       required
-                      maxLength="10"
+                      maxLength={10}
                       className="flex-1 bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:outline-none"
                       placeholder="10 digit number"
                     />
@@ -1368,6 +1501,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Gallery Tab */}
         {activeTab === "gallery" && (
           <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
             <h2 className="font-display text-2xl font-bold text-foreground">Gallery Management</h2>
@@ -1401,38 +1535,6 @@ const AdminDashboard = () => {
                   </button>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Detail Modal */}
-        {selectedBooking && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setSelectedBooking(null)}>
-            <div className="mx-4 w-full max-w-md rounded-2xl border border-border bg-card p-8" onClick={(e) => e.stopPropagation()}>
-              <h3 className="mb-6 font-display text-xl font-bold text-foreground">Booking {selectedBooking.id}</h3>
-              <div className="space-y-3">
-                {[
-                  { icon: <MapPin className="h-4 w-4 text-primary" />, value: BRANCHES.find((b) => b.id === selectedBooking.branch)?.name },
-                  { icon: <Calendar className="h-4 w-4 text-primary" />, value: `${selectedBooking.date} at ${selectedBooking.timeSlot} (${selectedBooking.duration}hr)` },
-                  { icon: <Phone className="h-4 w-4 text-primary" />, value: selectedBooking.phone },
-                  { icon: <Mail className="h-4 w-4 text-primary" />, value: selectedBooking.email },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm text-foreground font-body">
-                    {item.icon}
-                    {item.value}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-between border-t border-border pt-4">
-                <span className="text-sm text-muted-foreground font-body">Total</span>
-                <span className="text-lg font-bold text-primary font-display">₹{selectedBooking.totalPrice.toLocaleString()}</span>
-              </div>
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="mt-6 w-full rounded-xl border border-border py-3 text-sm font-medium text-foreground transition-colors hover:border-primary font-body"
-              >
-                Close
-              </button>
             </div>
           </div>
         )}

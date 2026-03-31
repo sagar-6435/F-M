@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { getBookingsExcelFile } from './utils/excelExport.js';
 import { saveBookings, loadBookings, saveTimeSlots, loadTimeSlots } from './utils/persistence.js';
 import { clearAllBookings, getAllBookingsFromFiles, migrateBookingsToMongo } from './utils/migration.js';
+import { sendBookingNotification } from './utils/notification.js';
 
 dotenv.config();
 
@@ -42,8 +43,8 @@ const defaultPricing = {
 };
 
 const OPENING_TIME_MINUTES = 10 * 60; // 10:00 AM
-const CLOSING_TIME_MINUTES = 23 * 60 + 30; // 11:30 PM
-const SLOT_STEP_MINUTES = 30;
+const CLOSING_TIME_MINUTES = 23 * 60 + 59; // 11:59 PM
+const SLOT_STEP_MINUTES = 30; // Internal step for generating all possible start times
 
 const to12HourTime = (minutes) => {
   const period = minutes >= 12 * 60 ? 'PM' : 'AM';
@@ -89,59 +90,61 @@ const canFitBookingInOperatingHours = (startTime, durationHours = 1) => {
   const startMinutes = parse12HourTime(startTime);
   if (startMinutes === null) return false;
   const endMinutes = startMinutes + Number(durationHours) * 60;
-  return startMinutes >= OPENING_TIME_MINUTES && endMinutes <= CLOSING_TIME_MINUTES + SLOT_STEP_MINUTES;
+  // Reject if Start time < 10:00 AM or End time > 11:59 PM
+  return startMinutes >= OPENING_TIME_MINUTES && endMinutes <= CLOSING_TIME_MINUTES;
 };
 
-const getAvailableStartSlots = (bookedSlots, durationHours = 1) => {
-  const daySlots = buildDaySlots();
-  const bookedSet = new Set(bookedSlots);
-  const needed = Math.max(1, Math.round((Number(durationHours) * 60) / SLOT_STEP_MINUTES));
+// Function to check if a new booking interval overlaps with an existing booking (including 30-min buffer)
+const isOverlappingWithBuffer = (newStart, newDuration, existingStartStr, existingDuration) => {
+  const newEnd = newStart + Number(newDuration) * 60;
+  const existingStart = parse12HourTime(existingStartStr);
+  if (existingStart === null) return false;
+  const existingEnd = existingStart + Number(existingDuration) * 60;
+  
+  // CORE CONDITION: Reject if (newStart < existingEnd + 30min && newEnd > existingStart)
+  if (newStart < (existingEnd + 30) && newEnd > existingStart) {
+    return true;
+  }
+  return false;
+};
+
+// Filter out slots based on bookings
+const getAvailableStartSlots = (bookings, requestedDuration = 1) => {
+  // Discrete slots based on user requirements for each duration
+  const slotsByDuration = {
+    1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
+    2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
+    3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
+  };
+  
+  const daySlots = slotsByDuration[requestedDuration] || [];
   const available = [];
 
-  for (let i = 0; i < daySlots.length; i++) {
-    const start = daySlots[i];
+  for (const start of daySlots) {
     const startMinutes = parse12HourTime(start);
     if (startMinutes === null) continue;
 
-    const endMinutes = startMinutes + Number(durationHours) * 60;
-    if (endMinutes > CLOSING_TIME_MINUTES + SLOT_STEP_MINUTES) continue;
+    const endMinutes = startMinutes + Number(requestedDuration) * 60;
+    // Limit check (End time > 11:59 PM)
+    if (endMinutes > CLOSING_TIME_MINUTES + 1) continue;
 
-    let canUse = true;
-    for (let j = 0; j < needed; j++) {
-      const slot = daySlots[i + j];
-      if (!slot || bookedSet.has(slot)) {
-        canUse = false;
+    let hasConflict = false;
+    for (const b of bookings) {
+      const conflict = isOverlappingWithBuffer(startMinutes, requestedDuration, b.timeSlot, b.duration);
+      if (conflict) {
+        console.log(`Conflict found for slot ${start} with booking ${b.id} (${b.timeSlot}, ${b.duration}h)`);
+        hasConflict = true;
         break;
       }
     }
-    if (canUse) available.push(start);
-  }
-
-  return available;
-};
-
-// Calculate gap between end of last booking and start of next available slot
-const calculateGapMinutes = (bookedSlots, startSlotIndex, daySlots) => {
-  if (bookedSlots.length === 0) return Infinity; // No bookings, unlimited gap
-  
-  const startSlot = daySlots[startSlotIndex];
-  const startMinutes = parse12HourTime(startSlot);
-  
-  // Find the last booked slot before this start time
-  let lastBookedMinutes = -1;
-  for (const bookedSlot of bookedSlots) {
-    const bookedMinutes = parse12HourTime(bookedSlot);
-    if (bookedMinutes < startMinutes && bookedMinutes > lastBookedMinutes) {
-      lastBookedMinutes = bookedMinutes;
+    
+    if (!hasConflict) {
+      available.push(start);
     }
   }
-  
-  if (lastBookedMinutes === -1) return Infinity; // No prior bookings
-  
-  // Gap is from end of last booking to start of next slot
-  // Each slot is 30 minutes, so add 30 to get the end time
-  const lastBookedEndMinutes = lastBookedMinutes + SLOT_STEP_MINUTES;
-  return startMinutes - lastBookedEndMinutes;
+  console.log(`Available slots for date:`, available);
+
+  return available;
 };
 
 // Get allowed durations based on gap
@@ -156,44 +159,7 @@ const getAllowedDurationsForGap = (gapMinutes) => {
   return []; // Gap < 1 hour: no bookings allowed
 };
 
-// Get available slots with duration restrictions based on gaps
-const getAvailableSlotsWithGapRestrictions = (bookedSlots, requestedDuration = 1) => {
-  const daySlots = buildDaySlots();
-  const bookedSet = new Set(bookedSlots);
-  const needed = Math.max(1, Math.round((Number(requestedDuration) * 60) / SLOT_STEP_MINUTES));
-  const available = [];
 
-  for (let i = 0; i < daySlots.length; i++) {
-    const start = daySlots[i];
-    const startMinutes = parse12HourTime(start);
-    if (startMinutes === null) continue;
-
-    const endMinutes = startMinutes + Number(requestedDuration) * 60;
-    if (endMinutes > CLOSING_TIME_MINUTES + SLOT_STEP_MINUTES) continue;
-
-    // Check if slots are available
-    let canUse = true;
-    for (let j = 0; j < needed; j++) {
-      const slot = daySlots[i + j];
-      if (!slot || bookedSet.has(slot)) {
-        canUse = false;
-        break;
-      }
-    }
-    
-    if (!canUse) continue;
-
-    // Check gap-based restrictions
-    const gapMinutes = calculateGapMinutes(bookedSlots, i, daySlots);
-    const allowedDurations = getAllowedDurationsForGap(gapMinutes);
-    
-    if (allowedDurations.includes(requestedDuration)) {
-      available.push(start);
-    }
-  }
-
-  return available;
-};
 
 const createBranchPricingDb = () => ({
   cakes: JSON.parse(JSON.stringify(defaultCakes)),
@@ -648,26 +614,41 @@ app.post('/api/admin/logout', (req, res) => {
 });
 
 app.get('/api/admin/dashboard/stats', verifyAdmin, async (req, res) => {
-  const { branch } = req.query;
+  const { branch, startDate, endDate } = req.query;
   let allBookings = [];
   
   try {
     if (branch && mongoConnections[branch]) {
-      allBookings = await Booking.find({});
+      let query = { branch };
+      if (startDate && endDate) query.date = { $gte: startDate, $lte: endDate };
+      allBookings = await Booking.find(query);
     } else if (branch) {
       const branchDb = getBranchDb(branch);
-      if (branchDb) allBookings = branchDb.bookings;
+      if (branchDb) {
+        allBookings = branchDb.bookings;
+        if (startDate && endDate) {
+          allBookings = allBookings.filter(b => b.date >= startDate && b.date <= endDate);
+        }
+      }
     } else {
       if (mongoConnections['branch-1']) {
-        const mongoBookings = await Booking.find({});
+        let query = {};
+        if (startDate && endDate) query.date = { $gte: startDate, $lte: endDate };
+        const mongoBookings = await Booking.find(query);
         allBookings = allBookings.concat(mongoBookings);
       }
       if (mongoConnections['branch-2']) {
-        const mongoBookings = await Booking.find({});
+        let query = {};
+        if (startDate && endDate) query.date = { $gte: startDate, $lte: endDate };
+        const mongoBookings = await Booking.find(query);
         allBookings = allBookings.concat(mongoBookings);
       }
       for (const branchId in branchDbs) {
-        allBookings = allBookings.concat(branchDbs[branchId].bookings);
+        let branchBookings = branchDbs[branchId].bookings;
+        if (startDate && endDate) {
+          branchBookings = branchBookings.filter(b => b.date >= startDate && b.date <= endDate);
+        }
+        allBookings = allBookings.concat(branchBookings);
       }
     }
     
@@ -764,16 +745,28 @@ app.get('/api/admin/bookings/download', verifyAdmin, async (req, res) => {
   try {
     const branch = req.query.branch || 'all';
     
-    // Get bookings from memory
+    // Get bookings
     let allBookings = [];
     if (branch === 'all') {
+      // Get from MongoDB for all active branches
+      for (const branchId in mongoConnections) {
+        if (mongoConnections[branchId]) {
+          const mBookings = await Booking.find({ branch: branchId });
+          allBookings = allBookings.concat(mBookings);
+        }
+      }
+      // Combine with local data
       for (const branchId in branchDbs) {
         allBookings = allBookings.concat(branchDbs[branchId].bookings);
       }
     } else {
-      const branchDb = getBranchDb(branch);
-      if (branchDb) {
-        allBookings = branchDb.bookings;
+      if (mongoConnections[branch]) {
+        allBookings = await Booking.find({ branch });
+      } else {
+        const branchDb = getBranchDb(branch);
+        if (branchDb) {
+          allBookings = branchDb.bookings;
+        }
       }
     }
     
@@ -830,7 +823,17 @@ app.get('/api/admin/bookings/download', verifyAdmin, async (req, res) => {
 
 // Branches
 app.get('/api/branches', (req, res) => {
-  res.json(globalDb.branches);
+  try {
+    if (!globalDb || !globalDb.branches) {
+      console.error('Critical Error: globalDb or globalDb.branches is missing!');
+      return res.status(500).json({ error: 'Server data configuration error' });
+    }
+    console.log(`✓ Serving ${globalDb.branches.length} branches`);
+    res.json(globalDb.branches);
+  } catch (error) {
+    console.error('Unexpected error in GET /api/branches:', error);
+    res.status(500).json({ error: 'Internal server error while fetching branches' });
+  }
 });
 
 app.get('/api/branches/:id', (req, res) => {
@@ -996,35 +999,33 @@ app.get('/api/availability/:branchId/:date/:service', async (req, res) => {
   let bookedSlots = [];
   
   try {
+    let bookings = [];
     if (mongoConnections[branchId]) {
-      const slots = await TimeSlot.find({ date });
-      bookedSlots = slots.map(slot => slot.timeSlot);
+      bookings = await Booking.find({ branch: branchId, date });
     } else if (branchDb) {
-      bookedSlots = branchDb.timeSlots.filter(slot => slot.date === date).map(slot => slot.timeSlot);
-      console.log(`Availability check - Branch: ${branchId}, Date: ${date}, Service: ${service}`);
-      console.log(`Total timeSlots in memory: ${branchDb.timeSlots.length}`);
-      console.log(`Booked slots for this date: ${bookedSlots.length}`, bookedSlots);
+      bookings = branchDb.bookings.filter(b => b.date === date);
     }
     
-    // Use gap-aware availability logic
-    let availableSlots = getAvailableSlotsWithGapRestrictions(bookedSlots, duration);
+    const availableSlots = getAvailableStartSlots(bookings, duration);
+    const bookedSlotsList = bookings.reduce((acc, b) => {
+        return acc.concat(getBlockedSlotsForBooking(b.timeSlot, b.duration));
+    }, []);
     
     // Filter out past slots if the date is today
     const today = new Date().toISOString().split('T')[0];
+    let filteredAvailable = availableSlots;
     if (date === today) {
       const now = new Date();
       const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
       
-      availableSlots = availableSlots.filter(slot => {
+      filteredAvailable = availableSlots.filter(slot => {
         const slotMinutes = parse12HourTime(slot);
         // Only show slots that start at least 1 hour from now
         return slotMinutes > currentTimeMinutes + 60;
       });
-      
-      console.log(`Filtered available slots (removing past slots): ${availableSlots.length}`, availableSlots);
     }
     
-    res.json({ availableSlots, bookedSlots });
+    res.json({ availableSlots: filteredAvailable, bookedSlots: bookedSlotsList });
   } catch (error) {
     console.error('Error fetching availability:', error);
     res.status(500).json({ error: 'Failed to fetch availability' });
@@ -1048,7 +1049,7 @@ app.post('/api/bookings', async (req, res) => {
   
   try {
     if (!canFitBookingInOperatingHours(booking.timeSlot, booking.duration)) {
-      return res.status(400).json({ error: 'Selected time is outside operating hours (10:00 AM - 11:30 PM)' });
+      return res.status(400).json({ error: 'Selected time is outside available hours (10:00 AM - 11:59 PM)' });
     }
 
     const slotsToBlock = getBlockedSlotsForBooking(booking.timeSlot, booking.duration);
@@ -1056,20 +1057,25 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ error: 'Invalid booking time slot' });
     }
 
-    let alreadyBookedSlots = [];
+    let existingBookings = [];
     if (mongoConnections[branch]) {
-      const existingSlots = await TimeSlot.find({ date: booking.date, timeSlot: { $in: slotsToBlock } });
-      alreadyBookedSlots = existingSlots.map((slot) => slot.timeSlot);
+      existingBookings = await Booking.find({ branch, date: booking.date });
     } else if (branchDb) {
-      alreadyBookedSlots = branchDb.timeSlots
-        .filter((slot) => slot.date === booking.date && slotsToBlock.includes(slot.timeSlot))
-        .map((slot) => slot.timeSlot);
+      existingBookings = branchDb.bookings.filter(b => b.date === booking.date);
     }
 
-    if (alreadyBookedSlots.length > 0) {
+    const startMinutes = parse12HourTime(booking.timeSlot);
+    let conflictFound = false;
+    for (const b of existingBookings) {
+      if (isOverlappingWithBuffer(startMinutes, booking.duration, b.timeSlot, b.duration)) {
+        conflictFound = true;
+        break;
+      }
+    }
+
+    if (conflictFound) {
       return res.status(409).json({
-        error: 'Selected slot is already booked',
-        bookedSlots: alreadyBookedSlots,
+        error: 'Slot not available (overlaps with existing booking or buffer time)',
       });
     }
 
@@ -1144,7 +1150,7 @@ app.get('/api/bookings', verifyAdmin, async (req, res) => {
   
   try {
     if (branch && mongoConnections[branch]) {
-      let query = {};
+      let query = { branch };
       if (status) query.paymentStatus = status;
       if (startDate && endDate) query.date = { $gte: startDate, $lte: endDate };
       allBookings = await Booking.find(query);
@@ -1168,6 +1174,18 @@ app.get('/api/bookings', verifyAdmin, async (req, res) => {
     let filtered = allBookings;
     if (status) filtered = filtered.filter(b => b.paymentStatus === status);
     if (startDate && endDate) filtered = filtered.filter(b => b.date >= startDate && b.date <= endDate);
+    
+    // Sort datewise (ascending)
+    filtered.sort((a, b) => {
+      // Primary sort: Date
+      if (a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      // Secondary sort: Time Slot
+      const timeA = parse12HourTime(a.timeSlot) || 0;
+      const timeB = parse12HourTime(b.timeSlot) || 0;
+      return timeA - timeB;
+    });
     
     res.json(filtered);
   } catch (error) {
@@ -1259,6 +1277,14 @@ app.post('/api/payments/process', async (req, res) => {
         } catch (saveError) {
           console.error('Failed to save booking data:', saveError);
         }
+        
+        // Send notification
+        try {
+          await sendBookingNotification(booking);
+        } catch (notifyError) {
+          console.error('Failed to send notification:', notifyError);
+        }
+        
         return res.json({ success: true, message: 'Payment processed', booking });
       }
     }
