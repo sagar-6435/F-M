@@ -274,4 +274,17 @@ export const api = {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
   },
+
+  updateBranch: async (token: string, branchId: string, data: any): Promise<any> => {
+    const res = await fetch(`${API_BASE}/branches/${branchId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to update branch");
+    return res.json();
+  },
 };

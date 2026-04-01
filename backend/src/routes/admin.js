@@ -1,70 +1,189 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
+import * as adminController from '../controllers/adminController.js';
+import * as catalogController from '../controllers/catalogController.js';
 import { verifyAdmin } from '../middleware/auth.js';
-import { mongoConnections } from '../config/database.js';
-import { Booking } from '../models/schemas.js';
-import { branchDbs, getBranchDb } from '../data/globalDb.js';
+import { getAllBookingsFromFiles } from '../utils/migration.js';
+import { mongoConnections, getBranchModels } from '../config/mongo.js';
+import { branchDbs } from '../config/constants.js';
+import { v4 as uuidv4 } from 'uuid';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
+const getRootFolderForBranch = (branchId) => branchId === 'branch-2' ? 'f-m-bvrm' : 'f-m-elr';
 
-// Admin Login
-router.post('/login', (req, res) => {
-  const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  
-  // Trim whitespace from both sides
-  const trimmedPassword = password ? password.trim() : '';
-  const trimmedAdminPassword = adminPassword ? adminPassword.trim() : '';
-  
-  if (trimmedPassword === trimmedAdminPassword) {
-    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, message: 'Login successful' });
-  } else {
-    res.status(401).json({ error: 'Invalid password' });
+router.post('/login', adminController.login);
+router.post('/logout', (req, res) => res.json({ message: 'Logout successful' }));
+
+router.get('/dashboard/stats', verifyAdmin, adminController.getDashboardStats);
+router.post('/migrate-to-mongo', verifyAdmin, adminController.migrateToMongo);
+router.post('/migrate-pricing-to-mongo', verifyAdmin, adminController.migratePricingToMongo);
+router.post('/clear-bookings', verifyAdmin, adminController.clearBookings);
+
+router.get('/all-bookings', verifyAdmin, async (req, res) => {
+  try {
+    const allBookings = await getAllBookingsFromFiles();
+    res.json({ count: allBookings.length, bookings: allBookings, timestamp: new Date() });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
-// Admin Logout
-router.post('/logout', (req, res) => {
-  res.json({ message: 'Logout successful' });
+// Gallery & Testimonials (Admin)
+router.get('/gallery', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || 'branch-1';
+  const type = req.query.type;
+  const catalog = await catalogController.getCatalogForBranch(branch);
+  if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+  const cakes = catalog.cakes.map((item) => ({ ...item, type: 'cake' }));
+  const decorations = catalog.decorations.map((item) => ({ ...item, type: 'decoration' }));
+  let items = [...cakes, ...decorations];
+  if (type === 'cake' || type === 'decoration') {
+    items = items.filter((item) => item.type === type);
+  }
+  res.json(items);
 });
 
-// Dashboard Stats
-router.get('/dashboard/stats', verifyAdmin, async (req, res) => {
-  const { branch } = req.query;
-  let allBookings = [];
+router.put('/gallery/:type/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { type, id } = req.params;
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'Image required' });
+  if (type !== 'cake' && type !== 'decoration') return res.status(400).json({ error: 'Invalid type' });
   
   try {
-    if (branch && mongoConnections[branch]) {
-      allBookings = await Booking.find({});
-    } else if (branch) {
-      const branchDb = getBranchDb(branch);
-      if (branchDb) allBookings = branchDb.bookings;
-    } else {
-      if (mongoConnections['branch-1']) {
-        const mongoBookings = await Booking.find({});
-        allBookings = allBookings.concat(mongoBookings);
-      }
-      if (mongoConnections['branch-2']) {
-        const mongoBookings = await Booking.find({});
-        allBookings = allBookings.concat(mongoBookings);
+    // If it's a data URL (base64 from frontend), upload to Cloudinary
+    let imageUrl = image;
+    if (image.startsWith('data:image')) {
+      const rootFolder = getRootFolderForBranch(branch);
+      console.log(`☁️ Uploading ${type} image to Cloudinary [${rootFolder}]...`);
+      imageUrl = await uploadToCloudinary(image, type + 's', rootFolder);
+      console.log(`✅ ${type} image uploaded: ${imageUrl}`);
+    }
+
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const list = type === 'cake' ? catalog.cakes : catalog.decorations;
+    const item = list.find((entry) => entry.id === id);
+    if (!item) return res.status(404).json({ error: `${type} not found` });
+    
+    item.image = imageUrl;
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(item);
+  } catch (err) {
+    console.error('Upload failed:', err);
+    res.status(500).json({ error: 'Failed to upload/save image' });
+  }
+});
+
+router.post('/gallery/testimonials', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { image, title, date } = req.body;
+  if (!image) return res.status(400).json({ error: 'Image required' });
+  
+  try {
+    let imageUrl = image;
+    if (image.startsWith('data:image')) {
+      const rootFolder = getRootFolderForBranch(branch);
+      console.log(`☁️ Uploading testimonial image to Cloudinary [${rootFolder}]...`);
+      imageUrl = await uploadToCloudinary(image, 'testimonials', rootFolder);
+    }
+
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const testimonial = {
+      id: `testimonial-${uuidv4()}`,
+      image: imageUrl,
+      title: title || 'Customer Memory',
+      date: date || new Date().toLocaleDateString(),
+    };
+    catalog.testimonials.push(testimonial);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.status(201).json(testimonial);
+  } catch (err) {
+    console.error('Testimonial upload failed:', err);
+    res.status(500).json({ error: 'Failed to upload/save testimonial' });
+  }
+});
+
+router.delete('/gallery/testimonials/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const catalog = await catalogController.getCatalogForBranch(branch);
+  if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+  const index = catalog.testimonials.findIndex((item) => item.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Not found' });
+  catalog.testimonials.splice(index, 1);
+  await catalogController.saveCatalogForBranch(branch, catalog);
+  res.json({ message: 'Deleted' });
+});
+
+// Download Bookings Excel
+router.get('/bookings/download', verifyAdmin, async (req, res) => {
+  try {
+    const branch = req.query.branch || 'all';
+    let allBookings = [];
+    if (branch === 'all') {
+      for (const branchId in mongoConnections) {
+        const models = getBranchModels(branchId);
+        if (models) {
+          const mBookings = await models.Booking.find({ branch: branchId });
+          allBookings = allBookings.concat(mBookings);
+        }
       }
       for (const branchId in branchDbs) {
-        allBookings = allBookings.concat(branchDbs[branchId].bookings);
+        if (!mongoConnections[branchId]) {
+          allBookings = allBookings.concat(branchDbs[branchId].bookings);
+        }
+      }
+    } else {
+      const models = getBranchModels(branch);
+      if (models) {
+        allBookings = await models.Booking.find({ branch });
+      } else {
+        const branchDb = branchDbs[branch];
+        if (branchDb) allBookings = branchDb.bookings;
       }
     }
     
-    const totalBookings = allBookings.length;
-    const paidBookings = allBookings.filter(b => b.paymentStatus === 'paid').length;
-    const pendingBookings = allBookings.filter(b => b.paymentStatus === 'pending').length;
-    const totalRevenue = allBookings
-      .filter(b => b.paymentStatus === 'paid')
-      .reduce((sum, b) => sum + b.totalPrice, 0);
+    const paidBookings = allBookings.filter(booking => booking.paymentStatus === 'paid');
+    if (paidBookings.length === 0) return res.status(404).json({ error: 'No paid bookings found' });
     
-    res.json({ totalBookings, paidBookings, pendingBookings, totalRevenue });
+    const XLSX = (await import('xlsx')).default;
+    const bookingRows = paidBookings.map(booking => ({
+      'Booking ID': booking.id,
+      'Branch': booking.branch,
+      'Service': booking.service,
+      'Date': booking.date,
+      'Time Slot': booking.timeSlot,
+      'Duration (hrs)': booking.duration,
+      'Customer Name': booking.name,
+      'Phone': booking.phone,
+      'Email': booking.email,
+      'Occasion': booking.customOccasion || booking.occasion,
+      'Decoration Required': booking.decorationRequired ? 'Yes' : 'No',
+      'Cake Selected': booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : 'None',
+      'Extra Decorations': booking.extraDecorations?.map((d) => `${d.name} (₹${d.price})`).join('; ') || 'None',
+      'Total Price': booking.totalPrice,
+      'Payment Status': booking.paymentStatus,
+      'Booking Date': new Date(booking.createdAt).toLocaleString(),
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(bookingRows);
+    const columnWidths = [
+      { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 15 },
+      { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
+      { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 20 }
+    ];
+    worksheet['!cols'] = columnWidths;
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Paid Bookings');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const fileName = `bookings_${branch}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(excelBuffer);
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    console.error('Error downloading bookings:', error);
+    res.status(500).json({ error: 'Failed to download bookings file' });
   }
 });
 

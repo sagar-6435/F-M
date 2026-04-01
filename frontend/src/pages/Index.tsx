@@ -59,9 +59,11 @@ const Index = () => {
               <Play className="h-4 w-4" /> View Services
             </a>
           </div>
-          <a href="tel:+919912710932" className="mt-8 inline-flex items-center gap-2 text-sm text-muted-foreground font-body">
-            <Phone className="h-4 w-4 text-primary" /> Call us: +91 99127 10932
-          </a>
+          {branches.length > 0 && (
+            <a href={`tel:${branches[0].phone}`} className="mt-8 inline-flex items-center gap-2 text-sm text-muted-foreground font-body">
+              <Phone className="h-4 w-4 text-primary" /> Call us: {branches[0].phone}
+            </a>
+          )}
         </div>
       </section>
 

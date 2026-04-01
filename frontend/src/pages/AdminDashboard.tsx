@@ -60,7 +60,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "specific" | "all">("all");
   const [customDate, setCustomDate] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery">("bookings");
+  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "settings">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
     service: "party-hall",
@@ -91,6 +91,9 @@ const AdminDashboard = () => {
   const [uploadingTestimonial, setUploadingTestimonial] = useState(false);
   const [manualAvailableSlots, setManualAvailableSlots] = useState<string[]>([]);
   const [manualBookedSlots, setManualBookedSlots] = useState<string[]>([]);
+  const [branchEditData, setBranchEditData] = useState({ name: "", address: "", phone: "", mapLink: "" });
+  const [savingBranch, setSavingBranch] = useState(false);
+  const [branchList, setBranchList] = useState<any[]>([]);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -109,6 +112,9 @@ const AdminDashboard = () => {
       setIsLoggedIn(true);
       setPassword("");
       localStorage.setItem("adminToken", data.token);
+      
+      const bData = await api.getBranches();
+      setBranchList(bData);
     } catch (err) {
       setError("Invalid password");
       console.error("Login error:", err);
@@ -219,8 +225,35 @@ const AdminDashboard = () => {
       setDecorations(decorationsData);
       setDecorationPrice(decorationPriceData);
       setTestimonials(await api.getTestimonials(selectedBranch));
+      
+      const bList = await api.getBranches();
+      setBranchList(bList);
+      const currentBranch = bList.find(b => b.id === selectedBranch);
+      if (currentBranch) {
+        setBranchEditData({
+          name: currentBranch.name,
+          address: currentBranch.address,
+          phone: currentBranch.phone,
+          mapLink: currentBranch.mapLink || ""
+        });
+      }
     } catch (error) {
       console.error("Error fetching pricing:", error);
+    }
+  };
+
+  const handleSaveBranchDetails = async () => {
+    if (!token) return;
+    try {
+      setSavingBranch(true);
+      await api.updateBranch(token, selectedBranch, branchEditData);
+      await fetchPricing(); // Refresh data
+      alert("Branch details updated successfully!");
+    } catch (error) {
+      console.error("Error saving branch details:", error);
+      setError("Failed to update branch details");
+    } finally {
+      setSavingBranch(false);
     }
   };
 
@@ -663,6 +696,17 @@ const AdminDashboard = () => {
           >
             <Eye className="inline h-4 w-4 mr-2" />
             Gallery
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
+              activeTab === "settings"
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Settings className="inline h-4 w-4 mr-2" />
+            Settings
           </button>
         </div>
 
@@ -1536,6 +1580,66 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-6">
+            <h2 className="font-display text-2xl font-bold text-foreground">Branch Settings</h2>
+            <p className="text-sm text-muted-foreground font-body">
+              Update the contact information and address for the selected branch.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Branch Name</label>
+                <input
+                  type="text"
+                  value={branchEditData.name}
+                  onChange={(e) => setBranchEditData({ ...branchEditData, name: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  value={branchEditData.phone}
+                  onChange={(e) => setBranchEditData({ ...branchEditData, phone: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Physical Address</label>
+                <textarea
+                  value={branchEditData.address}
+                  onChange={(e) => setBranchEditData({ ...branchEditData, address: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Google Maps Link</label>
+                <input
+                  type="text"
+                  value={branchEditData.mapLink}
+                  onChange={(e) => setBranchEditData({ ...branchEditData, mapLink: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveBranchDetails}
+              disabled={savingBranch}
+              className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50"
+            >
+              {savingBranch ? "Saving Changes..." : "Update Branch Details"}
+            </button>
           </div>
         )}
       </div>

@@ -79,11 +79,11 @@ const GalleryPage = () => {
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="rounded-full border border-border bg-muted px-4 py-2 text-xs font-medium text-foreground focus:border-primary focus:outline-none"
+              className="rounded-full border border-border bg-muted px-6 py-3 text-m font-semibold text-foreground focus:border-primary focus:outline-none transition-all hover:border-primary/50"
             >
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
-                  {branch.name}
+                  {branch.id === 'branch-1' ? 'ELURU' : (branch.id === 'branch-2' ? 'BHIMAVARAM' : branch.name)}
                 </option>
               ))}
             </select>

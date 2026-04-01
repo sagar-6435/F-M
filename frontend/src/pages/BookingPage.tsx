@@ -334,46 +334,39 @@ const BookingPage = () => {
               {booking.duration > 0 && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Available Time Slots</label>
-                  <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
-                    {(() => {
-                      const slotsByDuration: Record<number, string[]> = {
-                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
-                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
-                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
-                      };
-                      
-                      const slotsToDisplay = slotsByDuration[booking.duration] || [];
-
-                      return slotsToDisplay.map((slot) => {
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {availableSlots.length > 0 ? (
+                      availableSlots.map((slot) => {
                         const isBooked = bookedSlots.includes(slot);
-                        const isAvailable = availableSlots.includes(slot);
                         
                         const startTime = slot;
                         const startMinutes = parse12HourTime(startTime);
-                        const endMinutes = startMinutes! + booking.duration * 60;
+                        const endMinutes = (startMinutes || 0) + (booking.duration || 1) * 60;
                         const endTime = to12HourTime(endMinutes);
-                        const displaySlot = `${startTime} - ${endTime}`;
+                        const displayRange = `${startTime} - ${endTime}`;
 
                         return (
                           <button
                             key={slot}
-                            disabled={!isAvailable || isBooked}
+                            disabled={isBooked}
                             onClick={() => update({ timeSlot: slot })}
                             className={`rounded-xl border p-3 text-center transition-all ${
                               booking.timeSlot === slot
                                 ? "border-primary bg-primary/10 text-primary glow-gold shadow-sm"
                                 : isBooked
                                 ? "cursor-not-allowed border-border bg-muted/50 text-muted-foreground line-through opacity-50"
-                                : !isAvailable
-                                ? "cursor-not-allowed border-dashed border-border bg-muted/30 text-muted-foreground opacity-50"
                                 : "border-border text-foreground hover:border-primary/50 hover:bg-muted"
                             }`}
                           >
-                            <span className="block text-[10px] font-bold md:text-sm font-body">{displaySlot}</span>
+                            <span className="block text-[10px] font-bold md:text-sm font-body">{displayRange}</span>
                           </button>
                         );
-                      });
-                    })()}
+                      })
+                    ) : (
+                      <p className="col-span-full py-6 text-center text-sm text-muted-foreground font-body">
+                        No slots available for this duration. Try another date or duration.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
