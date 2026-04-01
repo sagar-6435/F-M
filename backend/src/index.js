@@ -1366,6 +1366,11 @@ app.get('/api/payments/:bookingId', async (req, res) => {
   }
 });
 
+// Root route
+app.get('/', (req, res) => {
+  res.send('Friends & Memories Backend is running 🚀');
+});
+
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found', path: req.path });
