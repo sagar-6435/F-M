@@ -101,8 +101,9 @@ const isOverlappingWithBuffer = (newStart, newDuration, existingStartStr, existi
   if (existingStart === null) return false;
   const existingEnd = existingStart + Number(existingDuration) * 60;
   
-  // CORE CONDITION: Reject if (newStart < existingEnd + 30min && newEnd > existingStart)
-  if (newStart < (existingEnd + 30) && newEnd > existingStart) {
+  // CORE CONDITION: Reject if there's less than 30-min gap between intervals
+  // Forbidden if (newStart < existingEnd + 30) AND (existingStart < newEnd + 30)
+  if (newStart < (existingEnd + 30) && existingStart < (newEnd + 30)) {
     return true;
   }
   return false;
@@ -1001,9 +1002,9 @@ app.get('/api/availability/:branchId/:date/:service', async (req, res) => {
   try {
     let bookings = [];
     if (mongoConnections[branchId]) {
-      bookings = await Booking.find({ branch: branchId, date });
+      bookings = await Booking.find({ branch: branchId, date, service });
     } else if (branchDb) {
-      bookings = branchDb.bookings.filter(b => b.date === date);
+      bookings = branchDb.bookings.filter(b => b.date === date && b.service === service);
     }
     
     const availableSlots = getAvailableStartSlots(bookings, duration);
@@ -1029,6 +1030,30 @@ app.get('/api/availability/:branchId/:date/:service', async (req, res) => {
   } catch (error) {
     console.error('Error fetching availability:', error);
     res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+});
+
+// Consolidate booking initialization data to improve frontend performance
+app.get('/api/booking/init/:branchId', async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const catalog = await getCatalogForBranch(branchId);
+    
+    if (!catalog && !globalDb.branches.find(b => b.id === branchId)) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+
+    res.json({
+      branches: globalDb.branches,
+      occasions: globalDb.occasions,
+      pricing: catalog?.pricing || defaultPricing,
+      cakes: catalog?.cakes || defaultCakes,
+      decorations: catalog?.decorations || defaultDecorations,
+      decorationPrice: catalog?.decorationPrice ?? 1500
+    });
+  } catch (error) {
+    console.error('Error in booking-init:', error);
+    res.status(500).json({ error: 'Failed to initialize booking data' });
   }
 });
 
@@ -1059,9 +1084,9 @@ app.post('/api/bookings', async (req, res) => {
 
     let existingBookings = [];
     if (mongoConnections[branch]) {
-      existingBookings = await Booking.find({ branch, date: booking.date });
+      existingBookings = await Booking.find({ branch, date: booking.date, service: booking.service });
     } else if (branchDb) {
-      existingBookings = branchDb.bookings.filter(b => b.date === booking.date);
+      existingBookings = branchDb.bookings.filter(b => b.date === booking.date && b.service === booking.service);
     }
 
     const startMinutes = parse12HourTime(booking.timeSlot);

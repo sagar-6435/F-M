@@ -76,44 +76,49 @@ const BookingPage = () => {
 
 
 
+  const [lastFetchedBranch, setLastFetchedBranch] = useState<string>("");
+
   useEffect(() => {
-    const loadData = async () => {
+    const initBooking = async () => {
       try {
-        const [branchesData, occasionsData] = await Promise.all([
-          api.getBranches(),
-          api.getOccasions(),
-        ]);
-        setBranches(branchesData);
-        setOccasions(occasionsData);
+        // Use either the branch from existing booking, or default to branch-1
+        const initialBranch = booking.branch || "branch-1";
+        const data = await api.getBookingInit(initialBranch);
+        
+        setBranches(data.branches);
+        setOccasions(data.occasions);
+        setPricing(data.pricing);
+        setCakes(data.cakes);
+        setDecorations(data.decorations);
+        setDecorationPrice(data.decorationPrice);
+        setLastFetchedBranch(initialBranch);
       } catch (error) {
-        console.error("Failed to load booking data:", error);
+        console.error("Failed to initialize booking data:", error);
       } finally {
         setLoading(false);
       }
     };
-    loadData();
+    initBooking();
   }, []);
 
+  // Update branch-specific data when branch changes (after initial load)
   useEffect(() => {
-    const loadBranchPricing = async () => {
-      try {
-        const branchId = booking.branch || "branch-1";
-        const [cakesData, decorationsData, pricingData, decorPriceData] = await Promise.all([
-          api.getCakes(branchId),
-          api.getDecorations(branchId),
-          api.getPricing(branchId),
-          api.getDecorationPrice(branchId),
-        ]);
-        setCakes(cakesData);
-        setDecorations(decorationsData);
-        setPricing(pricingData);
-        setDecorationPrice(decorPriceData);
-      } catch (error) {
-        console.error("Failed to load branch pricing:", error);
-      }
-    };
-    loadBranchPricing();
-  }, [booking.branch]);
+    if (!loading && booking.branch && booking.branch !== lastFetchedBranch) {
+      const loadBranchData = async () => {
+        try {
+          const data = await api.getBookingInit(booking.branch);
+          setPricing(data.pricing);
+          setCakes(data.cakes);
+          setDecorations(data.decorations);
+          setDecorationPrice(data.decorationPrice);
+          setLastFetchedBranch(booking.branch);
+        } catch (error) {
+          console.error("Failed to update branch data:", error);
+        }
+      };
+      loadBranchData();
+    }
+  }, [booking.branch, loading, lastFetchedBranch]);
 
   useEffect(() => {
     if (booking.branch && booking.date && booking.service && booking.duration) {

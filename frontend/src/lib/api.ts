@@ -43,6 +43,12 @@ export const api = {
     return res.json();
   },
 
+  async getBookingInit(branchId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/booking/init/${branchId}`);
+    if (!res.ok) throw new Error("Failed to fetch booking init data");
+    return res.json();
+  },
+
   async getCakes(branch?: string): Promise<CakeOption[]> {
     const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
     const res = await fetch(`${API_BASE}/cakes${query}`);
