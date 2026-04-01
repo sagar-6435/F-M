@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone, Settings } from "lucide-react";
+import { Menu, X, Phone } from "lucide-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,13 +27,12 @@ const Navbar = () => {
             <Link
               key={link.href}
               to={link.href}
-              className={`rounded-full px-2 lg:px-5 py-2 text-xs lg:text-sm 3xl:text-xl font-medium transition-all ${
-                link.highlight
+              className={`rounded-full px-2 lg:px-5 py-2 text-xs lg:text-sm 3xl:text-xl font-medium transition-all ${link.highlight
                   ? "bg-gradient-gold text-primary-foreground glow-gold"
                   : location.pathname === link.href
-                  ? "text-primary"
-                  : "text-foreground hover:text-primary"
-              }`}
+                    ? "text-primary"
+                    : "text-foreground hover:text-primary"
+                }`}
             >
               {link.label}
             </Link>
@@ -42,13 +41,6 @@ const Navbar = () => {
             <Phone className="h-3 w-3 lg:h-4 lg:w-4 3xl:h-6 3xl:w-6" />
             +91 99127 10932
           </a>
-          <Link
-            to="/admin"
-            className="flex items-center gap-2 rounded-full px-2 py-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-            title="Admin Dashboard"
-          >
-            <Settings className="h-4 w-4" />
-          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -65,9 +57,8 @@ const Navbar = () => {
               key={link.href}
               to={link.href}
               onClick={() => setIsOpen(false)}
-              className={`block py-3 text-sm font-medium ${
-                link.highlight ? "text-primary" : "text-foreground"
-              }`}
+              className={`block py-3 text-sm font-medium ${link.highlight ? "text-primary" : "text-foreground"
+                }`}
             >
               {link.label}
             </Link>
@@ -76,14 +67,6 @@ const Navbar = () => {
             <Phone className="h-4 w-4" />
             +91 99127 10932
           </a>
-          <Link
-            to="/admin"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 py-3 text-sm text-muted-foreground hover:text-primary"
-          >
-            <Settings className="h-4 w-4" />
-            Admin Dashboard
-          </Link>
         </div>
       )}
     </nav>
