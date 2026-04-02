@@ -44,7 +44,7 @@ export const api = {
   },
 
   async getBookingInit(branchId: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/booking/init/${branchId}`);
+    const res = await fetch(`${API_BASE}/bookings/init/${branchId}`);
     if (!res.ok) throw new Error("Failed to fetch booking init data");
     return res.json();
   },
@@ -152,7 +152,7 @@ export const api = {
   },
 
   async getAvailableSlots(branchId: string, date: string, service: string, duration: number): Promise<{ availableSlots: string[], bookedSlots: string[] }> {
-    const res = await fetch(`${API_BASE}/availability/${branchId}/${date}/${service}?duration=${duration}`);
+    const res = await fetch(`${API_BASE}/bookings/availability/${branchId}/${date}/${service}?duration=${duration}`);
     if (!res.ok) throw new Error("Failed to fetch available slots");
     const data = await res.json();
     return { availableSlots: data.availableSlots, bookedSlots: data.bookedSlots };

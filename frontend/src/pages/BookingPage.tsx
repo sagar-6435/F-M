@@ -624,13 +624,15 @@ const BookingPage = () => {
                   {paymentLoading ? "Processing..." : `Pay ₹${totalPrice.toLocaleString()} with PhonePe`}
                 </button>
                 
-                <button
-                  onClick={() => handlePayment('mock')}
-                  disabled={paymentLoading}
-                  className="w-full rounded-xl border border-border py-4 text-sm font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 font-body"
-                >
-                  {paymentLoading ? "Processing..." : "Test Payment (Mock)"}
-                </button>
+                {!import.meta.env.PROD && (
+                  <button
+                    onClick={() => handlePayment('mock')}
+                    disabled={paymentLoading}
+                    className="w-full rounded-xl border border-border py-4 text-sm font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 font-body"
+                  >
+                    {paymentLoading ? "Processing..." : "Test Payment (Mock)"}
+                  </button>
+                )}
               </div>
               
               <p className="text-xs text-muted-foreground font-body">

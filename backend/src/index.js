@@ -69,11 +69,9 @@ app.use('/api/payments', paymentRoutes);
 
 // Compatibility aliases for original endpoint structure (optional, but good for stability)
 app.use('/api', catalogRoutes); // for /api/pricing, /api/cakes, etc.
-app.use('/api/availability', (req, res, next) => {
-    // Redirect or mount availability specifically if needed, 
-    // but it's already in bookingRoutes as /api/bookings/availability
-    next();
-});
+app.use('/api/booking', bookingRoutes); // for legacy /api/booking/init/:id and other singular paths
+
+
 
 // Health & Debug
 app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
