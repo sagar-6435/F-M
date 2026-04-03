@@ -65,7 +65,7 @@ const AdminDashboard = () => {
     branch: "branch-1",
     service: "party-hall",
     date: "",
-    timeSlot: "10:00 AM",
+    timeSlot: "",
     duration: 1,
     name: "",
     phone: "",
@@ -94,6 +94,11 @@ const AdminDashboard = () => {
   const [branchEditData, setBranchEditData] = useState({ name: "", address: "", phone: "", mapLink: "" });
   const [savingBranch, setSavingBranch] = useState(false);
   const [branchList, setBranchList] = useState<any[]>([]);
+
+  // Sync manual booking branch with selected branch
+  useEffect(() => {
+    setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
+  }, [selectedBranch]);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -311,9 +316,10 @@ const AdminDashboard = () => {
       await fetchData();
       alert("Booking created successfully!");
       setActiveTab("bookings");
-    } catch (err) {
-      setError("Failed to create booking");
+    } catch (err: any) {
+      setError(err?.message || "Failed to create booking");
       console.error("Booking error:", err);
+      alert(`Booking failed: ${err?.message || "Internal error"}`);
     } finally {
       setSubmitting(false);
     }
@@ -1046,13 +1052,21 @@ const AdminDashboard = () => {
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                   >
                     {(() => {
-                      const slotsByDuration: Record<number, string[]> = {
-                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
-                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
-                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
+                      // Sort by actual time including minutes
+                      const parseToMinutes = (timeStr: string) => {
+                        const match = timeStr.match(/^(\d+):(\d+)\s+(AM|PM)$/);
+                        if (!match) return 0;
+                        let h = parseInt(match[1]);
+                        const m = parseInt(match[2]);
+                        const p = match[3];
+                        if (h === 12) h = 0;
+                        if (p === "PM") h += 12;
+                        return h * 60 + m;
                       };
-                      const allPotentialSlots = slotsByDuration[manualBooking.duration] || [];
-                      return allPotentialSlots.map((slot) => {
+
+                      const options = [...new Set([...manualAvailableSlots, ...manualBookedSlots])].sort((a, b) => parseToMinutes(a) - parseToMinutes(b));
+
+                      return options.map((slot) => {
                         const isBooked = manualBookedSlots.includes(slot);
                         const isAvailable = manualAvailableSlots.includes(slot);
                         return (
@@ -1070,13 +1084,7 @@ const AdminDashboard = () => {
                     value={manualBooking.duration}
                     onChange={(e) => {
                       const newDuration = parseInt(e.target.value);
-                      const slotsByDuration: Record<number, string[]> = {
-                        1: ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM', '7:00 PM', '8:30 PM', '10:00 PM'],
-                        2: ['10:00 AM', '12:30 PM', '3:00 PM', '5:30 PM', '8:00 PM'],
-                        3: ['10:00 AM', '1:30 PM', '5:00 PM', '8:30 PM']
-                      };
-                      const firstSlot = slotsByDuration[newDuration][0];
-                      setManualBooking({ ...manualBooking, duration: newDuration, timeSlot: firstSlot });
+                      setManualBooking({ ...manualBooking, duration: newDuration });
                     }}
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                   >
@@ -1161,7 +1169,7 @@ const AdminDashboard = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !manualBooking.date || !manualBooking.timeSlot}
                 className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 glow-gold font-body"
               >
                 {submitting ? "Creating Booking..." : "Create Booking (Cash Payment)"}

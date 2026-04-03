@@ -18,18 +18,43 @@ const BookingConfirmed = () => {
         if (transactionId) {
           // Check PhonePe payment status
           const statusResponse = await api.checkPhonePePaymentStatus(transactionId);
+          const bookingId = transactionId.split("_")[0];
           
-          if (statusResponse.success && statusResponse.data?.state === "COMPLETED") {
-            // Payment successful, booking is already created
-            const bookingId = transactionId.split("-")[0];
-            // You can fetch booking details here if needed
+          if (statusResponse.success && statusResponse.code === "PAYMENT_SUCCESS") {
+            // Finalize on backend (send notification etc)
+            const finalizeRes = await api.processMockPayment(
+              bookingId, 
+              statusResponse.data.amount / 100 // paise to rupees
+            );
+            
+            if (finalizeRes.success) {
+               setBooking(finalizeRes.booking);
+               setLoading(false);
+               return;
+            }
+          }
+          
+          // If we have a bookingId but flow didn't finish, try fetching it
+          if (bookingId) {
+             const b = await api.getBookingById(bookingId);
+             if (b) {
+               setBooking(b);
+               setLoading(false);
+               return;
+             }
           }
         }
         
-        // Get booking from location state
+        // Fallback: Get booking from location state
         const stateBooking = location.state?.booking;
         if (stateBooking) {
-          setBooking(stateBooking);
+           // We might want to refresh from DB to get the latest
+           try {
+             const refreshed = await api.getBookingById(stateBooking.id);
+             setBooking(refreshed);
+           } catch {
+             setBooking(stateBooking);
+           }
         }
       } catch (error) {
         console.error("Error checking payment status:", error);
@@ -77,12 +102,14 @@ const BookingConfirmed = () => {
                     ? booking.extraDecorations.map((d: any) => d.name).join(", ") 
                     : "None" 
                 },
-                { label: "Total Paid", value: `₹${booking.totalPrice?.toLocaleString()}` },
-                { label: "Payment Status", value: booking.paymentStatus === "paid" ? "✓ Paid" : "Pending" },
+                { label: "Total Price", value: `₹${booking.totalPrice?.toLocaleString()}` },
+                { label: "Amount Paid", value: `₹${(booking.amountPaid || 0).toLocaleString()}` },
+                { label: "Balance Remaining", value: `₹${(booking.balanceAmount || 0).toLocaleString()}`, highlight: booking.balanceAmount > 0 },
+                { label: "Payment Status", value: booking.paymentStatus === "paid" ? "✓ Fully Paid" : "✓ Partially Paid (Slot Confirmed)" },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between border-b border-border pb-2">
                   <span className="text-sm text-muted-foreground font-body">{item.label}</span>
-                  <span className="text-sm font-medium text-foreground font-body">{item.value}</span>
+                  <span className={`text-sm font-medium font-body ${(item as any).highlight ? "text-primary font-bold" : "text-foreground"}`}>{item.value}</span>
                 </div>
               ))}
             </div>

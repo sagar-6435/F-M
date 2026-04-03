@@ -21,7 +21,7 @@ const PHONEPE_BASE_URL = PHONEPE_ENV === 'production'
 // PhonePe Initiate
 router.post('/phonepe/initiate', async (req, res) => {
   const { bookingId, amount, phone } = req.body;
-  const merchantTransactionId = `MT${Date.now()}`;
+  const merchantTransactionId = `${bookingId}_${Date.now()}`;
   const userId = `U${phone}`;
 
   const payload = {
@@ -29,7 +29,7 @@ router.post('/phonepe/initiate', async (req, res) => {
     merchantTransactionId,
     merchantUserId: userId,
     amount: amount * 100, // PhonePe expects amount in paise
-    redirectUrl: `${FRONTEND_URL}/payment-status?tid=${merchantTransactionId}`,
+    redirectUrl: `${FRONTEND_URL}/booking-confirmed?transactionId=${merchantTransactionId}`,
     redirectMode: 'REDIRECT',
     callbackUrl: `${BACKEND_URL}/api/payments/phonepe/callback`,
     mobileNumber: phone,
@@ -113,84 +113,84 @@ router.post('/phonepe/status', async (req, res) => {
   }
 });
 
-router.post('/process', async (req, res) => {
-  const { bookingId } = req.body;
-  try {
-    for (const branchId in branchDbs) {
-      const models = getBranchModels(branchId);
-      if (models) {
-        const booking = await models.Booking.findOneAndUpdate(
-          { id: bookingId }, 
-          { paymentStatus: 'paid', updatedAt: new Date() }, 
-          { new: true }
-        );
-        if (booking) {
-          try {
-            await sendBookingNotification(booking);
-          } catch (notifyError) {
-            console.error('Failed to send notification:', notifyError);
-          }
-          return res.json({ success: true, message: 'Payment processed', booking });
-        }
-      }
-    }
-    for (const branchId in branchDbs) {
-      const booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
+// Helper to find and update booking across any storage
+const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
+  const amt = Number(amountPaid);
+  
+  // Try MongoDB branches
+  for (const branchId in ['branch-1', 'branch-2']) {
+    const models = getBranchModels(branchId);
+    if (models) {
+      const booking = await models.Booking.findOne({ id: bookingId });
       if (booking) {
-        booking.paymentStatus = 'paid';
+        booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+        booking.amountPaid = amt;
+        booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
+        booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
         booking.updatedAt = new Date();
-        await saveBookings(branchDbs);
+        await booking.save();
+        
+        // Send email notification
         try {
           await sendBookingNotification(booking);
-        } catch (notifyError) {
-          console.error('Failed to send notification:', notifyError);
+        } catch (emailErr) {
+          console.error('✗ Email notification failed but booking updated:', emailErr);
         }
-        return res.json({ success: true, message: 'Payment processed', booking });
+        
+        return booking;
       }
+    }
+  }
+
+  // Try local file branches
+  for (const branchId in branchDbs) {
+    const booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
+    if (booking) {
+      booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+      booking.amountPaid = amt;
+      booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
+      booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
+      booking.updatedAt = new Date();
+      await saveBookings(branchDbs);
+      
+      // Send email notification
+      try {
+        await sendBookingNotification(booking);
+      } catch (emailErr) {
+        console.error('✗ Email notification failed but booking updated:', emailErr);
+      }
+      
+      return booking;
+    }
+  }
+  
+  return null;
+};
+
+router.post('/process', async (req, res) => {
+  const { bookingId, amountPaid, paymentType } = req.body;
+  try {
+    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType);
+    if (booking) {
+      return res.json({ success: true, message: 'Payment processed', booking });
     }
     res.status(404).json({ error: 'Booking not found' });
   } catch (error) {
+    console.error('Error processing payment:', error);
     res.status(500).json({ error: 'Failed to process payment' });
   }
 });
 
 router.post('/mock', async (req, res) => {
-  const { bookingId } = req.body;
+  const { bookingId, amountPaid, paymentType } = req.body;
   try {
-    for (const branchId in branchDbs) {
-      const models = getBranchModels(branchId);
-      if (models) {
-        const booking = await models.Booking.findOneAndUpdate(
-          { id: bookingId }, 
-          { paymentStatus: 'paid', updatedAt: new Date() }, 
-          { new: true }
-        );
-        if (booking) {
-          try {
-            await sendBookingNotification(booking.toObject ? booking.toObject() : booking);
-          } catch (notifyError) {
-            console.error('Failed to send notification:', notifyError);
-          }
-          return res.json({ success: true, message: 'Mock payment processed', booking });
-        }
-      }
-    }
-    for (const branchId in branchDbs) {
-      const booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
-      if (booking) {
-        booking.paymentStatus = 'paid';
-        booking.updatedAt = new Date();
-        await saveBookings(branchDbs);
-        try {
-          await sendBookingNotification(booking);
-        } catch (notifyError) {
-          console.error('Failed to send notification:', notifyError);
-        }
-        return res.json({ success: true, message: 'Mock payment processed', booking });
-      }
+    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType);
+    if (booking) {
+      return res.json({ success: true, message: 'Mock payment processed', booking });
     }
     res.status(404).json({ error: 'Booking not found' });
   } catch (error) {
+    console.error('Error processing mock payment:', error);
     res.status(500).json({ error: 'Failed to process mock payment' });
   }
 });

@@ -141,6 +141,12 @@ export const api = {
     if (!res.ok) throw new Error("Failed to delete testimonial image");
   },
 
+  async getBookingById(id: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/bookings/${id}`);
+    if (!res.ok) throw new Error("Failed to fetch booking details");
+    return res.json();
+  },
+
   async createBooking(booking: any) {
     const res = await fetch(`${API_BASE}/bookings`, {
       method: "POST",
@@ -221,11 +227,11 @@ export const api = {
     return res.json();
   },
 
-  async initiatePhonePePayment(bookingId: string, amount: number, phone: string): Promise<any> {
+  async initiatePhonePePayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full'): Promise<any> {
     const res = await fetch(`${API_BASE}/payments/phonepe/initiate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, amount, phone }),
+      body: JSON.stringify({ bookingId, amount, phone, paymentType, amountPaid: amount }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -245,11 +251,11 @@ export const api = {
     return res.json();
   },
 
-  async processMockPayment(bookingId: string, amount: number): Promise<any> {
+  async processMockPayment(bookingId: string, amount: number, paymentType: string = 'full'): Promise<any> {
     const res = await fetch(`${API_BASE}/payments/mock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, amount }),
+      body: JSON.stringify({ bookingId, amountPaid: amount, paymentType }),
     });
     if (!res.ok) throw new Error("Failed to process mock payment");
     return res.json();

@@ -23,14 +23,14 @@ export const createBooking = async (req, res) => {
     id: `B${uuidv4().slice(0, 8).toUpperCase()}`,
     ...req.body,
     ...bookingTimes,
-    paymentStatus: 'pending',
+    paymentStatus: req.body.paymentStatus || 'pending',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
   
   try {
     if (!canFitBookingInOperatingHours(booking.timeSlot, booking.duration)) {
-      return res.status(400).json({ error: 'Selected time is outside available hours (10:00 AM - 11:59 PM)' });
+      return res.status(400).json({ error: 'Selected time is outside available hours (10:00 AM - 12:00 AM)' });
     }
 
     const slotsToBlock = getBlockedSlotsForBooking(booking.timeSlot, booking.duration);
@@ -55,6 +55,18 @@ export const createBooking = async (req, res) => {
     }
 
     if (conflictFound) {
+      // Check if it's the SAME booking (idempotency for retries)
+      const sameBooking = existingBookings.find(b => 
+        b.timeSlot === booking.timeSlot && 
+        b.phone === booking.phone && 
+        b.paymentStatus === 'pending'
+      );
+
+      if (sameBooking) {
+        console.log(`ℹ Retrying existing pending booking ${sameBooking.id} for ${booking.phone}`);
+        return res.status(200).json(sameBooking);
+      }
+
       return res.status(409).json({
         error: 'Slot not available (overlaps with existing booking or buffer time)',
       });

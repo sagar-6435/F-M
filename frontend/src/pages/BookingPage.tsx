@@ -158,13 +158,20 @@ const BookingPage = () => {
     }
   };
 
+  const [paymentType, setPaymentType] = useState<'full' | 'advance'>('advance');
+
   const handlePayment = async (paymentMethod: 'phonepe' | 'mock' = 'phonepe') => {
     try {
       setPaymentLoading(true);
+      const amountToPay = paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3);
+
       const bookingData = { 
         ...booking, 
         totalPrice, 
         paymentStatus: "pending",
+        paymentType,
+        amountPaid: 0,
+        balanceAmount: totalPrice,
         phone: `+91 ${booking.phone}`
       };
       
@@ -175,18 +182,20 @@ const BookingPage = () => {
         // Use mock payment for testing
         const paymentResponse = await api.processMockPayment(
           createdBooking.id,
-          totalPrice
+          amountToPay,
+          paymentType
         );
         
         if (paymentResponse.success) {
-          navigate("/booking-confirmed", { state: { booking: { ...createdBooking, paymentStatus: 'paid' } } });
+          navigate("/booking-confirmed", { state: { booking: paymentResponse.booking } });
         }
       } else {
         // Try PhonePe payment
         const paymentResponse = await api.initiatePhonePePayment(
           createdBooking.id,
-          totalPrice,
-          `91${booking.phone}` // PhonePe expects country code without +
+          amountToPay,
+          `91${booking.phone}`,
+          paymentType
         );
 
         if (paymentResponse.redirectUrl) {
@@ -604,24 +613,57 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 7: Payment */}
+          {/* Step 7: Payment Choice & Execution */}
           {step === 7 && (
-            <div className="space-y-6 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-primary glow-gold">
-                <CreditCard className="h-8 w-8 text-primary" />
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-primary glow-gold">
+                  <CreditCard className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Choose Payment Option</h3>
+                <p className="text-sm text-muted-foreground">Select how you want to pay for your booking</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-display">₹{totalPrice.toLocaleString()}</p>
-                <p className="mt-1 text-sm text-muted-foreground font-body">Total amount to pay</p>
+
+              <div className="grid gap-4">
+                <button
+                  onClick={() => setPaymentType('advance')}
+                  className={`flex items-center justify-between rounded-2xl border p-6 transition-all ${
+                    paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold text-foreground">Pay Advance (30%)</p>
+                    <p className="text-xs text-muted-foreground">Pay now to confirm slot, balance at venue</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-primary">₹{Math.ceil(totalPrice * 0.3).toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Balance: ₹{Math.floor(totalPrice * 0.7).toLocaleString()}</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setPaymentType('full')}
+                  className={`flex items-center justify-between rounded-2xl border p-6 transition-all ${
+                    paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold text-foreground">Full Payment</p>
+                    <p className="text-xs text-muted-foreground">Pay the entire amount now</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-primary">₹{totalPrice.toLocaleString()}</p>
+                  </div>
+                </button>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4">
                 <button
                   onClick={() => handlePayment('phonepe')}
                   disabled={paymentLoading}
                   className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 glow-gold font-body"
                 >
-                  {paymentLoading ? "Processing..." : `Pay ₹${totalPrice.toLocaleString()} with PhonePe`}
+                  {paymentLoading ? "Processing..." : `Pay ₹${(paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3)).toLocaleString()} with PhonePe`}
                 </button>
                 
                 {!import.meta.env.PROD && (
@@ -635,8 +677,8 @@ const BookingPage = () => {
                 )}
               </div>
               
-              <p className="text-xs text-muted-foreground font-body">
-                Secure payment powered by PhonePe • Use mock payment for testing
+              <p className="text-center text-[10px] text-muted-foreground font-body">
+                Secure payment powered by PhonePe • Payments are encrypted and secure
               </p>
             </div>
           )}
