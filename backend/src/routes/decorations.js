@@ -1,50 +1,69 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyAdmin } from '../middleware/auth.js';
-import { globalDb } from '../data/globalDb.js';
+import * as catalogController from '../controllers/catalogController.js';
 
 const router = express.Router();
 
 // Get all decorations
-router.get('/', (req, res) => {
-  res.json(globalDb.decorations);
+router.get('/', async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  res.json(result.catalog.decorations);
 });
 
 // Create new decoration
-router.post('/', verifyAdmin, (req, res) => {
-  const { name, price, description } = req.body;
+router.post('/', verifyAdmin, async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { branch, catalog } = result;
+
+  const { name, price, description, image } = req.body;
   const decoration = {
     id: `extra-${uuidv4()}`,
     name,
     price,
     description,
+    image,
   };
-  globalDb.decorations.push(decoration);
+  catalog.decorations.push(decoration);
+  await catalogController.saveCatalogForBranch(branch, catalog);
   res.status(201).json(decoration);
 });
 
 // Update decoration
-router.put('/:id', verifyAdmin, (req, res) => {
+router.put('/:id', verifyAdmin, async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { branch, catalog } = result;
+
   const { id } = req.params;
-  const { name, price, description } = req.body;
+  const { name, price, description, image } = req.body;
   
-  const decoration = globalDb.decorations.find(d => d.id === id);
+  const decoration = catalog.decorations.find(d => d.id === id);
   if (!decoration) return res.status(404).json({ error: 'Decoration not found' });
   
   if (name) decoration.name = name;
   if (price !== undefined) decoration.price = price;
   if (description) decoration.description = description;
+  if (image) decoration.image = image;
   
+  await catalogController.saveCatalogForBranch(branch, catalog);
   res.json(decoration);
 });
 
 // Delete decoration
-router.delete('/:id', verifyAdmin, (req, res) => {
+router.delete('/:id', verifyAdmin, async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { branch, catalog } = result;
+
   const { id } = req.params;
-  const index = globalDb.decorations.findIndex(d => d.id === id);
+  const index = catalog.decorations.findIndex(d => d.id === id);
   if (index === -1) return res.status(404).json({ error: 'Decoration not found' });
   
-  globalDb.decorations.splice(index, 1);
+  catalog.decorations.splice(index, 1);
+  await catalogController.saveCatalogForBranch(branch, catalog);
   res.json({ message: 'Decoration deleted' });
 });
 

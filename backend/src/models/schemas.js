@@ -31,6 +31,8 @@ export const bookingSchema = new mongoose.Schema({
   timeSlot: String,
   startTime: String,
   endTime: String,
+  membersCount: { type: Number, default: 0 },
+  extraPersonsCharge: { type: Number, default: 0 },
   endTimeWithBuffer: String,
   startTimeMinutes: Number,
   endTimeWithBufferMinutes: Number,
@@ -67,9 +69,15 @@ export const branchCatalogSchema = new mongoose.Schema(
     branch: { type: String, required: true, unique: true },
     pricing: { type: mongoose.Schema.Types.Mixed, default: () => JSON.parse(JSON.stringify(defaultPricing)) },
     decorationPrice: { type: Number, default: 1500 },
-    cakes: { type: [mongoose.Schema.Types.Mixed], default: () => JSON.parse(JSON.stringify(defaultCakes)) },
+    cakes: { type: [mongoose.Schema.Types.Mixed], default: () => JSON.parse(JSON.stringify(defaultCakes.map(c => ({ ...c, quantity: '1kg' })))) },
     decorations: { type: [mongoose.Schema.Types.Mixed], default: () => JSON.parse(JSON.stringify(defaultDecorations)) },
     testimonials: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    heroImages: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    socialLinks: { type: mongoose.Schema.Types.Mixed, default: { 
+      instagram: "https://instagram.com/friends_and_memories_elr",
+      facebook: "https://facebook.com",
+      whatsapp: "" // Default to branch phone
+    }},
   },
   { timestamps: true }
 );

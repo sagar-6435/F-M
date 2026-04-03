@@ -16,8 +16,7 @@ export const defaultDecorations = [
 ];
 
 export const defaultPricing = {
-  'party-hall': { 1: 2999, 2: 4999, 3: 6999 },
-  'private-theatre': { 1: 1999, 2: 3499, 3: 4999 },
+  'private-theatre-party-hall': { 1: 1999, 2: 3499, 3: 4999 },
 };
 
 export const globalDb = {
@@ -46,14 +45,15 @@ export const globalDb = {
     },
   ],
   services: [
-    { id: 'party-hall', name: 'Party Hall', description: 'Spacious party hall for celebrations' },
-    { id: 'private-theatre', name: 'Private Theatre', description: 'Private theatre for movie nights' },
+    { id: 'private-theatre-party-hall', name: 'Private Theatre + Party Hall', description: 'Experience the best of both: Private Theatre and Party Hall' },
   ],
   cakes: defaultCakes,
   decorations: defaultDecorations,
   occasions: ['Birthday', 'Anniversary', 'Proposal', 'Baby Shower', 'Farewell', 'Get Together', 'Date Night', 'Other'],
   pricing: defaultPricing,
   decorationPrice: 1500,
+  heroImages: [],
+  socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
 };
 
 export const branchDbs = {
@@ -62,11 +62,13 @@ export const branchDbs = {
 };
 
 export const createBranchPricingDb = () => ({
-  cakes: JSON.parse(JSON.stringify(defaultCakes)),
+  cakes: JSON.parse(JSON.stringify(defaultCakes.map(c => ({ ...c, quantity: '1kg' })))),
   decorations: JSON.parse(JSON.stringify(defaultDecorations)),
   pricing: JSON.parse(JSON.stringify(defaultPricing)),
   decorationPrice: 1500,
   testimonials: [],
+  heroImages: [],
+  socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
 });
 
 export const branchPricingDbs = {
@@ -75,9 +77,11 @@ export const branchPricingDbs = {
 };
 
 export const cloneBranchPricingDb = (data = {}) => ({
-  cakes: JSON.parse(JSON.stringify(data.cakes || defaultCakes)),
+  cakes: JSON.parse(JSON.stringify(data.cakes || defaultCakes.map(c => ({ ...c, quantity: '1kg' })))),
   decorations: JSON.parse(JSON.stringify(data.decorations || defaultDecorations)),
   pricing: JSON.parse(JSON.stringify(data.pricing || defaultPricing)),
   decorationPrice: data.decorationPrice ?? 1500,
   testimonials: JSON.parse(JSON.stringify(data.testimonials || [])),
+  heroImages: JSON.parse(JSON.stringify(data.heroImages || [])),
+  socialLinks: JSON.parse(JSON.stringify(data.socialLinks || { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" })),
 });

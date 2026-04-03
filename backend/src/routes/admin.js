@@ -116,6 +116,63 @@ router.delete('/gallery/testimonials/:id', verifyAdmin, async (req, res) => {
   res.json({ message: 'Deleted' });
 });
 
+// Hero Images (Admin)
+router.get('/hero-images', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    res.json(catalog.heroImages || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch hero images' });
+  }
+});
+
+router.post('/hero-images', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'Image required' });
+  
+  try {
+    let imageUrl = image;
+    if (image.startsWith('data:image')) {
+      const rootFolder = getRootFolderForBranch(branch);
+      console.log(`☁️ Uploading hero image to Cloudinary [${rootFolder}]...`);
+      imageUrl = await uploadToCloudinary(image, 'hero', rootFolder);
+    }
+
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    
+    if (!catalog.heroImages) catalog.heroImages = [];
+    catalog.heroImages.push(imageUrl);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.heroImages);
+  } catch (err) {
+    console.error('Hero upload failed:', err);
+    res.status(500).json({ error: 'Failed to upload/save hero image' });
+  }
+});
+
+router.delete('/hero-images/:index', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || 'branch-1';
+  const index = parseInt(req.params.index);
+  
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    if (!catalog.heroImages || index < 0 || index >= catalog.heroImages.length) {
+      return res.status(404).json({ error: 'Index out of bounds' });
+    }
+    
+    catalog.heroImages.splice(index, 1);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.heroImages);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete hero image' });
+  }
+});
+
 // Download Bookings Excel
 router.get('/bookings/download', verifyAdmin, async (req, res) => {
   try {

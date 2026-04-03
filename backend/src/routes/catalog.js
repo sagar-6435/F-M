@@ -184,6 +184,28 @@ router.get('/gallery/testimonials', async (req, res) => {
   res.json(catalog.testimonials || []);
 });
 
+// Social Links
+router.get('/social-links', async (req, res) => {
+  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+  if (!resolved) return;
+  res.json(resolved.catalog.socialLinks || { instagram: "", facebook: "", whatsapp: "" });
+});
+
+router.put('/social-links', verifyAdmin, async (req, res) => {
+  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+  if (!resolved) return;
+  const { branch, catalog } = resolved;
+  const { instagram, facebook, whatsapp } = req.body;
+  
+  if (!catalog.socialLinks) catalog.socialLinks = {};
+  if (instagram !== undefined) catalog.socialLinks.instagram = instagram;
+  if (facebook !== undefined) catalog.socialLinks.facebook = facebook;
+  if (whatsapp !== undefined) catalog.socialLinks.whatsapp = whatsapp;
+  
+  await catalogController.saveCatalogForBranch(branch, catalog);
+  res.json(catalog.socialLinks);
+});
+
 // General info
 router.get('/occasions', (req, res) => res.json(globalDb.occasions));
 router.get('/services', (req, res) => res.json(globalDb.services));

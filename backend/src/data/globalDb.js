@@ -24,15 +24,14 @@ export const globalDb = {
     },
   ],
   services: [
-    { id: 'party-hall', name: 'Party Hall', description: 'Spacious party hall for celebrations' },
-    { id: 'private-theatre', name: 'Private Theatre', description: 'Private theatre for movie nights' },
+    { id: 'private-theatre-party-hall', name: 'Private Theatre + Party Hall', description: 'Experience the best of both: Private Theatre and Party Hall' },
   ],
   cakes: [
-    { id: 'cake-1', name: 'Classic Chocolate Truffle', price: 799, description: 'Rich dark chocolate layers' },
-    { id: 'cake-2', name: 'Red Velvet Dream', price: 899, description: 'Cream cheese frosted perfection' },
-    { id: 'cake-3', name: 'Butterscotch Crunch', price: 749, description: 'Caramel & crunchy butterscotch' },
-    { id: 'cake-4', name: 'Fresh Fruit Delight', price: 999, description: 'Seasonal fruits with cream' },
-    { id: 'cake-5', name: 'Black Forest Premium', price: 849, description: 'Cherry-filled chocolate classic' },
+    { id: 'cake-1', name: 'Classic Chocolate Truffle', price: 799, description: 'Rich dark chocolate layers', quantity: '1kg' },
+    { id: 'cake-2', name: 'Red Velvet Dream', price: 899, description: 'Cream cheese frosted perfection', quantity: '1kg' },
+    { id: 'cake-3', name: 'Butterscotch Crunch', price: 749, description: 'Caramel & crunchy butterscotch', quantity: '1kg' },
+    { id: 'cake-4', name: 'Fresh Fruit Delight', price: 999, description: 'Seasonal fruits with cream', quantity: '1kg' },
+    { id: 'cake-5', name: 'Black Forest Premium', price: 849, description: 'Cherry-filled chocolate classic', quantity: '1kg' },
   ],
   decorations: [
     { id: 'extra-1', name: 'Balloon Bouquet Setup', price: 1500, description: '100+ premium balloons' },
@@ -44,10 +43,10 @@ export const globalDb = {
   ],
   occasions: ['Birthday', 'Anniversary', 'Proposal', 'Baby Shower', 'Farewell', 'Get Together', 'Date Night', 'Other'],
   pricing: {
-    'party-hall': { 1: 2999, 2: 4999, 3: 6999 },
-    'private-theatre': { 1: 1999, 2: 3499, 3: 4999 },
+    'private-theatre-party-hall': { 1: 1999, 2: 3499, 3: 4999 },
   },
   decorationPrice: 1500,
+  heroImages: [],
 };
 
 export const branchDbs = {

@@ -12,6 +12,7 @@ export interface CakeOption {
   price: number;
   description: string;
   image?: string;
+  quantity?: string;
 }
 
 export interface ExtraDecoration {
@@ -24,13 +25,15 @@ export interface ExtraDecoration {
 
 export interface BookingData {
   branch: string;
-  service: "party-hall" | "private-theatre" | "";
+  service: "private-theatre-party-hall" | "";
   date: string;
   duration: number;
   timeSlot: string;
   name: string;
   phone: string;
   email: string;
+  membersCount: number;
+  extraPersonsCharge: number;
   decorationRequired: boolean;
   occasion: string;
   customOccasion?: string;
@@ -149,22 +152,23 @@ export const TIME_SLOTS: Record<number, TimeSlot[]> = {
 };
 
 export const BASE_PRICES: Record<string, Record<number, number>> = {
-  "party-hall": { 1: 2999, 2: 4999, 3: 6999 },
-  "private-theatre": { 1: 1999, 2: 3499, 3: 4999 },
+  "private-theatre-party-hall": { 1: 1999, 2: 3499, 3: 4999 },
 };
 
 export const DECORATION_PRICE = 1500;
 
 export const INITIAL_BOOKING: BookingData = {
-  branch: "",
-  service: "",
+  branch: "branch-1",
+  service: "private-theatre-party-hall",
   date: "",
   duration: 0,
   timeSlot: "",
+  membersCount: 2,
+  extraPersonsCharge: 0,
   name: "",
   phone: "",
   email: "",
-  decorationRequired: false,
+  decorationRequired: true,
   occasion: "",
   cakeRequired: false,
   selectedCake: null,

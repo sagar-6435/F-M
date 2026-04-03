@@ -1,34 +1,43 @@
 import express from 'express';
 import { verifyAdmin } from '../middleware/auth.js';
-import { globalDb } from '../data/globalDb.js';
+import * as catalogController from '../controllers/catalogController.js';
 
 const router = express.Router();
 
 // Get all pricing
-router.get('/', (req, res) => {
-  res.json(globalDb.pricing);
+router.get('/', async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  res.json(result.catalog.pricing);
 });
 
 // Update pricing
-router.put('/', verifyAdmin, (req, res) => {
+router.put('/', verifyAdmin, async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { branch, catalog } = result;
+
   const { service, duration, price } = req.body;
   
-  if (!globalDb.pricing[service]) {
-    globalDb.pricing[service] = {};
+  if (!catalog.pricing[service]) {
+    catalog.pricing[service] = {};
   }
   
-  globalDb.pricing[service][duration] = price;
-  res.json(globalDb.pricing);
+  catalog.pricing[service][duration] = price;
+  await catalogController.saveCatalogForBranch(branch, catalog);
+  res.json(catalog.pricing);
 });
 
 // Get pricing for specific service and duration
-router.get('/:service/:duration', (req, res) => {
+router.get('/:service/:duration', async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { catalog } = result;
+
   const { service, duration } = req.params;
-  const price = globalDb.pricing[service]?.[duration];
+  const price = catalog.pricing[service]?.[duration];
   if (price === undefined) return res.status(404).json({ error: 'Pricing not found' });
   res.json({ service, duration, price });
 });
-
-
 
 export default router;

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BRANCHES } from "@/lib/booking-data";
 import { api } from "@/lib/api";
-import { Eye, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download } from "lucide-react";
+import { Eye, EyeOff, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -16,7 +16,12 @@ interface Booking {
   email: string;
   occasion: string;
   totalPrice: number;
-  paymentStatus: "pending" | "paid";
+  paymentStatus: "pending" | "paid" | "cancelled";
+  paymentType?: "full" | "advance";
+  amountPaid?: number;
+  balanceAmount?: number;
+  membersCount?: number;
+  extraPersonsCharge?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,6 +55,7 @@ const formatServiceName = (serviceId: string) =>
 const AdminDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<"branch-1" | "branch-2">("branch-1");
   const [filter, setFilter] = useState<"all" | "pending" | "paid">("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -84,14 +90,17 @@ const AdminDashboard = () => {
   const [editValues, setEditValues] = useState<any>({});
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0 });
-  const [newCake, setNewCake] = useState({ name: "", description: "", price: 0, image: "" });
+  const [newCake, setNewCake] = useState({ name: "", description: "", price: 0, image: "", quantity: "1kg" });
   const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "" });
+  const [heroImages, setHeroImages] = useState<string[]>([]);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [newTestimonialTitle, setNewTestimonialTitle] = useState("");
   const [uploadingTestimonial, setUploadingTestimonial] = useState(false);
   const [manualAvailableSlots, setManualAvailableSlots] = useState<string[]>([]);
   const [manualBookedSlots, setManualBookedSlots] = useState<string[]>([]);
   const [branchEditData, setBranchEditData] = useState({ name: "", address: "", phone: "", mapLink: "" });
+  const [socialEditData, setSocialEditData] = useState({ instagram: "", facebook: "", whatsapp: "" });
   const [savingBranch, setSavingBranch] = useState(false);
   const [branchList, setBranchList] = useState<any[]>([]);
 
@@ -230,6 +239,8 @@ const AdminDashboard = () => {
       setDecorations(decorationsData);
       setDecorationPrice(decorationPriceData);
       setTestimonials(await api.getTestimonials(selectedBranch));
+      setHeroImages(await api.getHeroImages(selectedBranch));
+      setSocialEditData(await api.getSocialLinks(selectedBranch));
       
       const bList = await api.getBranches();
       setBranchList(bList);
@@ -251,9 +262,12 @@ const AdminDashboard = () => {
     if (!token) return;
     try {
       setSavingBranch(true);
-      await api.updateBranch(token, selectedBranch, branchEditData);
+      await Promise.all([
+        api.updateBranch(token, selectedBranch, branchEditData),
+        api.updateSocialLinks(token, selectedBranch, socialEditData)
+      ]);
       await fetchPricing(); // Refresh data
-      alert("Branch details updated successfully!");
+      alert("Branch & Social details updated successfully!");
     } catch (error) {
       console.error("Error saving branch details:", error);
       setError("Failed to update branch details");
@@ -530,7 +544,7 @@ const AdminDashboard = () => {
         },
         body: JSON.stringify({ ...newCake, branch: selectedBranch }),
       });
-      setNewCake({ name: "", description: "", price: 0, image: "" });
+      setNewCake({ name: "", description: "", price: 0, image: "", quantity: "1kg" });
       await fetchPricing();
     } catch (error) {
       console.error("Error creating cake:", error);
@@ -589,6 +603,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleHeroUpload = async (file?: File | null) => {
+    if (!token || !file) return;
+    try {
+      setUploadingHero(true);
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(file);
+      });
+      const updated = await api.addHeroImage(token, selectedBranch, image);
+      setHeroImages(updated);
+    } catch (error) {
+      console.error("Error uploading hero image:", error);
+      setError("Failed to upload hero image");
+    } finally {
+      setUploadingHero(false);
+    }
+  };
+
+  const handleDeleteHero = async (index: number) => {
+    if (!token) return;
+    if (confirm("Delete this hero carousel image?")) {
+      try {
+        const updated = await api.deleteHeroImage(token, selectedBranch, index);
+        setHeroImages(updated);
+      } catch (error) {
+        console.error("Error deleting hero image:", error);
+        setError("Failed to delete hero image");
+      }
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="flex min-h-screen items-center justify-center pt-24">
@@ -598,14 +645,23 @@ const AdminDashboard = () => {
           </div>
           <h2 className="mb-6 text-center font-display text-2xl font-bold text-foreground">Admin Login</h2>
           
-          <input
-            type="password"
-            placeholder="Enter admin password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-            className="mb-4 w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
-          />
+          <div className="relative mb-4">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter admin password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+              className="w-full rounded-xl border border-border bg-muted px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-primary"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
           {error && <p className="mb-4 text-sm text-red-500 font-body">{error}</p>}
           <button
             onClick={handleLogin}
@@ -832,7 +888,7 @@ const AdminDashboard = () => {
                 <table className="w-full text-sm font-body">
                   <thead className="border-b border-border bg-muted">
                     <tr>
-                      {["ID", "Name", "Service", "Date", "Time", "Duration", "Status", "Amount", "Booked At", ""].map((h) => (
+                      {["ID", "Name", "Service", "Date", "Time", "Status", "Payment", "Paid", "Total", "Booked At", ""].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -842,17 +898,18 @@ const AdminDashboard = () => {
                       <tr key={b.id} className="border-b border-border hover:bg-muted transition-colors">
                         <td className="px-4 py-3 text-foreground font-medium">{b.id}</td>
                         <td className="px-4 py-3 text-foreground">{b.name}</td>
-                        <td className="px-4 py-3 text-foreground capitalize">{b.service.replace('-', ' ')}</td>
+                        <td className="px-4 py-3 text-foreground capitalize">{b.service.replace(/-/g, ' ')}</td>
                         <td className="px-4 py-3 text-muted-foreground">{b.date}</td>
                         <td className="px-4 py-3 text-muted-foreground">{b.timeSlot}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{b.duration}h</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${
-                            b.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                            b.paymentStatus === "paid" ? "bg-green-100 text-green-800" : b.paymentStatus === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
                           }`}>
                             {b.paymentStatus}
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{b.paymentType || 'N/A'}</td>
+                        <td className="px-4 py-3 font-semibold text-green-600">₹{(b.amountPaid || 0).toLocaleString()}</td>
                         <td className="px-4 py-3 font-semibold text-foreground">₹{b.totalPrice.toLocaleString()}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}
@@ -967,12 +1024,27 @@ const AdminDashboard = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground">Total Amount</p>
-                          <p className="text-2xl font-bold text-primary">₹{selectedBooking.totalPrice.toLocaleString()}</p>
+                          <p className="text-xl font-bold text-primary">₹{selectedBooking.totalPrice.toLocaleString()}</p>
+                          {selectedBooking.extraPersonsCharge ? (
+                             <p className="text-[10px] text-muted-foreground font-body">Inc. ₹{selectedBooking.extraPersonsCharge} extra charge</p>
+                          ) : null}
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Payment Status</p>
-                          <p className={`text-lg font-semibold ${
-                            selectedBooking.paymentStatus === "paid" ? "text-green-600" : "text-yellow-600"
+                          <p className="text-xs text-muted-foreground">Payment Type</p>
+                          <p className="text-sm font-semibold capitalize">{selectedBooking.paymentType}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Amount Paid</p>
+                          <p className="text-lg font-bold text-green-600">₹{(selectedBooking.amountPaid || 0).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Balance Amount</p>
+                          <p className="text-lg font-bold text-red-600">₹{(selectedBooking.balanceAmount || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className={`text-sm font-semibold ${
+                            selectedBooking.paymentStatus === "paid" ? "text-green-600" : selectedBooking.paymentStatus === "cancelled" ? "text-red-600" : "text-yellow-600"
                           }`}>
                             {selectedBooking.paymentStatus.toUpperCase()}
                           </p>
@@ -980,13 +1052,35 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Close Button */}
-                    <button
-                      onClick={() => setSelectedBooking(null)}
-                      className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-all hover:scale-105"
-                    >
-                      Close
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setSelectedBooking(null)}
+                        className="flex-1 rounded-xl border border-border px-4 py-3 font-semibold text-foreground transition-all hover:bg-muted"
+                      >
+                        Close
+                      </button>
+                      {selectedBooking.paymentStatus !== 'cancelled' && (
+                        <button
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to cancel this booking?")) {
+                              try {
+                                if (!token) return;
+                                await api.updateBooking(token, selectedBooking.id, { paymentStatus: 'cancelled' });
+                                await fetchData();
+                                setSelectedBooking(null);
+                              } catch (err) {
+                                console.error("Cancel failed:", err);
+                                alert("Failed to cancel booking");
+                              }
+                            }
+                          }}
+                          className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-all hover:bg-red-700"
+                        >
+                          Cancel Booking
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1378,7 +1472,7 @@ const AdminDashboard = () => {
                       ) : (
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-semibold text-lg">{cake.name}</h4>
+                            <h4 className="font-semibold text-lg">{cake.name} ({cake.quantity || '1kg'})</h4>
                             <p className="text-sm text-muted-foreground">{cake.description}</p>
                             <p className="font-bold text-primary mt-2">₹{cake.price}</p>
                           </div>
@@ -1555,38 +1649,68 @@ const AdminDashboard = () => {
 
         {/* Gallery Tab */}
         {activeTab === "gallery" && (
-          <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
-            <h2 className="font-display text-2xl font-bold text-foreground">Gallery Management</h2>
-            <p className="text-sm text-muted-foreground font-body">
-              Upload testimonial images for this branch. These images are shown on the public gallery page.
-            </p>
-            <input
-              type="text"
-              placeholder="Optional title (e.g. Birthday Celebration)"
-              value={newTestimonialTitle}
-              onChange={(e) => setNewTestimonialTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleUploadTestimonial(e.target.files?.[0])}
-              className="w-full text-xs text-muted-foreground"
-            />
-            {uploadingTestimonial && <p className="text-xs text-primary">Uploading testimonial image...</p>}
-            <div className="grid gap-3 md:grid-cols-2">
-              {testimonials.map((item) => (
-                <div key={item.id} className="rounded-xl border border-border p-3 space-y-2">
-                  <img src={item.image} alt={item.title || "Testimonial"} className="h-32 w-full rounded-lg object-cover" />
-                  <p className="text-sm font-medium text-foreground">{item.title || "Customer Memory"}</p>
-                  <button
-                    onClick={() => handleDeleteTestimonial(item.id)}
-                    className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+          <div className="space-y-8">
+            <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
+              <h2 className="font-display text-2xl font-bold text-foreground">Hero Carousel Management</h2>
+              <p className="text-sm text-muted-foreground font-body">
+                Upload image banners for the home page carousel for this branch.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleHeroUpload(e.target.files?.[0])}
+                className="w-full text-xs text-muted-foreground"
+              />
+              {uploadingHero && <p className="text-xs text-primary">Uploading hero image...</p>}
+              <div className="grid gap-3 md:grid-cols-3">
+                {heroImages.map((img, idx) => (
+                  <div key={idx} className="relative aspect-video rounded-xl border border-border overflow-hidden group">
+                    <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => handleDeleteHero(idx)}
+                      className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ✕
+                    </button>
+                    <div className="absolute bottom-1 left-2 bg-black/50 text-[10px] text-white px-1 rounded">#{idx+1}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
+              <h2 className="font-display text-2xl font-bold text-foreground">Testimonials Management</h2>
+              <p className="text-sm text-muted-foreground font-body">
+                Upload testimonial images for this branch. These images are shown on the public gallery page.
+              </p>
+              <input
+                type="text"
+                placeholder="Optional title (e.g. Birthday Celebration)"
+                value={newTestimonialTitle}
+                onChange={(e) => setNewTestimonialTitle(e.target.value)}
+                className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadTestimonial(e.target.files?.[0])}
+                className="w-full text-xs text-muted-foreground"
+              />
+              {uploadingTestimonial && <p className="text-xs text-primary">Uploading testimonial image...</p>}
+              <div className="grid gap-3 md:grid-cols-2">
+                {testimonials.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-border p-3 space-y-2">
+                    <img src={item.image} alt={item.title || "Testimonial"} className="h-32 w-full rounded-lg object-cover" />
+                    <p className="text-sm font-medium text-foreground">{item.title || "Customer Memory"}</p>
+                    <button
+                      onClick={() => handleDeleteTestimonial(item.id)}
+                      className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1594,9 +1718,11 @@ const AdminDashboard = () => {
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-6">
-            <h2 className="font-display text-2xl font-bold text-foreground">Branch Settings</h2>
+            <h2 className="font-display text-2xl font-bold text-foreground">
+              Settings for {BRANCHES.find((b) => b.id === selectedBranch)?.name || "Branch"}
+            </h2>
             <p className="text-sm text-muted-foreground font-body">
-              Update the contact information and address for the selected branch.
+              Update the contact information, address, and social handles for this specific location.
             </p>
             
             <div className="space-y-4">
@@ -1638,6 +1764,42 @@ const AdminDashboard = () => {
                   onChange={(e) => setBranchEditData({ ...branchEditData, mapLink: e.target.value })}
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                 />
+              </div>
+
+              <div className="pt-4 border-t border-border mt-4">
+                <h3 className="text-sm font-bold text-foreground mb-4 font-display">Social Media Links</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Instagram URL</label>
+                    <input
+                      type="text"
+                      value={socialEditData.instagram}
+                      onChange={(e) => setSocialEditData({ ...socialEditData, instagram: e.target.value })}
+                      placeholder="https://instagram.com/your-profile"
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Facebook URL</label>
+                    <input
+                      type="text"
+                      value={socialEditData.facebook}
+                      onChange={(e) => setSocialEditData({ ...socialEditData, facebook: e.target.value })}
+                      placeholder="https://facebook.com/your-page"
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">WhatsApp Number (Optional)</label>
+                    <input
+                      type="text"
+                      value={socialEditData.whatsapp}
+                      onChange={(e) => setSocialEditData({ ...socialEditData, whatsapp: e.target.value })}
+                      placeholder="99127XXXXX (Leave empty for branch phone)"
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -1,31 +1,20 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, MapPin, Film, PartyPopper, Calendar, Clock, User, Cake, Sparkles, CreditCard } from "lucide-react";
-import {
-  BookingData, INITIAL_BOOKING,
-  OCCASIONS, CAKE_OPTIONS,
-  EXTRA_DECORATIONS, TIME_SLOTS, BASE_PRICES, DECORATION_PRICE,
-  type CakeOption, type ExtraDecoration, type TimeSlot,
-} from "@/lib/booking-data";
-import { api, type Branch } from "@/lib/api";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { 
+  MapPin, Clock, PartyPopper, Cake, Sparkles, Check, 
+  CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar
+} from "lucide-react";
+import { api, Branch, CakeOption, ExtraDecoration } from "../lib/api";
+import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-data";
 
-const STEPS = [
-  "Select Branch & Service",
-  "Date & Time",
-  "Your Details",
-  "Occasion",
-  "Cake Selection",
-  "Extra Decorations",
-  "Summary",
-  "Payment",
-];
-
-const STEP_ICONS = [MapPin, Calendar, User, PartyPopper, Cake, Sparkles, Check, CreditCard];
-const formatServiceName = (serviceId: string) =>
-  serviceId
+const formatServiceName = (serviceId: string) => {
+  if (serviceId === "private-theatre-party-hall") return "Private Theatre + Party Hall";
+  return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+};
+
 const parse12HourTime = (timeString: string) => {
   const match = timeString.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
   if (!match) return null;
@@ -36,6 +25,7 @@ const parse12HourTime = (timeString: string) => {
   if (period === "PM") hours += 12;
   return hours * 60 + minutes;
 };
+
 const to12HourTime = (minutes: number) => {
   const normalized = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
   const period = normalized >= 12 * 60 ? "PM" : "AM";
@@ -44,12 +34,25 @@ const to12HourTime = (minutes: number) => {
   const mins = normalized % 60;
   return `${hour12}:${String(mins).padStart(2, "0")} ${period}`;
 };
+
 const formatSlotRange = (startTime: string, durationHours: number) => {
   const startMinutes = parse12HourTime(startTime);
   if (startMinutes === null) return startTime;
   const endMinutes = startMinutes + durationHours * 60;
   return `${startTime} - ${to12HourTime(endMinutes)}`;
 };
+
+const STEPS = [
+  "Select Branch & Service",
+  "Date, Time & Details",
+  "Occasion",
+  "Cake Selection",
+  "Extra Decorations",
+  "Summary",
+  "Payment",
+];
+
+const STEP_ICONS = [MapPin, Clock, PartyPopper, Cake, Sparkles, Check, CreditCard];
 
 const BookingPage = () => {
   const [step, setStep] = useState(0);
@@ -66,22 +69,11 @@ const BookingPage = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const serviceParam = searchParams.get("service");
-    if (serviceParam === "party-hall" || serviceParam === "private-theatre") {
-      setBooking((prev) => ({ ...prev, service: serviceParam }));
-    }
-  }, [searchParams]);
-
-
-
   const [lastFetchedBranch, setLastFetchedBranch] = useState<string>("");
 
   useEffect(() => {
     const initBooking = async () => {
       try {
-        // Use either the branch from existing booking, or default to branch-1
         const initialBranch = booking.branch || "branch-1";
         const data = await api.getBookingInit(initialBranch);
         
@@ -92,6 +84,12 @@ const BookingPage = () => {
         setDecorations(data.decorations);
         setDecorationPrice(data.decorationPrice);
         setLastFetchedBranch(initialBranch);
+        
+        // Auto-select first service if only one
+        const services = Object.keys(data.pricing);
+        if (services.length === 1 && !booking.service) {
+           setBooking(prev => ({ ...prev, service: services[0] as any, branch: initialBranch }));
+        }
       } catch (error) {
         console.error("Failed to initialize booking data:", error);
       } finally {
@@ -101,7 +99,6 @@ const BookingPage = () => {
     initBooking();
   }, []);
 
-  // Update branch-specific data when branch changes (after initial load)
   useEffect(() => {
     if (!loading && booking.branch && booking.branch !== lastFetchedBranch) {
       const loadBranchData = async () => {
@@ -112,6 +109,11 @@ const BookingPage = () => {
           setDecorations(data.decorations);
           setDecorationPrice(data.decorationPrice);
           setLastFetchedBranch(booking.branch);
+          
+          const services = Object.keys(data.pricing);
+          if (services.length === 1) {
+            setBooking(prev => ({ ...prev, service: services[0] as any }));
+          }
         } catch (error) {
           console.error("Failed to update branch data:", error);
         }
@@ -145,15 +147,21 @@ const BookingPage = () => {
     if (booking.decorationRequired) total += decorationPrice;
     if (booking.selectedCake) total += booking.selectedCake.price;
     booking.extraDecorations.forEach((d) => (total += d.price));
+    
+    // Extra person charge for Branch 1
+    let extraCharge = 0;
+    if (booking.branch === "branch-1" && booking.membersCount > 10) {
+      extraCharge = (booking.membersCount - 10) * 150;
+    }
+    total += extraCharge;
     return total;
   }, [booking, pricing, decorationPrice]);
 
   const canNext = (): boolean => {
     switch (step) {
       case 0: return !!booking.branch && !!booking.service;
-      case 1: return !!booking.date && !!booking.duration && !!booking.timeSlot;
-      case 2: return !!booking.name && !!booking.phone && !!booking.email;
-      case 3: return !!booking.occasion;
+      case 1: return !!booking.date && !!booking.duration && !!booking.timeSlot && !!booking.name && !!booking.phone && !!booking.email && booking.membersCount > 0;
+      case 2: return !!booking.occasion;
       default: return true;
     }
   };
@@ -163,11 +171,14 @@ const BookingPage = () => {
   const handlePayment = async (paymentMethod: 'phonepe' | 'mock' = 'phonepe') => {
     try {
       setPaymentLoading(true);
+      
+      const extraCharge = (booking.branch === "branch-1" && booking.membersCount > 10) ? (booking.membersCount - 10) * 150 : 0;
       const amountToPay = paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3);
 
       const bookingData = { 
         ...booking, 
         totalPrice, 
+        extraPersonsCharge: extraCharge,
         paymentStatus: "pending",
         paymentType,
         amountPaid: 0,
@@ -175,11 +186,9 @@ const BookingPage = () => {
         phone: `+91 ${booking.phone}`
       };
       
-      // First create the booking
       const createdBooking = await api.createBooking(bookingData);
       
       if (paymentMethod === 'mock') {
-        // Use mock payment for testing
         const paymentResponse = await api.processMockPayment(
           createdBooking.id,
           amountToPay,
@@ -190,7 +199,6 @@ const BookingPage = () => {
           navigate("/booking-confirmed", { state: { booking: paymentResponse.booking } });
         }
       } else {
-        // Try PhonePe payment
         const paymentResponse = await api.initiatePhonePePayment(
           createdBooking.id,
           amountToPay,
@@ -199,7 +207,6 @@ const BookingPage = () => {
         );
 
         if (paymentResponse.redirectUrl) {
-          // Redirect to PhonePe payment page
           window.location.href = paymentResponse.redirectUrl;
         } else {
           throw new Error("Failed to get payment redirect URL");
@@ -247,9 +254,9 @@ const BookingPage = () => {
             <div className="rounded-2xl border border-border bg-card p-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display text-2xl font-bold text-foreground">{STEPS[step]}</h2>
-              {step < 6 && (
+              {step < 5 && (
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground font-body">Current Total</p>
+                  <p className="text-xs text-muted-foreground font-body">Total Estimation</p>
                   <p className="text-lg font-bold text-primary font-display">₹{totalPrice.toLocaleString()}</p>
                 </div>
               )}
@@ -271,26 +278,16 @@ const BookingPage = () => {
                     >
                       <p className="font-semibold text-foreground text-sm font-body">{b.name}</p>
                       <p className="mt-1 text-xs text-muted-foreground font-body">{b.address}</p>
-                      {b.mapLink && (
-                        <a
-                          href={b.mapLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline font-body"
-                        >
-                          <MapPin className="h-3 w-3" />
-                          View on Maps
-                        </a>
-                      )}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
                 <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Service</label>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {Object.keys(pricing).map((serviceId) => (
+                <div className="grid gap-3 md:grid-cols-1">
+                  {Object.keys(pricing)
+                    .filter(id => id === 'private-theatre-party-hall')
+                    .map((serviceId) => (
                     <button
                       key={serviceId}
                       onClick={() => update({ service: serviceId as any })}
@@ -298,12 +295,11 @@ const BookingPage = () => {
                         booking.service === serviceId ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
                       }`}
                     >
-                      {serviceId === "party-hall" ? (
-                        <PartyPopper className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Film className="h-5 w-5 text-primary" />
-                      )}
-                      <span className="font-semibold text-foreground text-sm font-body">{formatServiceName(serviceId)}</span>
+                      <Film className="h-5 w-5 text-primary" />
+                      <div className="text-left">
+                        <span className="font-semibold text-foreground text-sm font-body">{formatServiceName(serviceId)}</span>
+                        <p className="text-[10px] text-muted-foreground font-body">Best combined experience</p>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -311,19 +307,37 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 1: Date & Time */}
+          {/* Step 1: Date, Time & Details (Merged) */}
           {step === 1 && (
             <div className="space-y-6">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Select Date</label>
-                <input
-                  type="date"
-                  value={booking.date}
-                  min={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => update({ date: e.target.value, timeSlot: "" })}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Select Date</label>
+                  <input
+                    type="date"
+                    value={booking.date}
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => update({ date: e.target.value, timeSlot: "" })}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Members Count</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={booking.membersCount}
+                    onChange={(e) => update({ membersCount: parseInt(e.target.value) || 0 })}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                  {booking.branch === "branch-1" && booking.membersCount > 10 && (
+                    <p className="mt-1 text-[10px] text-primary font-body animate-pulse">
+                      * Extra {(booking.membersCount - 10)} persons: +₹{(booking.membersCount - 10) * 150}
+                    </p>
+                  )}
+                </div>
               </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground font-body">Duration</label>
                 <div className="flex gap-3">
@@ -340,6 +354,7 @@ const BookingPage = () => {
                   ))}
                 </div>
               </div>
+
               {booking.duration > 0 && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Available Time Slots</label>
@@ -347,13 +362,7 @@ const BookingPage = () => {
                     {availableSlots.length > 0 ? (
                       availableSlots.map((slot) => {
                         const isBooked = bookedSlots.includes(slot);
-                        
-                        const startTime = slot;
-                        const startMinutes = parse12HourTime(startTime);
-                        const endMinutes = (startMinutes || 0) + (booking.duration || 1) * 60;
-                        const endTime = to12HourTime(endMinutes);
-                        const displayRange = `${startTime} - ${endTime}`;
-
+                        const displayRange = formatSlotRange(slot, booking.duration);
                         return (
                           <button
                             key={slot}
@@ -372,70 +381,63 @@ const BookingPage = () => {
                         );
                       })
                     ) : (
-                      <p className="col-span-full py-6 text-center text-sm text-muted-foreground font-body">
-                        No slots available for this duration. Try another date or duration.
+                      <p className="col-span-full py-2 text-center text-xs text-muted-foreground font-body">
+                        No slots available.
                       </p>
                     )}
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Step 2: User Info */}
-          {step === 2 && (
-            <div className="space-y-4">
-              {[
-                { key: "name", label: "Full Name", type: "text", placeholder: "Enter your name" },
-                { key: "phone", label: "Phone Number", type: "tel", placeholder: "XXXXX XXXXX" },
-                { key: "email", label: "Email", type: "email", placeholder: "you@example.com" },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">{field.label}</label>
-                  {field.key === "phone" ? (
+              <div className="pt-4 border-t border-border">
+                <h4 className="mb-4 text-sm font-semibold text-foreground font-body">Your Information</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="mb-1 text-xs text-muted-foreground font-body">Full Name</label>
+                    <input
+                      type="text"
+                      value={booking.name}
+                      onChange={(e) => update({ name: e.target.value })}
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-body focus:border-primary focus:outline-none"
+                      placeholder="Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 text-xs text-muted-foreground font-body">Phone</label>
                     <div className="flex items-center rounded-xl border border-border bg-muted overflow-hidden">
-                      <span className="px-4 py-3 text-foreground font-body">+91</span>
+                      <span className="pl-3 pr-1 text-sm text-foreground">+91</span>
                       <input
-                        type={field.type}
-                        placeholder={field.placeholder}
-                        value={(booking as any)[field.key]}
-                        onChange={(e) => update({ [field.key]: e.target.value })}
-                        className="flex-1 bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:outline-none"
+                        type="tel"
+                        value={booking.phone}
+                        onChange={(e) => update({ phone: e.target.value })}
+                        className="w-full bg-transparent px-2 py-2.5 text-sm font-body focus:outline-none"
                         maxLength={10}
+                        placeholder="Number"
                       />
                     </div>
-                  ) : (
+                  </div>
+                  <div>
+                    <label className="mb-1 text-xs text-muted-foreground font-body">Email</label>
                     <input
-                      type={field.type}
-                      placeholder={field.placeholder}
-                      value={(booking as any)[field.key]}
-                      onChange={(e) => update({ [field.key]: e.target.value })}
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                      type="email"
+                      value={booking.email}
+                      onChange={(e) => update({ email: e.target.value })}
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-body focus:border-primary focus:outline-none"
+                      placeholder="Email"
                     />
-                  )}
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
           )}
 
-          {/* Step 3: Occasion */}
-          {step === 3 && (
+          {/* Step 2: Occasion */}
+          {step === 2 && (
             <div className="space-y-6">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Need Decoration?</label>
-                <div className="flex gap-3">
-                  {[true, false].map((val) => (
-                    <button
-                      key={String(val)}
-                      onClick={() => update({ decorationRequired: val })}
-                      className={`flex-1 rounded-xl border py-3 text-sm font-medium transition-all font-body ${
-                        booking.decorationRequired === val ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
-                      }`}
-                    >
-                      {val ? `Yes (+₹${decorationPrice})` : "No"}
-                    </button>
-                  ))}
-                </div>
+              <div className="rounded-xl bg-primary/5 p-4 border border-primary/20">
+                <p className="text-xs text-primary font-body font-semibold flex items-center gap-2">
+                   <Sparkles className="h-3 w-3" /> Decoration is mandatory and included (₹{decorationPrice})
+                </p>
               </div>
               <div>
                 <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Occasion</label>
@@ -454,13 +456,12 @@ const BookingPage = () => {
                 </div>
                 {booking.occasion === "Other" && (
                   <div className="mt-4">
-                    <label className="mb-2 block text-sm font-medium text-foreground font-body">Please specify your occasion</label>
                     <input
                       type="text"
-                      placeholder="Enter your occasion"
+                      placeholder="Please specify your occasion"
                       value={booking.customOccasion || ""}
                       onChange={(e) => update({ customOccasion: e.target.value })}
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                     />
                   </div>
                 )}
@@ -468,8 +469,8 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 4: Cake */}
-          {step === 4 && (
+          {/* Step 3: Cake */}
+          {step === 3 && (
             <div className="space-y-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground font-body">Would you like a cake?</label>
@@ -493,31 +494,26 @@ const BookingPage = () => {
                     <button
                       key={cake.id}
                       onClick={() => update({ selectedCake: cake })}
-                      className={`rounded-xl border overflow-hidden transition-all ${
-                        booking.selectedCake?.id === cake.id ? "border-primary bg-muted" : "border-border hover:border-primary"
+                      className={`rounded-xl border overflow-hidden transition-all text-left ${
+                        booking.selectedCake?.id === cake.id ? "border-primary bg-muted shadow-md" : "border-border hover:border-primary"
                       }`}
                     >
-                      <div className="aspect-square bg-muted overflow-hidden">
+                      <div className="aspect-video bg-muted overflow-hidden relative">
                         {cake.image ? (
-                          <img
-                            src={cake.image}
-                            alt={cake.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={cake.image} alt={cake.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">
-                            No image
-                          </div>
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">No image</div>
                         )}
+                        <div className="absolute top-2 right-2 bg-primary/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                           {cake.quantity || '1kg'}
+                        </div>
                       </div>
-                      <div className="p-4">
-                        <p className="font-semibold text-foreground text-sm font-body">{cake.name}</p>
-                        <p className="text-xs text-muted-foreground font-body mt-1">{cake.description}</p>
-                        <div className="flex justify-between items-center mt-3">
+                      <div className="p-3">
+                        <p className="font-bold text-foreground text-sm font-body">{cake.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-body line-clamp-1">{cake.description}</p>
+                        <div className="flex justify-between items-center mt-2">
                           <span className="text-sm font-bold text-primary font-body">₹{cake.price}</span>
-                          {booking.selectedCake?.id === cake.id && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
+                          {booking.selectedCake?.id === cake.id && <Check className="h-4 w-4 text-primary" />}
                         </div>
                       </div>
                     </button>
@@ -527,10 +523,10 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 5: Extra Decorations */}
-          {step === 5 && (
-            <div className="space-y-2">
-              <p className="mb-4 text-sm text-muted-foreground font-body">Select any extras you'd like to add:</p>
+          {/* Step 4: Extra Decorations */}
+          {step === 4 && (
+            <div className="space-y-3">
+              <p className="mb-2 text-xs text-muted-foreground font-body">Select any extras (with images):</p>
               {decorations.map((item) => {
                 const selected = booking.extraDecorations.some((d) => d.id === item.id);
                 return (
@@ -542,24 +538,24 @@ const BookingPage = () => {
                         : [...booking.extraDecorations, item];
                       update({ extraDecorations: extras });
                     }}
-                    className={`w-full rounded-xl border p-4 text-left transition-all ${
+                    className={`w-full rounded-xl border p-3 text-left transition-all ${
                       selected ? "border-primary bg-muted" : "border-border hover:border-primary"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="h-12 w-12 rounded-lg object-cover" />
-                        ) : null}
-                        <div className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-primary bg-primary" : "border-border"}`}>
+                        {item.image && (
+                           <img src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
+                        )}
+                        <div className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-primary bg-primary" : "border-border"}`}>
                           {selected && <Check className="h-3 w-3 text-primary-foreground" />}
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground text-sm font-body">{item.name}</p>
-                          <p className="text-xs text-muted-foreground font-body">{item.description}</p>
+                          <p className="font-bold text-foreground text-xs font-body">{item.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-body">{item.description}</p>
                         </div>
                       </div>
-                      <span className="text-sm font-bold text-primary font-body">₹{item.price}</span>
+                      <span className="text-xs font-bold text-primary font-body">₹{item.price}</span>
                     </div>
                   </button>
                 );
@@ -567,45 +563,52 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 6: Summary */}
-          {step === 6 && (
+          {/* Step 5: Summary */}
+          {step === 5 && (
             <div className="space-y-4">
               {[
                 { label: "Branch", value: branches.find((b) => b.id === booking.branch)?.name },
                 { label: "Service", value: formatServiceName(booking.service || "") },
                 { label: "Date", value: booking.date },
                 { label: "Time", value: `${booking.timeSlot} (${booking.duration}hr)` },
+                { label: "Members", value: `${booking.membersCount} Persons` },
                 { label: "Name", value: booking.name },
-                { label: "Phone", value: booking.phone },
-                { label: "Email", value: booking.email },
                 { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
-                { label: "Decoration", value: booking.decorationRequired ? `Yes (+₹${decorationPrice})` : "No" },
+                { label: "Decoration", value: `Mandatory (+₹${decorationPrice})` },
                 { label: "Cake", value: booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between border-b border-border pb-2">
-                  <span className="text-sm text-muted-foreground font-body">{item.label}</span>
-                  <span className="text-sm font-medium text-foreground font-body">{item.value}</span>
+                  <span className="text-xs text-muted-foreground font-body">{item.label}</span>
+                  <span className="text-xs font-medium text-foreground font-body">{item.value}</span>
                 </div>
               ))}
+              
+              {booking.branch === "branch-1" && booking.membersCount > 10 && (
+                 <div className="flex justify-between border-b border-border pb-2">
+                   <span className="text-xs text-primary font-bold font-body">Extra Persons (&gt;10)</span>
+                   <span className="text-xs font-bold text-primary font-body">₹{(booking.membersCount - 10) * 150}</span>
+                 </div>
+              )}
+
               {booking.extraDecorations.length > 0 && (
                 <div className="border-b border-border pb-2">
-                  <span className="text-sm text-muted-foreground font-body">Extras</span>
+                  <span className="text-xs text-muted-foreground font-body">Extras</span>
                   <div className="mt-1 space-y-1">
                     {booking.extraDecorations.map((d) => (
                       <div key={d.id} className="flex justify-between">
-                        <span className="text-xs text-foreground font-body">{d.name}</span>
-                        <span className="text-xs text-primary font-body">₹{d.price}</span>
+                        <span className="text-[10px] text-foreground font-body">{d.name}</span>
+                        <span className="text-[10px] text-primary font-body">₹{d.price}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
               <div className="flex justify-between pt-2">
-                <span className="text-lg font-bold text-foreground font-display">Total</span>
+                <span className="text-lg font-bold text-foreground font-display">Grand Total</span>
                 <span className="text-lg font-bold text-primary font-display">₹{totalPrice.toLocaleString()}</span>
               </div>
               <button
-                onClick={() => setStep(7)}
+                onClick={() => setStep(6)}
                 className="w-full mt-6 rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] glow-gold font-body"
               >
                 Proceed to Payment
@@ -613,78 +616,74 @@ const BookingPage = () => {
             </div>
           )}
 
-          {/* Step 7: Payment Choice & Execution */}
-          {step === 7 && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-primary glow-gold">
-                  <CreditCard className="h-8 w-8 text-primary" />
+          {/* Step 6: Payment Choice */}
+          {step === 6 && (
+             <div className="space-y-6">
+               <div className="text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-primary glow-gold">
+                  <CreditCard className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-display text-xl font-bold">Choose Payment Option</h3>
-                <p className="text-sm text-muted-foreground">Select how you want to pay for your booking</p>
+                <h3 className="font-display text-xl font-bold">Secure Payment</h3>
+                <p className="text-xs text-muted-foreground">Select your preferred payment plan</p>
               </div>
 
-              <div className="grid gap-4">
+              <div className="grid gap-3">
                 <button
                   onClick={() => setPaymentType('advance')}
-                  className={`flex items-center justify-between rounded-2xl border p-6 transition-all ${
+                  className={`flex items-center justify-between rounded-xl border p-5 transition-all ${
                     paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
                   }`}
                 >
                   <div className="text-left">
-                    <p className="font-bold text-foreground">Pay Advance (30%)</p>
-                    <p className="text-xs text-muted-foreground">Pay now to confirm slot, balance at venue</p>
+                    <p className="font-bold text-sm text-foreground">30% Advance</p>
+                    <p className="text-[10px] text-muted-foreground">Confirm your booking now</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-primary">₹{Math.ceil(totalPrice * 0.3).toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">Balance: ₹{Math.floor(totalPrice * 0.7).toLocaleString()}</p>
+                    <p className="text-lg font-bold text-primary">₹{Math.ceil(totalPrice * 0.3).toLocaleString()}</p>
+                    <p className="text-[8px] text-muted-foreground uppercase">Bal: ₹{Math.floor(totalPrice * 0.7).toLocaleString()}</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setPaymentType('full')}
-                  className={`flex items-center justify-between rounded-2xl border p-6 transition-all ${
+                  className={`flex items-center justify-between rounded-xl border p-5 transition-all ${
                     paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
                   }`}
                 >
                   <div className="text-left">
-                    <p className="font-bold text-foreground">Full Payment</p>
-                    <p className="text-xs text-muted-foreground">Pay the entire amount now</p>
+                    <p className="font-bold text-sm text-foreground">100% Full Payment</p>
+                    <p className="text-[10px] text-muted-foreground">No balance to pay later</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-primary">₹{totalPrice.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-primary">₹{totalPrice.toLocaleString()}</p>
                   </div>
                 </button>
               </div>
               
-              <div className="space-y-3 pt-4">
+              <div className="space-y-3 pt-2">
                 <button
                   onClick={() => handlePayment('phonepe')}
                   disabled={paymentLoading}
-                  className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 glow-gold font-body"
+                  className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                 >
-                  {paymentLoading ? "Processing..." : `Pay ₹${(paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3)).toLocaleString()} with PhonePe`}
+                  {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3)).toLocaleString()} Now`}
                 </button>
                 
                 {!import.meta.env.PROD && (
                   <button
                     onClick={() => handlePayment('mock')}
                     disabled={paymentLoading}
-                    className="w-full rounded-xl border border-border py-4 text-sm font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 font-body"
+                    className="w-full rounded-xl border border-border py-2 text-xs font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                   >
-                    {paymentLoading ? "Processing..." : "Test Payment (Mock)"}
+                     (Dev Mode) Test Payment
                   </button>
                 )}
               </div>
-              
-              <p className="text-center text-[10px] text-muted-foreground font-body">
-                Secure payment powered by PhonePe • Payments are encrypted and secure
-              </p>
-            </div>
+             </div>
           )}
 
           {/* Navigation */}
-          {step < 6 && (
+          {step < 5 && (
             <div className="mt-8 flex justify-between">
               <button
                 onClick={() => setStep(Math.max(0, step - 1))}
@@ -693,15 +692,13 @@ const BookingPage = () => {
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
-              {step < 6 && (
-                <button
-                  onClick={() => setStep(Math.min(7, step + 1))}
-                  disabled={!canNext()}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 disabled:opacity-30 disabled:hover:scale-100 font-body"
-                >
-                  Next <ArrowRight className="h-4 w-4" />
-                </button>
-              )}
+              <button
+                onClick={() => setStep(Math.min(6, step + 1))}
+                disabled={!canNext()}
+                className="flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 disabled:opacity-30 disabled:hover:scale-100 font-body"
+              >
+                Next <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>

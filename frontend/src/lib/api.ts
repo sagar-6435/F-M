@@ -14,6 +14,7 @@ export interface CakeOption {
   price: number;
   description: string;
   image?: string;
+  quantity?: string;
 }
 
 export interface ExtraDecoration {
@@ -21,6 +22,7 @@ export interface ExtraDecoration {
   name: string;
   price: number;
   description: string;
+  image?: string;
 }
 
 export interface TestimonialImage {
@@ -141,6 +143,36 @@ export const api = {
     if (!res.ok) throw new Error("Failed to delete testimonial image");
   },
 
+  async getHeroImages(branch: string): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/admin/hero-images?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch hero images");
+    return res.json();
+  },
+
+  async addHeroImage(token: string, branch: string, image: string): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/admin/hero-images?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ image }),
+    });
+    if (!res.ok) throw new Error("Failed to add hero image");
+    return res.json();
+  },
+
+  async deleteHeroImage(token: string, branch: string, index: number): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/admin/hero-images/${index}?branch=${encodeURIComponent(branch)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error("Failed to delete hero image");
+    return res.json();
+  },
+
   async getBookingById(id: string): Promise<any> {
     const res = await fetch(`${API_BASE}/bookings/${id}`);
     if (!res.ok) throw new Error("Failed to fetch booking details");
@@ -202,6 +234,25 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error("Failed to fetch statistics");
+    return res.json();
+  },
+
+  async getSocialLinks(branch: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/catalog/social-links?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch social links");
+    return res.json();
+  },
+
+  async updateSocialLinks(token: string, branch: string, data: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/catalog/social-links?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to update social links");
     return res.json();
   },
 

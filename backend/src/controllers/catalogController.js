@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getBranchModels } from '../config/mongo.js';
-import { cloneBranchPricingDb, branchPricingDbs, createBranchPricingDb } from '../config/constants.js';
+import { cloneBranchPricingDb, branchPricingDbs, createBranchPricingDb, defaultPricing } from '../config/constants.js';
 import { promises as fs } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,11 +42,21 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
   const models = getBranchModels(branchId);
   if (models) {
     const defaultData = createBranchPricingDb();
-    const doc = await models.BranchCatalog.findOneAndUpdate(
-      { branch: branchId },
-      { $setOnInsert: { branch: branchId, ...defaultData } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    let doc = await models.BranchCatalog.findOne({ branch: branchId });
+    
+    if (!doc) {
+      doc = await models.BranchCatalog.create({ branch: branchId, ...defaultData });
+    } else {
+      // MIGRATION: If old services exist, merge them into the new unified service
+      const pricing = doc.pricing || {};
+      if (pricing['private-theatre'] || pricing['party-hall']) {
+        const unifiedPricing = pricing['private-theatre-party-hall'] || defaultPricing['private-theatre-party-hall'];
+        doc.pricing = { 'private-theatre-party-hall': unifiedPricing };
+        // Remove old keys if they were somehow explicitly in the object
+        if (doc.markModified) doc.markModified('pricing');
+        await doc.save();
+      }
+    }
     return cloneBranchPricingDb(doc.toObject());
   }
 
@@ -55,6 +65,10 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
 };
 
 export const saveCatalogForBranch = async (branchId, catalog) => {
+  // Always update memory cache and persist to file as a secondary backup
+  branchPricingDbs[branchId] = cloneBranchPricingDb(catalog);
+  await saveBranchPricingData();
+
   const models = getBranchModels(branchId);
   if (models) {
     await models.BranchCatalog.findOneAndUpdate(
@@ -66,14 +80,12 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
         decorations: catalog.decorations,
         decorationPrice: catalog.decorationPrice,
         testimonials: catalog.testimonials,
+        heroImages: catalog.heroImages || [],
+        socialLinks: catalog.socialLinks || { instagram: "", facebook: "", whatsapp: "" },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    return;
   }
-
-  branchPricingDbs[branchId] = cloneBranchPricingDb(catalog);
-  await saveBranchPricingData();
 };
 
 export const getBranchFromRequest = (req, includeBody = true) =>

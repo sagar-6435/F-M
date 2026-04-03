@@ -1,21 +1,28 @@
 import express from 'express';
 import { verifyAdmin } from '../middleware/auth.js';
-import { globalDb } from '../data/globalDb.js';
+import * as catalogController from '../controllers/catalogController.js';
 
 const router = express.Router();
 
 // Get decoration price
-router.get('/', (req, res) => {
-  res.json({ decorationPrice: globalDb.decorationPrice });
+router.get('/', async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  res.json({ decorationPrice: result.catalog.decorationPrice });
 });
 
 // Update decoration price
-router.put('/', verifyAdmin, (req, res) => {
+router.put('/', verifyAdmin, async (req, res) => {
+  const result = await catalogController.getCatalogOrSendError(req, res);
+  if (!result) return;
+  const { branch, catalog } = result;
+
   const { price } = req.body;
   if (price !== undefined) {
-    globalDb.decorationPrice = price;
+    catalog.decorationPrice = price;
   }
-  res.json({ decorationPrice: globalDb.decorationPrice });
+  await catalogController.saveCatalogForBranch(branch, catalog);
+  res.json({ decorationPrice: catalog.decorationPrice });
 });
 
 export default router;

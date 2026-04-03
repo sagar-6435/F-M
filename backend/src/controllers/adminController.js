@@ -16,7 +16,7 @@ export const login = (req, res) => {
   const trimmedAdminPassword = adminPassword ? adminPassword.trim() : '';
   
   if (trimmedPassword === trimmedAdminPassword) {
-    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '3650d' });
     res.json({ token, message: 'Login successful' });
   } else {
     res.status(401).json({ error: 'Invalid password' });
