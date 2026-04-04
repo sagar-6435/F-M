@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+
 import { BRANCHES } from "@/lib/booking-data";
-import { api } from "@/lib/api";
+import { API_BASE, api } from "@/lib/api";
 import { Eye, EyeOff, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download } from "lucide-react";
 
 interface Booking {
@@ -57,6 +58,7 @@ const AdminDashboard = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<"branch-1" | "branch-2">("branch-1");
+
   const [filter, setFilter] = useState<"all" | "pending" | "paid">("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -109,23 +111,28 @@ const AdminDashboard = () => {
     setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
   }, [selectedBranch]);
 
-  // Check for existing token on mount
+  // Check for existing token and branch on mount
   useEffect(() => {
     const savedToken = localStorage.getItem("adminToken");
+    const savedBranch = localStorage.getItem("adminBranch") as "branch-1" | "branch-2" | null;
     if (savedToken) {
       setToken(savedToken);
       setIsLoggedIn(true);
+      if (savedBranch) setSelectedBranch(savedBranch);
     }
   }, []);
+
 
   const handleLogin = async () => {
     try {
       setError(null);
       const data = await api.adminLogin(password);
       setToken(data.token);
+      setSelectedBranch(data.branch as "branch-1" | "branch-2");
       setIsLoggedIn(true);
       setPassword("");
       localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminBranch", data.branch);
       
       const bData = await api.getBranches();
       setBranchList(bData);
@@ -134,6 +141,7 @@ const AdminDashboard = () => {
       console.error("Login error:", err);
     }
   };
+
 
   // Fetch bookings and stats when logged in or branch/filter changes
   useEffect(() => {
@@ -283,7 +291,9 @@ const AdminDashboard = () => {
     setBookings([]);
     setStats(null);
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminBranch");
   };
+
 
   const handleDownloadExcel = async () => {
     if (!token) return;
@@ -341,7 +351,7 @@ const AdminDashboard = () => {
 
   const handleSaveService = async () => {
     try {
-      const response = await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
+      const response = await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -361,7 +371,7 @@ const AdminDashboard = () => {
 
   const handleSaveCake = async () => {
     try {
-      const baseUrl = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const baseUrl = editValues.id?.startsWith("cake-") ? `${API_BASE}/cakes/${editValues.id}` : `${API_BASE}/cakes`;
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("cake-") ? "PUT" : "POST";
 
@@ -385,7 +395,7 @@ const AdminDashboard = () => {
 
   const handleSaveDecoration = async () => {
     try {
-      const baseUrl = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const baseUrl = editValues.id?.startsWith("extra-") ? `${API_BASE}/decorations/${editValues.id}` : `${API_BASE}/decorations`;
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("extra-") ? "PUT" : "POST";
 
@@ -409,7 +419,7 @@ const AdminDashboard = () => {
 
   const handleSaveDecorationPrice = async () => {
     try {
-      const response = await fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
+      const response = await fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -429,7 +439,7 @@ const AdminDashboard = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`/api/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -445,7 +455,7 @@ const AdminDashboard = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`/api/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -519,7 +529,7 @@ const AdminDashboard = () => {
         { duration: 3, price: newService.threeHours },
       ];
       for (const update of updates) {
-        await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
+        await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "PUT",
           headers,
           body: JSON.stringify({ service, duration: update.duration, price: update.price, branch: selectedBranch }),
@@ -536,7 +546,7 @@ const AdminDashboard = () => {
   const handleCreateCake = async () => {
     if (!token || !newCake.name.trim()) return;
     try {
-      await fetch(`/api/cakes?branch=${encodeURIComponent(selectedBranch)}`, {
+      await fetch(`${API_BASE}/cakes?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -555,7 +565,7 @@ const AdminDashboard = () => {
   const handleCreateDecoration = async () => {
     if (!token || !newDecoration.name.trim()) return;
     try {
-      await fetch(`/api/decorations?branch=${encodeURIComponent(selectedBranch)}`, {
+      await fetch(`${API_BASE}/decorations?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -643,12 +653,15 @@ const AdminDashboard = () => {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-primary glow-gold">
             <LogIn className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="mb-6 text-center font-display text-2xl font-bold text-foreground">Admin Login</h2>
+          <h2 className="mb-2 text-center font-display text-2xl font-bold text-foreground">Admin Login</h2>
+          <p className="mb-6 text-center text-xs text-muted-foreground font-body">
+            Your password determines which branch you manage
+          </p>
           
           <div className="relative mb-4">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Enter admin password"
+              placeholder="Enter branch password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleLogin()}
@@ -669,9 +682,6 @@ const AdminDashboard = () => {
           >
             Login
           </button>
-          <p className="mt-3 text-center text-xs text-muted-foreground font-body">
-            Password: admin123
-          </p>
         </div>
       </div>
     );
@@ -692,17 +702,6 @@ const AdminDashboard = () => {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value as "branch-1" | "branch-2")}
-              className="rounded-full border border-border bg-muted px-4 py-2 text-xs font-medium text-foreground focus:border-primary focus:outline-none"
-            >
-              {BRANCHES.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium transition-all font-body hover:border-primary"

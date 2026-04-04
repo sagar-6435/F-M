@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus, Save, X, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BRANCHES } from "@/lib/booking-data";
+import { API_BASE } from "@/lib/api";
 
 interface PricingItem {
   id?: string;
@@ -35,7 +36,7 @@ const AdminPricing = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await fetch(`${API_BASE}/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -89,10 +90,10 @@ const AdminPricing = () => {
       setLoading(true);
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [pricingRes, cakesRes, decorationsRes, decorationPriceRes] = await Promise.all([
-        fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
-        fetch(`/api/cakes?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
-        fetch(`/api/decorations?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
-        fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`${API_BASE}/cakes?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`${API_BASE}/decorations?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
+        fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
       ]);
 
       if (pricingRes.ok) setPricing(await pricingRes.json());
@@ -126,9 +127,12 @@ const AdminPricing = () => {
 
   const handleSaveService = async () => {
     try {
-      const response = await fetch(`/api/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
+      const response = await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
@@ -143,13 +147,16 @@ const AdminPricing = () => {
 
   const handleSaveCake = async () => {
     try {
-      const baseUrl = editValues.id?.startsWith("cake-") ? `/api/cakes/${editValues.id}` : "/api/cakes";
+      const baseUrl = editValues.id?.startsWith("cake-") ? `${API_BASE}/cakes/${editValues.id}` : `${API_BASE}/cakes`;
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("cake-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
@@ -164,13 +171,16 @@ const AdminPricing = () => {
 
   const handleSaveDecoration = async () => {
     try {
-      const baseUrl = editValues.id?.startsWith("extra-") ? `/api/decorations/${editValues.id}` : "/api/decorations";
+      const baseUrl = editValues.id?.startsWith("extra-") ? `${API_BASE}/decorations/${editValues.id}` : `${API_BASE}/decorations`;
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("extra-") ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
@@ -185,9 +195,12 @@ const AdminPricing = () => {
 
   const handleSaveDecorationPrice = async () => {
     try {
-      const response = await fetch(`/api/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
+      const response = await fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ price: decorationPrice, branch: selectedBranch }),
       });
 
@@ -202,7 +215,10 @@ const AdminPricing = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`/api/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { method: "DELETE" });
+        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (response.ok) {
           await fetchPricing();
         }
@@ -215,7 +231,10 @@ const AdminPricing = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`/api/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { method: "DELETE" });
+        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (response.ok) {
           await fetchPricing();
         }

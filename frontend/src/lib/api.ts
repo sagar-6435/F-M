@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL;
+export const API_BASE = import.meta.env.VITE_API_URL;
 
 export interface Branch {
   id: string;
@@ -196,7 +196,7 @@ export const api = {
     return { availableSlots: data.availableSlots, bookedSlots: data.bookedSlots };
   },
 
-  async adminLogin(password: string): Promise<{ token: string }> {
+  async adminLogin(password: string): Promise<{ token: string; branch: string }> {
     const res = await fetch(`${API_BASE}/admin/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

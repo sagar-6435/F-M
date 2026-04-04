@@ -11,13 +11,22 @@ const __dirname = path.dirname(__filename);
 
 export const login = (req, res) => {
   const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD;
   const trimmedPassword = password ? password.trim() : '';
-  const trimmedAdminPassword = adminPassword ? adminPassword.trim() : '';
   
-  if (trimmedPassword === trimmedAdminPassword) {
-    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '3650d' });
-    res.json({ token, message: 'Login successful' });
+  // Branch-specific passwords (fall back to shared ADMIN_PASSWORD)
+  const branch1Password = (process.env.ADMIN_PASSWORD_BRANCH1 || process.env.ADMIN_PASSWORD || '').trim();
+  const branch2Password = (process.env.ADMIN_PASSWORD_BRANCH2 || process.env.ADMIN_PASSWORD || '').trim();
+  
+  let assignedBranch = null;
+  if (trimmedPassword === branch1Password) {
+    assignedBranch = 'branch-1';
+  } else if (trimmedPassword === branch2Password) {
+    assignedBranch = 'branch-2';
+  }
+  
+  if (assignedBranch) {
+    const token = jwt.sign({ role: 'admin', branch: assignedBranch }, process.env.JWT_SECRET, { expiresIn: '3650d' });
+    res.json({ token, branch: assignedBranch, message: 'Login successful' });
   } else {
     res.status(401).json({ error: 'Invalid password' });
   }

@@ -75,9 +75,9 @@
     ],
     "pricing": {
       "private-theatre-party-hall": {
-        "1": 1999,
-        "2": 3499,
-        "3": 4999
+        "1": 1,
+        "2": 2,
+        "3": 3
       }
     },
     "decorationPrice": 1500,

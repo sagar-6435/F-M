@@ -111,8 +111,19 @@ const BookingPage = () => {
           setLastFetchedBranch(booking.branch);
           
           const services = Object.keys(data.pricing);
+          const isBhimavaram = booking.branch === "branch-2" || data.branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
+          
           if (services.length === 1) {
-            setBooking(prev => ({ ...prev, service: services[0] as any }));
+            setBooking(prev => ({ 
+              ...prev, 
+              service: services[0] as any,
+              membersCount: (isBhimavaram && prev.membersCount > 10) ? 10 : prev.membersCount
+            }));
+          } else if (isBhimavaram) {
+            setBooking(prev => {
+              if (prev.membersCount > 10) return { ...prev, membersCount: 10 };
+              return prev;
+            });
           }
         } catch (error) {
           console.error("Failed to update branch data:", error);
@@ -160,7 +171,10 @@ const BookingPage = () => {
   const canNext = (): boolean => {
     switch (step) {
       case 0: return !!booking.branch && !!booking.service;
-      case 1: return !!booking.date && !!booking.duration && !!booking.timeSlot && !!booking.name && !!booking.phone && !!booking.email && booking.membersCount > 0;
+      case 1: 
+        const isBhimavaram = booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
+        const isCountOk = isBhimavaram ? booking.membersCount <= 10 : true;
+        return !!booking.date && !!booking.duration && !!booking.timeSlot && !!booking.name && !!booking.phone && !!booking.email && booking.membersCount > 0 && isCountOk;
       case 2: return !!booking.occasion;
       default: return true;
     }
@@ -283,7 +297,7 @@ const BookingPage = () => {
                 </div>
               </div>
               <div>
-                <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Service</label>
+                <label className="mb-3 block text-sm font-medium text-foreground font-body">Service</label>
                 <div className="grid gap-3 md:grid-cols-1">
                   {Object.keys(pricing)
                     .filter(id => id === 'private-theatre-party-hall')
@@ -326,13 +340,24 @@ const BookingPage = () => {
                   <input
                     type="number"
                     min="1"
+                    max={(booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram")) ? 10 : undefined}
                     value={booking.membersCount}
-                    onChange={(e) => update({ membersCount: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let val = parseInt(e.target.value) || 0;
+                      const isBhimavaram = booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
+                      if (isBhimavaram && val > 10) val = 10;
+                      update({ membersCount: val });
+                    }}
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                   />
                   {booking.branch === "branch-1" && booking.membersCount > 10 && (
                     <p className="mt-1 text-[10px] text-primary font-body animate-pulse">
                       * Extra {(booking.membersCount - 10)} persons: +₹{(booking.membersCount - 10) * 150}
+                    </p>
+                  )}
+                  {(booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram")) && (
+                    <p className="mt-1 text-[10px] text-red-500 font-bold font-body animate-bounce">
+                      * Maximum 10 persons allowed for Bhimavaram branch.
                     </p>
                   )}
                 </div>

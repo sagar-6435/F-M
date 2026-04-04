@@ -16,7 +16,10 @@ export const createBooking = async (req, res) => {
   }
 
   console.log(`📝 Processing booking for branch: ${branch} (Using ${models ? 'MongoDB' : 'Local File'})`);
-  const { timeSlot, duration } = req.body;
+  const { timeSlot, duration, membersCount } = req.body;
+  if (branch === 'branch-2' && membersCount > 10) {
+    return res.status(400).json({ error: 'Maximum 10 persons allowed for Bhimavaram branch' });
+  }
   const bookingTimes = calculateBookingTimes(timeSlot, duration);
 
   const booking = {
