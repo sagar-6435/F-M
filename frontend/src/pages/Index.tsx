@@ -225,11 +225,19 @@ const Index = () => {
               })}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground font-body">
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground font-body">
                <Link to="/" className="hover:text-primary">Home</Link>
+               <Link to="/about" className="hover:text-primary">About Us</Link>
                <Link to="/gallery" className="hover:text-primary">Gallery</Link>
                <Link to="/booking" className="hover:text-primary">Booking</Link>
                <Link to="/contact" className="hover:text-primary">Contact</Link>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-widest text-muted-foreground/60 font-body">
+               <Link to="/terms" className="hover:text-primary">Terms & Conditions</Link>
+               <Link to="/privacy" className="hover:text-primary">Privacy Policy</Link>
+               <Link to="/refund-cancellation" className="hover:text-primary">Refund & Cancellation</Link>
+               <Link to="/shipping-delivery" className="hover:text-primary">Shipping & Delivery</Link>
             </div>
 
             <p className="text-xs text-muted-foreground font-body border-t border-border/50 pt-6 w-full text-center">

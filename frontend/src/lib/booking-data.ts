@@ -163,7 +163,7 @@ export const INITIAL_BOOKING: BookingData = {
   date: "",
   duration: 0,
   timeSlot: "",
-  membersCount: 2,
+  membersCount: 0,
   extraPersonsCharge: 0,
   name: "",
   phone: "",

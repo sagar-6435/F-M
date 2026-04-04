@@ -9,6 +9,7 @@ const Navbar = () => {
   const links = [
     { href: "/", label: "Home" },
     { href: "/gallery", label: "Gallery" },
+    { href: "/about", label: "About" },
     { href: "/booking", label: "Book Now", highlight: true },
     { href: "/contact", label: "Contact" },
   ];

@@ -167,6 +167,10 @@ const BookingPage = () => {
     total += extraCharge;
     return total;
   }, [booking, pricing, decorationPrice]);
+  
+  const advanceAmount = useMemo(() => totalPrice < 2500 ? 1000 : 1500, [totalPrice]);
+  const balanceAmount = useMemo(() => totalPrice - advanceAmount, [totalPrice, advanceAmount]);
+
 
   const canNext = (): boolean => {
     switch (step) {
@@ -187,7 +191,7 @@ const BookingPage = () => {
       setPaymentLoading(true);
       
       const extraCharge = (booking.branch === "branch-1" && booking.membersCount > 10) ? (booking.membersCount - 10) * 150 : 0;
-      const amountToPay = paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3);
+      const amountToPay = paymentType === 'full' ? totalPrice : advanceAmount;
 
       const bookingData = { 
         ...booking, 
@@ -196,7 +200,7 @@ const BookingPage = () => {
         paymentStatus: "pending",
         paymentType,
         amountPaid: 0,
-        balanceAmount: totalPrice,
+        balanceAmount: paymentType === 'full' ? 0 : balanceAmount,
         phone: `+91 ${booking.phone}`
       };
       
@@ -341,7 +345,7 @@ const BookingPage = () => {
                     type="number"
                     min="1"
                     max={(booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram")) ? 10 : undefined}
-                    value={booking.membersCount}
+                    value={booking.membersCount || ""}
                     onChange={(e) => {
                       let val = parseInt(e.target.value) || 0;
                       const isBhimavaram = booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
@@ -660,12 +664,12 @@ const BookingPage = () => {
                   }`}
                 >
                   <div className="text-left">
-                    <p className="font-bold text-sm text-foreground">30% Advance</p>
+                    <p className="font-bold text-sm text-foreground">Fixed Advance</p>
                     <p className="text-[10px] text-muted-foreground">Confirm your booking now</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-primary">₹{Math.ceil(totalPrice * 0.3).toLocaleString()}</p>
-                    <p className="text-[8px] text-muted-foreground uppercase">Bal: ₹{Math.floor(totalPrice * 0.7).toLocaleString()}</p>
+                    <p className="text-lg font-bold text-primary">₹{advanceAmount.toLocaleString()}</p>
+                    <p className="text-[8px] text-muted-foreground uppercase">Bal: ₹{balanceAmount.toLocaleString()}</p>
                   </div>
                 </button>
 
@@ -691,7 +695,7 @@ const BookingPage = () => {
                   disabled={paymentLoading}
                   className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                 >
-                  {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : Math.ceil(totalPrice * 0.3)).toLocaleString()} Now`}
+                  {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()} Now`}
                 </button>
                 
                 {!import.meta.env.PROD && (

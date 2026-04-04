@@ -13,6 +13,11 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminPricing from "./pages/AdminPricing";
 import ContactPage from "./pages/ContactPage";
 import GalleryPage from "./pages/GalleryPage";
+import AboutUs from "./pages/AboutUs";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import RefundPolicy from "./pages/RefundPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +50,11 @@ const App = () => {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/pricing" element={<AdminPricing />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refund-cancellation" element={<RefundPolicy />} />
+            <Route path="/shipping-delivery" element={<ShippingPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
