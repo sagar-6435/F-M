@@ -257,6 +257,10 @@ const BookingPage = () => {
           currency: paymentResponse.currency,
           name: "F&M Cakes & Desserts",
           description: "Cake Booking Payment",
+          notes: {
+            bookingId: createdBooking.id,
+            paymentType: paymentType
+          },
           handler: async (response: any) => {
             try {
               // Verify payment on backend
@@ -295,7 +299,8 @@ const BookingPage = () => {
           },
           theme: {
             color: "#FFD700"
-          }
+          },
+          upi_link: true
         };
 
         const razorpay = new (window as any).Razorpay(options);
