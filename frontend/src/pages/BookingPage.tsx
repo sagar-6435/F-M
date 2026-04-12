@@ -285,7 +285,7 @@ const BookingPage = () => {
           throw new Error("Failed to create payment order");
         }
 
-        // Open Razorpay checkout
+        // Open Razorpay checkout with UPI Intent Flow (not deprecated Collect Flow)
         const options: any = {
           key: paymentResponse.keyId,
           order_id: paymentResponse.orderId,
@@ -293,18 +293,14 @@ const BookingPage = () => {
           currency: paymentResponse.currency,
           name: "F&M Cakes & Desserts",
           description: "Cake Booking Payment",
+          image: "https://razorpay.com/i/logo.png",
           notes: {
             bookingId: createdBooking.id,
             paymentType: paymentType
           },
-          // Show UPI prominently in the checkout
-          display: {
-            align: 'center',
-            language: 'en'
-          },
-          hide_upi_link: false,
+          // Use Intent flow (recommended) - not deprecated Collect flow
+          // Razorpay will show all enabled payment methods on dashboard
           timeout: 600,
-          upi_link: true,
           handler: async (response: any) => {
             try {
               // Verify payment on backend
@@ -347,6 +343,10 @@ const BookingPage = () => {
           theme: {
             color: "#FFD700",
             backdrop_color: "rgba(0, 0, 0, 0.1)"
+          },
+          retry: {
+            enabled: true,
+            max_count: 3
           }
         };
 
