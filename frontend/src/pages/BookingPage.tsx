@@ -873,6 +873,17 @@ const BookingPage = () => {
                      (Dev Mode) Test Payment
                   </button>
                 )}
+
+                <button
+                  onClick={() => {
+                    setStep(5);
+                    setPaymentLoading(false);
+                  }}
+                  disabled={paymentLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-medium text-foreground transition-colors hover:border-primary disabled:opacity-30 font-body"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
               </div>
              </div>
           )}
