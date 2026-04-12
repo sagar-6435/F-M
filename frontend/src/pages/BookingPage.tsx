@@ -286,7 +286,7 @@ const BookingPage = () => {
         }
 
         // Open Razorpay checkout
-        const options = {
+        const options: any = {
           key: paymentResponse.keyId,
           order_id: paymentResponse.orderId,
           amount: paymentResponse.amount,
@@ -296,6 +296,14 @@ const BookingPage = () => {
           notes: {
             bookingId: createdBooking.id,
             paymentType: paymentType
+          },
+          // Enable all payment methods including UPI
+          method: {
+            upi: true,
+            card: true,
+            wallet: true,
+            netbanking: true,
+            emandate: false
           },
           handler: async (response: any) => {
             try {
