@@ -1,4 +1,4 @@
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Clock, MapPin, Users, Cake, Gift, CreditCard, Mail, Phone, FileText, Download } from "lucide-react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { BRANCHES } from "@/lib/booking-data";
@@ -69,67 +69,287 @@ const BookingConfirmed = () => {
   }, [searchParams, location.state]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center pt-24 pb-16">
-      <div className="container mx-auto max-w-lg px-4 text-center">
-        <div className="rounded-2xl border border-border bg-card p-10">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 glow-gold">
-            <CheckCircle className="h-10 w-10 text-primary" />
+    <div className="min-h-screen pt-24 pb-16 bg-gradient-to-b from-primary/5 to-transparent">
+      <div className="container mx-auto max-w-2xl px-4">
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 glow-gold animate-pulse">
+                <CheckCircle className="h-8 w-8 text-primary" />
+              </div>
+              <p className="text-lg text-muted-foreground font-body">Loading booking details...</p>
+            </div>
           </div>
-          <h1 className="mb-2 font-display text-3xl font-bold text-foreground">Booking Confirmed!</h1>
-          <p className="mb-8 text-sm text-muted-foreground font-body">
-            Thank you{booking?.name ? `, ${booking.name}` : ""}! Your booking has been confirmed.
-          </p>
-          {loading ? (
-            <p className="text-sm text-muted-foreground font-body">Loading booking details...</p>
-          ) : booking ? (
-            <div className="mb-8 space-y-3 text-left">
-              {[
-                { label: "Booking ID", value: booking.id },
-                { 
-                  label: "Branch/Location", 
-                  value: (() => {
-                    const b = BRANCHES.find((br) => br.id === booking.branch);
-                    return b ? `${b.name} (${b.address})` : booking.branch;
-                  })()
-                },
-                { label: "Service", value: booking.service === "party-hall" ? "Party Hall" : "Private Theatre" },
-                { label: "Date", value: booking.date },
-                { label: "Time", value: booking.timeSlot },
-                { label: "Duration", value: `${booking.duration} hour${booking.duration > 1 ? "s" : ""}` },
-                { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
-                { label: "Cake", value: booking.cakeRequired && booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
-                { 
-                  label: "Extra Decorations", 
-                  value: booking.extraDecorations && booking.extraDecorations.length > 0 
-                    ? booking.extraDecorations.map((d: any) => d.name).join(", ") 
-                    : "None" 
-                },
-                { label: "Total Price", value: `₹${booking.totalPrice?.toLocaleString()}` },
-                { label: "Amount Paid", value: `₹${(booking.amountPaid || 0).toLocaleString()}` },
-                { label: "Balance Remaining", value: `₹${(booking.balanceAmount || 0).toLocaleString()}`, highlight: booking.balanceAmount > 0 },
-                { label: "Payment Status", value: booking.paymentStatus === "paid" ? "✓ Fully Paid" : "✓ Partially Paid (Slot Confirmed)" },
-              ].map((item) => (
-                <div key={item.label} className="flex justify-between border-b border-border pb-2">
-                  <span className="text-sm text-muted-foreground font-body">{item.label}</span>
-                  <span className={`text-sm font-medium font-body ${(item as any).highlight ? "text-primary font-bold" : "text-foreground"}`}>{item.value}</span>
+        ) : booking ? (
+          <>
+            {/* Success Header */}
+            <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 p-8 mb-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 glow-gold">
+                <CheckCircle className="h-8 w-8 text-primary" />
+              </div>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">Booking Confirmed!</h1>
+              <p className="text-sm text-muted-foreground font-body">
+                Thank you{booking?.name ? `, ${booking.name}` : ""}! Your event slot has been reserved.
+              </p>
+            </div>
+
+            {/* Booking ID Card */}
+            <div className="rounded-2xl border-2 border-primary bg-primary/5 p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Booking Reference ID</p>
+                  <p className="font-mono text-xl font-bold text-primary">{booking.id}</p>
                 </div>
-              ))}
+                <FileText className="h-8 w-8 text-primary opacity-50" />
+              </div>
             </div>
-          ) : (
-            <div className="mb-8 p-4 rounded-xl bg-muted">
-              <p className="text-sm text-muted-foreground font-body">No booking details available. Redirecting to home...</p>
+
+            {/* Slot Details Section */}
+            <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+              <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Event Details
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="flex gap-3">
+                  <Calendar className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Date</p>
+                    <p className="font-semibold text-foreground">{new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Clock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Time Slot</p>
+                    <p className="font-semibold text-foreground">{booking.timeSlot}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Clock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Duration</p>
+                    <p className="font-semibold text-foreground">{booking.duration} hour{booking.duration > 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Users className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Members</p>
+                    <p className="font-semibold text-foreground">{booking.membersCount} Person{booking.membersCount > 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105 font-body"
-          >
-            Back to Home <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+
+            {/* Location & Service Section */}
+            <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+              <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Location & Service
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Branch</p>
+                  <p className="font-semibold text-foreground">
+                    {(() => {
+                      const b = BRANCHES.find((br) => br.id === booking.branch);
+                      return b ? b.name : booking.branch;
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Address</p>
+                  <p className="font-semibold text-foreground">
+                    {(() => {
+                      const b = BRANCHES.find((br) => br.id === booking.branch);
+                      return b ? b.address : "N/A";
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Service</p>
+                  <p className="font-semibold text-foreground">
+                    {booking.service === "private-theatre-party-hall" ? "Private Theatre + Party Hall" : booking.service}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Occasion</p>
+                  <p className="font-semibold text-foreground">
+                    {booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorations & Add-ons Section */}
+            {(booking.selectedCake || booking.extraDecorations?.length > 0) && (
+              <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+                <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  Add-ons & Decorations
+                </h2>
+                <div className="space-y-3">
+                  {booking.selectedCake && (
+                    <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Cake className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-foreground text-sm">{booking.selectedCake.name}</span>
+                      </div>
+                      <span className="font-bold text-primary">₹{booking.selectedCake.price}</span>
+                    </div>
+                  )}
+                  {booking.extraDecorations?.map((d: any) => (
+                    <div key={d.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-foreground text-sm">{d.name}</span>
+                      </div>
+                      <span className="font-bold text-primary">₹{d.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Payment Summary Section */}
+            <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+              <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Payment Summary
+              </h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center pb-3 border-b border-border">
+                  <span className="text-sm text-muted-foreground font-body">Service & Decoration</span>
+                  <span className="font-semibold text-foreground">₹{((booking.totalPrice || 0) - (booking.selectedCake?.price || 0) - (booking.extraDecorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0)).toLocaleString()}</span>
+                </div>
+                {booking.selectedCake && (
+                  <div className="flex justify-between items-center pb-3 border-b border-border">
+                    <span className="text-sm text-muted-foreground font-body">{booking.selectedCake.name}</span>
+                    <span className="font-semibold text-foreground">₹{booking.selectedCake.price}</span>
+                  </div>
+                )}
+                {booking.extraDecorations?.length > 0 && (
+                  <div className="flex justify-between items-center pb-3 border-b border-border">
+                    <span className="text-sm text-muted-foreground font-body">Extra Decorations</span>
+                    <span className="font-semibold text-foreground">₹{booking.extraDecorations.reduce((sum: number, d: any) => sum + d.price, 0).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-3">
+                  <span className="font-bold text-foreground">Total Amount</span>
+                  <span className="text-2xl font-bold text-primary">₹{booking.totalPrice?.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="mt-6 space-y-2 pt-4 border-t border-border">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground font-body">Amount Paid</span>
+                  <span className={`font-bold ${booking.amountPaid > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>₹{(booking.amountPaid || 0).toLocaleString()}</span>
+                </div>
+                {booking.balanceAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground font-body">Balance Due</span>
+                    <span className="font-bold text-orange-600">₹{(booking.balanceAmount || 0).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="mt-3 p-3 rounded-lg bg-primary/5">
+                  <p className="text-sm font-semibold text-primary">
+                    {booking.paymentStatus === "paid" ? "✓ Fully Paid" : "✓ Slot Confirmed - Balance due on event day"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Info Section */}
+            <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+              <h2 className="font-display text-xl font-bold text-foreground mb-4">Your Information</h2>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <Users className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Name</p>
+                    <p className="font-semibold text-foreground">{booking.name}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Phone className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Phone</p>
+                    <p className="font-semibold text-foreground">{booking.phone}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Mail className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground font-body">Email</p>
+                    <p className="font-semibold text-foreground">{booking.email}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Next Steps Section */}
+            <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 mb-6">
+              <h2 className="font-display text-lg font-bold text-foreground mb-4">What's Next?</h2>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">1</div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Confirmation Email</p>
+                    <p className="text-xs text-muted-foreground font-body">Check your email for booking confirmation and receipt</p>
+                  </div>
+                </div>
+                {booking.balanceAmount > 0 && (
+                  <div className="flex gap-3">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">2</div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">Pay Balance Amount</p>
+                      <p className="text-xs text-muted-foreground font-body">Pay ₹{booking.balanceAmount.toLocaleString()} on the event day at the branch</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">{booking.balanceAmount > 0 ? 3 : 2}</div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Reach Early</p>
+                    <p className="text-xs text-muted-foreground font-body">Please arrive 10-15 minutes before your scheduled time</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border px-6 py-3 font-semibold text-foreground hover:bg-muted transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Print Receipt
+              </button>
+              <Link
+                to="/"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground transition-all hover:scale-105"
+              >
+                Back to Home <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground font-body mb-6">Booking details could not be loaded. Try refreshing or contact support.</p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-8 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-105"
+            >
+              Back to Home <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
+};
 };
 
 export default BookingConfirmed;

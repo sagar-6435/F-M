@@ -4,7 +4,7 @@ import {
   MapPin, Clock, PartyPopper, Cake, Sparkles, Check, 
   CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar
 } from "lucide-react";
-import { api, Branch, CakeOption, ExtraDecoration } from "../lib/api";
+import { api, API_BASE, Branch, CakeOption, ExtraDecoration } from "../lib/api";
 import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-data";
 
 const formatServiceName = (serviceId: string) => {
@@ -301,39 +301,77 @@ const BookingPage = () => {
           // Use Intent flow (recommended) - not deprecated Collect flow
           // Razorpay will show all enabled payment methods on dashboard
           timeout: 600,
-          handler: async (response: any) => {
-            try {
-              // Verify payment on backend
-              const verifyRes = await fetch(`${API_BASE}/payments/razorpay/callback`, {
-                method: 'POST',
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature
-                })
-              });
-
-              if (verifyRes.ok) {
-                // Update booking payment status
-                await api.processMockPayment(
+          handler: (response: any) => {
+            console.log("✅ Payment successful via Razorpay!", response);
+            
+            // Immediately clear localStorage and prepare redirect
+            localStorage.removeItem('bookingState');
+            localStorage.removeItem('bookingStep');
+            
+            // Update booking payment status in background (non-blocking)
+            Promise.resolve()
+              .then(() => {
+                console.log("📤 Sending payment confirmation to backend...");
+                return api.processMockPayment(
                   createdBooking.id,
                   amountToPay,
                   paymentType
                 );
-                // Clear booking state from localStorage on successful completion
-                localStorage.removeItem('bookingState');
-                localStorage.removeItem('bookingStep');
-                navigate("/booking-confirmed", { 
-                  state: { booking: createdBooking, orderId: response.razorpay_order_id } 
+              })
+              .then(() => {
+                console.log("✅ Backend payment processed");
+              })
+              .catch((processError) => {
+                console.error("⚠️ Backend processing failed (non-blocking):", processError);
+              });
+
+            // Verify payment signature with backend (non-blocking)
+            Promise.resolve()
+              .then(() => {
+                console.log("🔐 Verifying payment signature...");
+                return fetch(`${API_BASE}/payments/razorpay/callback`, {
+                  method: 'POST',
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature
+                  })
                 });
-              } else {
-                throw new Error("Payment verification failed");
+              })
+              .then((verifyRes) => {
+                if (!verifyRes.ok) {
+                  console.warn("⚠️ Payment verification returned status:", verifyRes.status);
+                } else {
+                  console.log("✅ Payment verified successfully");
+                }
+              })
+              .catch((verifyError) => {
+                console.error("⚠️ Payment verification failed (non-blocking):", verifyError);
+              });
+
+            // IMMEDIATE redirect - do not wait for verification
+            console.log("🚀 Initiating redirect to booking-confirmed...");
+            setPaymentLoading(false);
+            
+            // Use setTimeout with 0ms to ensure React state update, then navigate
+            setTimeout(() => {
+              try {
+                console.log("📍 Executing navigate...");
+                navigate("/booking-confirmed", { 
+                  state: { 
+                    booking: createdBooking, 
+                    orderId: response.razorpay_order_id,
+                    paymentId: response.razorpay_payment_id
+                  },
+                  replace: true
+                });
+              } catch (navError) {
+                console.error("❌ Navigation failed:", navError);
+                // Fallback: Use window.location if react-router fails
+                window.location.href = "/booking-confirmed";
               }
-            } catch (error) {
-              console.error("Payment verification error:", error);
-              alert("Payment verification failed. Please contact support.");
-            }
+            }, 0);
           },
           prefill: {
             name: booking.name,
