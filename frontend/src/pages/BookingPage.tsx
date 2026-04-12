@@ -71,6 +71,39 @@ const BookingPage = () => {
   const [searchParams] = useSearchParams();
   const [lastFetchedBranch, setLastFetchedBranch] = useState<string>("");
 
+  // Load booking state from localStorage on mount
+  useEffect(() => {
+    const savedBooking = localStorage.getItem('bookingState');
+    const savedStep = localStorage.getItem('bookingStep');
+    
+    if (savedBooking) {
+      try {
+        const parsedBooking = JSON.parse(savedBooking);
+        setBooking(parsedBooking);
+      } catch (error) {
+        console.error('Failed to restore booking state:', error);
+      }
+    }
+    
+    if (savedStep) {
+      try {
+        const parsedStep = parseInt(savedStep, 10);
+        setStep(parsedStep);
+      } catch (error) {
+        console.error('Failed to restore booking step:', error);
+      }
+    }
+  }, []);
+
+  // Save booking state and step to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('bookingState', JSON.stringify(booking));
+  }, [booking]);
+
+  useEffect(() => {
+    localStorage.setItem('bookingStep', String(step));
+  }, [step]);
+
   useEffect(() => {
     const initBooking = async () => {
       try {
@@ -229,6 +262,9 @@ const BookingPage = () => {
         );
         
         if (paymentResponse.success) {
+          // Clear booking state from localStorage on successful completion
+          localStorage.removeItem('bookingState');
+          localStorage.removeItem('bookingStep');
           navigate("/booking-confirmed", { state: { booking: paymentResponse.booking } });
         }
       } else {
@@ -281,6 +317,9 @@ const BookingPage = () => {
                   amountToPay,
                   paymentType
                 );
+                // Clear booking state from localStorage on successful completion
+                localStorage.removeItem('bookingState');
+                localStorage.removeItem('bookingStep');
                 navigate("/booking-confirmed", { 
                   state: { booking: createdBooking, orderId: response.razorpay_order_id } 
                 });
