@@ -297,14 +297,14 @@ const BookingPage = () => {
             bookingId: createdBooking.id,
             paymentType: paymentType
           },
-          // Enable all payment methods including UPI
-          method: {
-            upi: true,
-            card: true,
-            wallet: true,
-            netbanking: true,
-            emandate: false
+          // Show UPI prominently in the checkout
+          display: {
+            align: 'center',
+            language: 'en'
           },
+          hide_upi_link: false,
+          timeout: 600,
+          upi_link: true,
           handler: async (response: any) => {
             try {
               // Verify payment on backend
@@ -345,9 +345,9 @@ const BookingPage = () => {
             contact: booking.phone
           },
           theme: {
-            color: "#FFD700"
-          },
-          upi_link: true
+            color: "#FFD700",
+            backdrop_color: "rgba(0, 0, 0, 0.1)"
+          }
         };
 
         const razorpay = new (window as any).Razorpay(options);
