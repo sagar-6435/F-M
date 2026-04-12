@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   MapPin, Clock, PartyPopper, Cake, Sparkles, Check, 
-  CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar, QrCode, Smartphone
+  CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar
 } from "lucide-react";
-import { api, API_BASE, Branch, CakeOption, ExtraDecoration } from "../lib/api";
+import { api, Branch, CakeOption, ExtraDecoration } from "../lib/api";
 import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-data";
 
 const formatServiceName = (serviceId: string) => {
@@ -185,7 +185,6 @@ const BookingPage = () => {
   };
 
   const [paymentType, setPaymentType] = useState<'full' | 'advance'>('advance');
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'upi'>('razorpay');
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -202,7 +201,7 @@ const BookingPage = () => {
     });
   };
 
-  const handlePayment = async (method: 'razorpay' | 'upi' | 'mock' = 'razorpay') => {
+  const handlePayment = async (paymentMethod: 'razorpay' | 'mock' = 'razorpay') => {
     try {
       setPaymentLoading(true);
       
@@ -213,16 +212,16 @@ const BookingPage = () => {
         ...booking, 
         totalPrice, 
         extraPersonsCharge: extraCharge,
-        paymentStatus: method === 'upi' ? 'pending' : "pending",
+        paymentStatus: "pending",
         paymentType,
-        amountPaid: method === 'upi' ? 0 : 0,
+        amountPaid: 0,
         balanceAmount: paymentType === 'full' ? 0 : balanceAmount,
         phone: `+91 ${booking.phone}`
       };
       
       const createdBooking = await api.createBooking(bookingData);
       
-      if (method === 'mock') {
+      if (paymentMethod === 'mock') {
         const paymentResponse = await api.processMockPayment(
           createdBooking.id,
           amountToPay,
@@ -232,23 +231,7 @@ const BookingPage = () => {
         if (paymentResponse.success) {
           navigate("/booking-confirmed", { state: { booking: paymentResponse.booking } });
         }
-      } else if (method === 'upi') {
-        // For UPI, mark booking as awaiting UPI verification
-        await api.processMockPayment(
-          createdBooking.id,
-          amountToPay,
-          paymentType
-        );
-        navigate("/booking-confirmed", { 
-          state: { 
-            booking: createdBooking, 
-            paymentMethod: 'upi',
-            upiId: 'friendsandmemories@upi',
-            amount: amountToPay
-          } 
-        });
       } else {
-        // Razorpay payment
         // Load Razorpay script
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
@@ -745,154 +728,62 @@ const BookingPage = () => {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-primary glow-gold">
                   <CreditCard className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground">Choose Payment Method</h3>
-                <p className="mt-1 text-sm text-muted-foreground font-body">Select how you'd like to pay</p>
+                <h3 className="font-display text-xl font-bold">Secure Payment</h3>
+                <p className="text-xs text-muted-foreground">Select your preferred payment plan</p>
               </div>
 
-              {/* Payment Method Selection */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3">
                 <button
-                  onClick={() => setPaymentMethod('razorpay')}
-                  className={`rounded-xl border p-4 text-center transition-all ${
-                    paymentMethod === 'razorpay' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                  onClick={() => setPaymentType('advance')}
+                  className={`flex items-center justify-between rounded-xl border p-5 transition-all ${
+                    paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex items-center justify-center mb-2">
-                    <CreditCard className="h-6 w-6 text-primary" />
+                  <div className="text-left">
+                    <p className="font-bold text-sm text-foreground">Fixed Advance</p>
+                    <p className="text-[10px] text-muted-foreground">Confirm your booking now</p>
                   </div>
-                  <p className="font-bold text-sm text-foreground">Razorpay</p>
-                  <p className="text-[10px] text-muted-foreground">Card/Wallet</p>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">₹{advanceAmount.toLocaleString()}</p>
+                    <p className="text-[8px] text-muted-foreground uppercase">Bal: ₹{balanceAmount.toLocaleString()}</p>
+                  </div>
                 </button>
 
                 <button
-                  onClick={() => setPaymentMethod('upi')}
-                  className={`rounded-xl border p-4 text-center transition-all ${
-                    paymentMethod === 'upi' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                  onClick={() => setPaymentType('full')}
+                  className={`flex items-center justify-between rounded-xl border p-5 transition-all ${
+                    paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex items-center justify-center mb-2">
-                    <QrCode className="h-6 w-6 text-primary" />
+                  <div className="text-left">
+                    <p className="font-bold text-sm text-foreground">100% Full Payment</p>
+                    <p className="text-[10px] text-muted-foreground">No balance to pay later</p>
                   </div>
-                  <p className="font-bold text-sm text-foreground">UPI/QR</p>
-                  <p className="text-[10px] text-muted-foreground">Direct Transfer</p>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">₹{totalPrice.toLocaleString()}</p>
+                  </div>
                 </button>
               </div>
-
-              {/* Razorpay Payment Section */}
-              {paymentMethod === 'razorpay' && (
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
-                    <h4 className="font-bold text-sm text-foreground mb-3">Payment Amount</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => setPaymentType('advance')}
-                        className={`w-full rounded-xl border p-4 text-left transition-all ${
-                          paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-sm text-foreground">50% Advance Payment</p>
-                            <p className="text-[10px] text-muted-foreground">Pay remaining on event day</p>
-                          </div>
-                          <span className="text-lg font-bold text-primary">₹{advanceAmount.toLocaleString()}</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => setPaymentType('full')}
-                        className={`w-full rounded-xl border p-4 text-left transition-all ${
-                          paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-sm text-foreground">100% Full Payment</p>
-                            <p className="text-[10px] text-muted-foreground">No balance to pay later</p>
-                          </div>
-                          <span className="text-lg font-bold text-primary">₹{totalPrice.toLocaleString()}</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
+              
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={() => handlePayment('razorpay')}
+                  disabled={paymentLoading}
+                  className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
+                >
+                  {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()} Now`}
+                </button>
+                
+                {!import.meta.env.PROD && (
                   <button
-                    onClick={() => handlePayment('razorpay')}
+                    onClick={() => handlePayment('mock')}
                     disabled={paymentLoading}
-                    className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
+                    className="w-full rounded-xl border border-border py-2 text-xs font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                   >
-                    {paymentLoading ? "Processing..." : `Pay ₹${(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()}`}
+                     (Dev Mode) Test Payment
                   </button>
-                </div>
-              )}
-
-              {/* UPI Payment Section */}
-              {paymentMethod === 'upi' && (
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
-                    <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-                      <QrCode className="h-4 w-4 text-blue-600" />
-                      UPI Payment Instructions
-                    </h4>
-                    <div className="space-y-3 text-sm text-foreground">
-                      <p>Scan the QR code or use the UPI ID below to transfer the payment:</p>
-                      
-                      <div className="bg-white rounded-lg p-4 border border-blue-200">
-                        <p className="text-[10px] text-muted-foreground mb-2">UPI Address</p>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-mono font-bold text-sm break-all">friendsandmemories@upi</p>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText('friendsandmemories@upi');
-                              alert('UPI address copied!');
-                            }}
-                            className="px-3 py-1 rounded bg-primary text-primary-foreground text-[10px] font-bold hover:bg-primary/90"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg p-4 border border-blue-200">
-                        <p className="text-[10px] text-muted-foreground mb-2">Amount to Transfer</p>
-                        <p className="font-bold text-lg text-primary">
-                          ₹{(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()}
-                        </p>
-                      </div>
-
-                      <p className="text-[10px] text-muted-foreground">
-                        Note: Make sure to include your booking reference or phone number ({booking.phone}) in the payment note.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        id="upi-confirm"
-                        className="w-4 h-4 rounded"
-                      />
-                      <span className="text-sm text-foreground font-body">I have completed the UPI transfer</span>
-                    </label>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      const checkbox = document.getElementById('upi-confirm') as HTMLInputElement;
-                      if (!checkbox?.checked) {
-                        alert('Please confirm that you have completed the UPI transfer');
-                        return;
-                      }
-                      handlePayment('upi');
-                    }}
-                    disabled={paymentLoading}
-                    className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
-                  >
-                    {paymentLoading ? "Processing..." : "Confirm Payment"}
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
              </div>
           )}
 
