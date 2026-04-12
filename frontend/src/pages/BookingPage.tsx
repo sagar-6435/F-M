@@ -808,6 +808,12 @@ const BookingPage = () => {
               >
                 Proceed to Payment
               </button>
+              <button
+                onClick={() => setStep(4)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-medium text-foreground transition-colors hover:border-primary font-body"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
             </div>
           )}
 
