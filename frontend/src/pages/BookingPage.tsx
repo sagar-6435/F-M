@@ -186,7 +186,22 @@ const BookingPage = () => {
 
   const [paymentType, setPaymentType] = useState<'full' | 'advance'>('advance');
 
-  const handlePayment = async (paymentMethod: 'phonepe' | 'mock' = 'phonepe') => {
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (document.getElementById('razorpay-script')) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.id = 'razorpay-script';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayment = async (paymentMethod: 'razorpay' | 'mock' = 'razorpay') => {
     try {
       setPaymentLoading(true);
       
@@ -217,18 +232,79 @@ const BookingPage = () => {
           navigate("/booking-confirmed", { state: { booking: paymentResponse.booking } });
         }
       } else {
-        const paymentResponse = await api.initiatePhonePePayment(
+        // Load Razorpay script
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          throw new Error("Failed to load Razorpay script");
+        }
+
+        const paymentResponse = await api.initiateRazorpayPayment(
           createdBooking.id,
           amountToPay,
           `91${booking.phone}`,
           paymentType
         );
 
-        if (paymentResponse.redirectUrl) {
-          window.location.href = paymentResponse.redirectUrl;
-        } else {
-          throw new Error("Failed to get payment redirect URL");
+        if (!paymentResponse.orderId) {
+          throw new Error("Failed to create payment order");
         }
+
+        // Open Razorpay checkout
+        const options = {
+          key: paymentResponse.keyId,
+          order_id: paymentResponse.orderId,
+          amount: paymentResponse.amount,
+          currency: paymentResponse.currency,
+          name: "F&M Cakes & Desserts",
+          description: "Cake Booking Payment",
+          handler: async (response: any) => {
+            try {
+              // Verify payment on backend
+              const verifyRes = await fetch(`${API_BASE}/payments/razorpay/callback`, {
+                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+
+              if (verifyRes.ok) {
+                // Update booking payment status
+                await api.processMockPayment(
+                  createdBooking.id,
+                  amountToPay,
+                  paymentType
+                );
+                navigate("/booking-confirmed", { 
+                  state: { booking: createdBooking, orderId: response.razorpay_order_id } 
+                });
+              } else {
+                throw new Error("Payment verification failed");
+              }
+            } catch (error) {
+              console.error("Payment verification error:", error);
+              alert("Payment verification failed. Please contact support.");
+            }
+          },
+          prefill: {
+            name: booking.name,
+            email: booking.email,
+            contact: booking.phone
+          },
+          theme: {
+            color: "#FFD700"
+          }
+        };
+
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.on('payment.failed', (response: any) => {
+          console.error("Payment failed:", response.error);
+          alert(`Payment failed: ${response.error.description}`);
+          setPaymentLoading(false);
+        });
+        razorpay.open();
       }
     } catch (error) {
       console.error("Payment failed:", error);
@@ -691,7 +767,7 @@ const BookingPage = () => {
               
               <div className="space-y-3 pt-2">
                 <button
-                  onClick={() => handlePayment('phonepe')}
+                  onClick={() => handlePayment('razorpay')}
                   disabled={paymentLoading}
                   className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                 >

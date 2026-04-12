@@ -278,25 +278,25 @@ export const api = {
     return res.json();
   },
 
-  async initiatePhonePePayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full'): Promise<any> {
-    const res = await fetch(`${API_BASE}/payments/phonepe/initiate`, {
+  async initiateRazorpayPayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full'): Promise<any> {
+    const res = await fetch(`${API_BASE}/payments/razorpay/initiate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bookingId, amount, phone, paymentType, amountPaid: amount }),
     });
     const data = await res.json();
     if (!res.ok) {
-      console.error('PhonePe API Error:', data);
-      throw new Error(data.message || "Failed to initiate PhonePe payment");
+      console.error('Razorpay API Error:', data);
+      throw new Error(data.message || "Failed to initiate Razorpay payment");
     }
     return data;
   },
 
-  async checkPhonePePaymentStatus(transactionId: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/payments/phonepe/status`, {
+  async checkRazorpayPaymentStatus(orderId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/payments/razorpay/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transactionId }),
+      body: JSON.stringify({ orderId }),
     });
     if (!res.ok) throw new Error("Failed to check payment status");
     return res.json();

@@ -13,18 +13,20 @@ const BookingConfirmed = () => {
   useEffect(() => {
     const checkPaymentStatus = async () => {
       try {
-        const transactionId = searchParams.get("transactionId");
+        const orderId = searchParams.get("orderId");
         
-        if (transactionId) {
-          // Check PhonePe payment status
-          const statusResponse = await api.checkPhonePePaymentStatus(transactionId);
-          const bookingId = transactionId.split("_")[0];
+        if (orderId) {
+          // Check Razorpay payment status
+          const statusResponse = await api.checkRazorpayPaymentStatus(orderId);
+          // Extract bookingId from orderId (format: order_bookingId_timestamp)
+          const parts = orderId.split('_');
+          const bookingId = parts.length > 1 ? parts.slice(1, -1).join('_') : null;
           
-          if (statusResponse.success && statusResponse.code === "PAYMENT_SUCCESS") {
+          if (statusResponse.success && statusResponse.status === "paid") {
             // Finalize on backend (send notification etc)
             const finalizeRes = await api.processMockPayment(
               bookingId, 
-              statusResponse.data.amount / 100 // paise to rupees
+              statusResponse.amount / 100 // paise to rupees
             );
             
             if (finalizeRes.success) {
