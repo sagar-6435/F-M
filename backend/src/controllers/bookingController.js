@@ -43,9 +43,9 @@ export const createBooking = async (req, res) => {
 
     let existingBookings = [];
     if (models) {
-      existingBookings = await models.Booking.find({ branch, date: booking.date, service: booking.service });
+      existingBookings = await models.Booking.find({ branch, date: booking.date, service: booking.service, paymentStatus: 'paid' });
     } else if (branchDb) {
-      existingBookings = branchDb.bookings.filter(b => b.date === booking.date && b.service === booking.service);
+      existingBookings = branchDb.bookings.filter(b => b.date === booking.date && b.service === booking.service && b.paymentStatus === 'paid');
     }
 
     const startMinutes = parse12HourTime(booking.timeSlot);
@@ -332,9 +332,11 @@ export const getAvailability = async (req, res) => {
   try {
     let bookings = [];
     if (models) {
-      bookings = await models.Booking.find({ branch: branchId, date, service });
+      // Only get PAID bookings to mark slots as blocked
+      bookings = await models.Booking.find({ branch: branchId, date, service, paymentStatus: 'paid' });
     } else if (branchDb) {
-      bookings = branchDb.bookings.filter(b => b.date === date && b.service === service);
+      // Only get PAID bookings to mark slots as blocked
+      bookings = branchDb.bookings.filter(b => b.date === date && b.service === service && b.paymentStatus === 'paid');
     }
     
     const availableSlots = getAvailableStartSlots(bookings, duration);
