@@ -339,10 +339,17 @@ export const getAvailability = async (req, res) => {
       bookings = branchDb.bookings.filter(b => b.date === date && b.service === service && b.paymentStatus === 'paid');
     }
     
+    console.log(`📋 Availability check for ${branchId} on ${date} (${service}): Found ${bookings.length} paid bookings`);
+    if (bookings.length > 0) {
+      bookings.forEach(b => console.log(`  - Booking: ${b.id} | Time: ${b.timeSlot} | Duration: ${b.duration}h | Status: ${b.paymentStatus}`));
+    }
+    
     const availableSlots = getAvailableStartSlots(bookings, duration);
     const bookedSlotsList = bookings.reduce((acc, b) => {
         return acc.concat(getBlockedSlotsForBooking(b.timeSlot, b.duration));
     }, []);
+    
+    console.log(`✅ Available slots: ${availableSlots.length}, Blocked slots: ${bookedSlotsList.length}`);
     
     const today = new Date().toISOString().split('T')[0];
     let filteredAvailable = availableSlots;
