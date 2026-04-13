@@ -278,7 +278,8 @@ const BookingPage = () => {
           createdBooking.id,
           amountToPay,
           `91${booking.phone}`,
-          paymentType
+          paymentType,
+          createdBooking // Pass complete booking details for Razorpay receipt
         );
 
         if (!paymentResponse.orderId) {

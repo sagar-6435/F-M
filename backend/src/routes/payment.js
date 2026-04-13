@@ -23,18 +23,29 @@ const getRazorpayAuth = () => {
 
 // Razorpay Initiate
 router.post('/razorpay/initiate', async (req, res) => {
-  const { bookingId, amount, phone } = req.body;
+  const { bookingId, amount, phone, bookingDetails } = req.body;
   const orderId = `order_${bookingId}_${Date.now()}`;
 
   try {
-    // Create order on Razorpay
+    // Create order on Razorpay with complete booking details in notes
     const orderPayload = {
       amount: amount * 100, // Razorpay expects amount in paise
       currency: 'INR',
       receipt: bookingId,
       notes: {
         bookingId: bookingId,
-        phone: phone
+        phone: phone,
+        customerName: bookingDetails?.name || '',
+        branch: bookingDetails?.branch || '',
+        service: bookingDetails?.service || '',
+        date: bookingDetails?.date || '',
+        timeSlot: bookingDetails?.timeSlot || '',
+        duration: bookingDetails?.duration || '',
+        membersCount: bookingDetails?.membersCount || '',
+        occasion: bookingDetails?.occasion || '',
+        totalPrice: bookingDetails?.totalPrice || amount,
+        selectedCake: bookingDetails?.selectedCake?.name || 'None',
+        extraDecorations: bookingDetails?.extraDecorations?.map(d => d.name).join(', ') || 'None'
       }
     };
 

@@ -280,11 +280,18 @@ export const api = {
     return res.json();
   },
 
-  async initiateRazorpayPayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full'): Promise<any> {
+  async initiateRazorpayPayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full', bookingDetails: any = {}): Promise<any> {
     const res = await fetch(`${API_BASE}/payments/razorpay/initiate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, amount, phone, paymentType, amountPaid: amount }),
+      body: JSON.stringify({ 
+        bookingId, 
+        amount, 
+        phone, 
+        paymentType, 
+        amountPaid: amount,
+        bookingDetails // Include complete booking details for Razorpay notes
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
