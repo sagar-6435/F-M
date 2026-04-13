@@ -93,10 +93,26 @@ router.post('/razorpay/callback', async (req, res) => {
       .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      console.log(`Payment verified for order: ${razorpay_order_id}`);
+      console.log(`✅ Payment verified for order: ${razorpay_order_id}`);
+      
+      // Extract bookingId from orderId (format: order_bookingId_timestamp)
+      const bookingId = razorpay_order_id.split('_')[1];
+      
+      if (bookingId) {
+        console.log(`📝 Updating booking ${bookingId} to PAID status`);
+        
+        // Update booking status to PAID
+        const booking = await updateBookingPayment(bookingId, null, 'razorpay');
+        
+        if (booking) {
+          console.log(`✅ Booking ${bookingId} marked as PAID`);
+          return res.json({ success: true, message: 'Payment verified and booking updated', booking });
+        }
+      }
+      
       res.json({ success: true, message: 'Payment verified' });
     } else {
-      console.error('Invalid signature');
+      console.error('❌ Invalid signature for order:', razorpay_order_id);
       res.status(400).json({ success: false, message: 'Invalid signature' });
     }
   } catch (error) {
@@ -121,6 +137,18 @@ router.post('/razorpay/status', async (req, res) => {
     const data = await response.json();
     
     if (data.id) {
+      // Extract bookingId from orderId (format: order_bookingId_timestamp)
+      const bookingId = orderId.split('_')[1];
+      
+      // If payment status is paid, update booking
+      if (data.status === 'paid' && bookingId) {
+        console.log(`💳 Payment status PAID for order ${orderId}, updating booking ${bookingId}`);
+        
+        // Get payment details to know the amount paid
+        const amount = data.amount / 100; // Convert from paise to rupees
+        await updateBookingPayment(bookingId, amount, 'razorpay');
+      }
+      
       res.json({ 
         success: true, 
         orderId: data.id,
@@ -139,20 +167,28 @@ router.post('/razorpay/status', async (req, res) => {
 
 // Helper to find and update booking across any storage
 const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
-  const amt = Number(amountPaid);
+  let amt = Number(amountPaid) || 0;
   
   // Try MongoDB branches
-  for (const branchId in ['branch-1', 'branch-2']) {
+  const branchIds = ['branch-1', 'branch-2'];
+  for (const branchId of branchIds) {
     const models = getBranchModels(branchId);
     if (models) {
       const booking = await models.Booking.findOne({ id: bookingId });
       if (booking) {
+        // If no amount provided, assume full payment of total price
+        if (amountPaid === null || amountPaid === undefined) {
+          amt = booking.totalPrice;
+        }
+        
         booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
         booking.amountPaid = amt;
         booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
         booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
         booking.updatedAt = new Date();
         await booking.save();
+        
+        console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
         
         // Send email notification
         try {
@@ -170,12 +206,19 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
   for (const branchId in branchDbs) {
     const booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
     if (booking) {
+      // If no amount provided, assume full payment of total price
+      if (amountPaid === null || amountPaid === undefined) {
+        amt = booking.totalPrice;
+      }
+      
       booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
       booking.amountPaid = amt;
       booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
       booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
       booking.updatedAt = new Date();
       await saveBookings(branchDbs);
+      
+      console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
       
       // Send email notification
       try {
