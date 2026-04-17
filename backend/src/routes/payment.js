@@ -4,6 +4,7 @@ import { getBranchModels } from '../config/mongo.js';
 import { branchDbs } from '../config/constants.js';
 import { saveBookings } from '../utils/persistence.js';
 import { sendBookingNotification } from '../utils/notification.js';
+import { sendAdminSmsNotification } from '../utils/sms.js';
 
 const router = express.Router();
 
@@ -190,12 +191,15 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
         
         console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
         
-        // Send email notification
-        try {
-          await sendBookingNotification(booking);
-        } catch (emailErr) {
-          console.error('✗ Email notification failed but booking updated:', emailErr);
-        }
+        // Send email notification (non-blocking)
+        sendBookingNotification(booking).catch(err =>
+          console.error('✗ Email notification failed:', err)
+        );
+
+        // Send admin SMS notification (non-blocking)
+        sendAdminSmsNotification(booking).catch(err =>
+          console.error('✗ Admin SMS notification failed:', err)
+        );
         
         return booking;
       }
@@ -220,12 +224,15 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
       
       console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
       
-      // Send email notification
-      try {
-        await sendBookingNotification(booking);
-      } catch (emailErr) {
-        console.error('✗ Email notification failed but booking updated:', emailErr);
-      }
+      // Send email notification (non-blocking)
+      sendBookingNotification(booking).catch(err =>
+        console.error('✗ Email notification failed:', err)
+      );
+
+      // Send admin SMS notification (non-blocking)
+      sendAdminSmsNotification(booking).catch(err =>
+        console.error('✗ Admin SMS notification failed:', err)
+      );
       
       return booking;
     }

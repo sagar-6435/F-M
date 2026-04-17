@@ -125,7 +125,7 @@ const Index = () => {
           </h2>
           <div className="mx-auto grid max-w-2xl gap-8 md:grid-cols-1">
             {[
-              { id: "private-theatre-party-hall", img: heroImg, title: "Private Theatre + Party Hall", desc: "Experience the ultimate celebration with our combined premium private theatre and elegant party hall service.", features: ["50+ guest capacity", "4K Projection & Dolby Sound", "Custom decorations included", "Recliner seating & AC"] },
+              { id: "private-theatre-party-hall", img: heroImg, title: "Private Theatre + Party Hall", desc: "Experience the ultimate celebration with our combined premium private theatre and elegant party hall service.", features: ["1000+ happy customers", "4K Projection & Dolby Sound", "Decorations included", "Recliner seating & AC"] },
             ].map((service) => (
               <div
                 key={service.title}
@@ -246,32 +246,12 @@ const Index = () => {
             </div>
 
             <p className="text-xs text-muted-foreground font-body border-t border-border/50 pt-6 w-full text-center">
-              © 2026 Friends & Memories. All rights reserved. Premium Private Cinema Experience.
+              © 2024 Friends & Memories. All rights reserved. Premium Private Cinema Experience.
             </p>
           </div>
         </div>
       </footer>
 
-      {/* Floating WhatsApp Button */}
-      {branches.length > 0 && (() => {
-        const branch = branches[0];
-        const socials = branchSocials[branch.id];
-        const waNumber = (socials?.whatsapp || branch.phone).replace(/\+/g, "").replace(/\s/g, "");
-        return (
-          <a
-            href={`https://wa.me/91${waNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-all hover:scale-110 hover:shadow-[#25D366]/50 duration-300 group"
-            aria-label="Contact on WhatsApp"
-          >
-            <MessageCircle className="h-7 w-7" />
-            <span className="absolute right-full mr-3 whitespace-nowrap rounded-lg bg-card border border-border px-3 py-1.5 text-xs font-semibold text-foreground opacity-0 transition-opacity group-hover:opacity-100 shadow-xl pointer-events-none">
-              Need help? Chat with us!
-            </span>
-          </a>
-        );
-      })()}
     </div>
   );
 };

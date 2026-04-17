@@ -87,6 +87,20 @@
           "price": 5000,
           "offerPrice": 3999
         }
+      },
+      "premium-pack": {
+        "1": {
+          "price": 3500,
+          "offerPrice": 2800
+        },
+        "2": {
+          "price": 4500,
+          "offerPrice": 3600
+        },
+        "3": {
+          "price": 5000,
+          "offerPrice": 4000
+        }
       }
     },
     "decorationPrice": 0,
@@ -182,6 +196,20 @@
         "3": {
           "price": 4999,
           "offerPrice": 3999
+        }
+      },
+      "premium-pack": {
+        "1": {
+          "price": 3500,
+          "offerPrice": 2800
+        },
+        "2": {
+          "price": 4500,
+          "offerPrice": 3600
+        },
+        "3": {
+          "price": 5000,
+          "offerPrice": 4000
         }
       }
     },

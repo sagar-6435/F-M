@@ -12,6 +12,9 @@ const router = express.Router();
 router.get('/pricing', async (req, res) => {
   const resolved = await catalogController.getCatalogOrSendError(req, res, false);
   if (!resolved) return;
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.json(resolved.catalog.pricing);
 });
 
@@ -38,6 +41,9 @@ router.get('/pricing/:service/:duration', async (req, res) => {
   const { service, duration } = req.params;
   const price = resolved.catalog.pricing[service]?.[duration];
   if (price === undefined) return res.status(404).json({ error: 'Pricing not found' });
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.json({ service, duration, price });
 });
 
@@ -45,6 +51,9 @@ router.get('/pricing/:service/:duration', async (req, res) => {
 router.get('/decoration-price', async (req, res) => {
   const resolved = await catalogController.getCatalogOrSendError(req, res, false);
   if (!resolved) return;
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.json({ decorationPrice: resolved.catalog.decorationPrice });
 });
 
@@ -62,6 +71,9 @@ router.put('/decoration-price', verifyAdmin, async (req, res) => {
 router.get('/cakes', async (req, res) => {
   const resolved = await catalogController.getCatalogOrSendError(req, res, false);
   if (!resolved) return;
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.json(resolved.catalog.cakes);
 });
 
@@ -128,6 +140,9 @@ router.delete('/cakes/:id', verifyAdmin, async (req, res) => {
 router.get('/decorations', async (req, res) => {
   const resolved = await catalogController.getCatalogOrSendError(req, res, false);
   if (!resolved) return;
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.json(resolved.catalog.decorations);
 });
 

@@ -16,7 +16,16 @@ export const defaultDecorations = [
 ];
 
 export const defaultPricing = {
-  'private-theatre-party-hall': { 1: 1999, 2: 3499, 3: 4999 },
+  'private-theatre-party-hall': {
+    1: { price: 1500, offerPrice: 1300 },
+    2: { price: 2500, offerPrice: 2000 },
+    3: { price: 5000, offerPrice: 3999 }
+  },
+  'premium-pack': {
+    1: { price: 3500, offerPrice: 2800 },
+    2: { price: 4500, offerPrice: 3600 },
+    3: { price: 5000, offerPrice: 4000 }
+  }
 };
 
 export const globalDb = {
@@ -46,6 +55,7 @@ export const globalDb = {
   ],
   services: [
     { id: 'private-theatre-party-hall', name: 'Private Theatre + Party Hall', description: 'Experience the best of both: Private Theatre and Party Hall' },
+    { id: 'premium-pack', name: 'Premium Pack', description: 'Fog entry • Photos • Cake • Theatre • Decoration' },
   ],
   cakes: defaultCakes,
   decorations: defaultDecorations,

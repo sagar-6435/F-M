@@ -47,15 +47,26 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
     if (!doc) {
       doc = await models.BranchCatalog.create({ branch: branchId, ...defaultData });
     } else {
-      // MIGRATION: If old services exist, merge them into the new unified service
+      // MIGRATION: Merge new services from defaultPricing into existing pricing
       const pricing = doc.pricing || {};
+      const mergedPricing = { ...defaultPricing };
+      
+      // Keep existing service data
+      for (const service in pricing) {
+        if (service !== 'private-theatre' && service !== 'party-hall') {
+          mergedPricing[service] = pricing[service];
+        }
+      }
+      
+      // Handle legacy services
       if (pricing['private-theatre'] || pricing['party-hall']) {
         const unifiedPricing = pricing['private-theatre-party-hall'] || defaultPricing['private-theatre-party-hall'];
-        doc.pricing = { 'private-theatre-party-hall': unifiedPricing };
-        // Remove old keys if they were somehow explicitly in the object
-        if (doc.markModified) doc.markModified('pricing');
-        await doc.save();
+        mergedPricing['private-theatre-party-hall'] = unifiedPricing;
       }
+      
+      doc.pricing = mergedPricing;
+      if (doc.markModified) doc.markModified('pricing');
+      await doc.save();
     }
     
     const catalogObj = doc.toObject();

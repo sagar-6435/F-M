@@ -169,17 +169,20 @@ const AdminPricing = () => {
 
       if (response.ok) {
         const updated = await response.json();
-        console.log("Pricing updated successfully:", updated);
-        setPricing(updated);
+        console.log("Pricing updated successfully and saved to database:", updated);
+        
+        // Verify the update by fetching fresh data from server
+        await fetchPricing();
+        
         setEditingId(null);
-        alert(`Service pricing saved!\nService: ${editValues.service}, Duration: ${editValues.duration}h\nPrice: ₹${editValues.price}, Original: ₹${editValues.originalPrice}, Offer: ₹${editValues.offerPrice}`);
+        alert(`✅ Service pricing saved to database!\n\nService: ${editValues.service}\nDuration: ${editValues.duration}h\nPrice: ₹${editValues.price}\nOffer: ₹${editValues.offerPrice}\n\n⏱️ Users will see updated prices within 30 seconds.`);
       } else {
         console.error("Error saving pricing:", response.status, await response.text());
-        alert("Failed to save pricing");
+        alert("❌ Failed to save pricing to database");
       }
     } catch (error) {
       console.error("Error saving pricing:", error);
-      alert("Error saving pricing: " + error);
+      alert("❌ Error saving pricing: " + error);
     }
   };
 
@@ -206,13 +209,13 @@ const AdminPricing = () => {
       if (response.ok) {
         await fetchPricing();
         setEditingId(null);
-        alert("Cake saved successfully!");
+        alert(`✅ Cake saved to database!\n\n${editValues.id ? "Updated" : "Created"}: ${editValues.name}\nPrice: ₹${editValues.price}\n\n⏱️ Users will see updated cakes within 30 seconds.`);
       } else {
-        alert(`Error: ${data.error || "Failed to save cake"}`);
+        alert(`❌ Error: ${data.error || "Failed to save cake"}`);
       }
     } catch (error) {
       console.error("Error saving cake:", error);
-      alert(`Error: ${error.message}`);
+      alert(`❌ Error: ${error.message}`);
     }
   };
 
@@ -239,13 +242,13 @@ const AdminPricing = () => {
       if (response.ok) {
         await fetchPricing();
         setEditingId(null);
-        alert("Decoration saved successfully!");
+        alert(`✅ Decoration saved to database!\n\n${editValues.id ? "Updated" : "Created"}: ${editValues.name}\nPrice: ₹${editValues.price}\n\n⏱️ Users will see updated decorations within 30 seconds.`);
       } else {
-        alert(`Error: ${data.error || "Failed to save decoration"}`);
+        alert(`❌ Error: ${data.error || "Failed to save decoration"}`);
       }
     } catch (error) {
       console.error("Error saving decoration:", error);
-      alert(`Error: ${error.message}`);
+      alert(`❌ Error: ${error.message}`);
     }
   };
 

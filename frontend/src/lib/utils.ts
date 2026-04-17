@@ -9,7 +9,8 @@ export function cn(...inputs: ClassValue[]) {
  * Get the effective price to charge (offer price if available, otherwise regular price)
  */
 export function getEffectivePrice(item: { price: number; offerPrice?: number; originalPrice?: number }): number {
-  return item.offerPrice !== undefined && item.offerPrice !== null ? item.offerPrice : item.price || 0;
+  // Use strict null/undefined check — offerPrice of 0 is a valid offer price
+  return (item.offerPrice != null) ? item.offerPrice : (item.price ?? 0);
 }
 
 /**

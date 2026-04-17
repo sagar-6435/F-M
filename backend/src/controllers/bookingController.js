@@ -391,6 +391,11 @@ export const getBookingInit = async (req, res) => {
     const pricingData = catalog?.pricing || defaultPricing;
     console.log(`[BOOKING-INIT] Branch ${branchId} - pricing data:`, JSON.stringify(pricingData));
 
+    // Set cache-control headers to prevent caching and ensure fresh data from DB
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     res.json({
       branches: globalDb.branches,
       occasions: globalDb.occasions,

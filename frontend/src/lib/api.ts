@@ -52,7 +52,8 @@ export const api = {
   },
 
   async getBookingInit(branchId: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/bookings/init/${branchId}`);
+    const timestamp = Date.now();
+    const res = await fetch(`${API_BASE}/bookings/init/${branchId}?t=${timestamp}`);
     if (!res.ok) throw new Error("Failed to fetch booking init data");
     return res.json();
   },
