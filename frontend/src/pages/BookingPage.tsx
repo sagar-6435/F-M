@@ -218,24 +218,12 @@ const BookingPage = () => {
     ? ["Select Branch & Service", "Date, Time & Details", "Occasion", "Summary", "Payment"]
     : ALL_STEPS;
 
-  // Map actual step to render (skip cake and extras for premium-pack)
-  const getActualStep = (displayStep: number): number => {
+  // Get correct icons based on selected service
+  const getStepIcons = () => {
     if (isPremiumPack) {
-      // For premium-pack: 0=service, 1=date, 2=occasion, 3=summary, 4=payment
-      if (displayStep <= 2) return displayStep;
-      if (displayStep === 3) return 5; // Summary
-      if (displayStep === 4) return 6; // Payment
+      return [MapPin, Clock, PartyPopper, Check, CreditCard]; // 5 icons for premium pack
     }
-    return displayStep;
-  };
-
-  const getDisplayStep = (actualStep: number): number => {
-    if (isPremiumPack) {
-      if (actualStep <= 2) return actualStep;
-      if (actualStep === 5) return 3; // Summary
-      if (actualStep === 6) return 4; // Payment
-    }
-    return actualStep;
+    return STEP_ICONS; // 7 icons for standard pack
   };
 
   // Navigate to next step, skipping cake and extras for premium-pack
@@ -526,7 +514,8 @@ const BookingPage = () => {
             {/* Progress */}
             <div className="mb-10 flex items-center justify-between overflow-x-auto pb-2">
               {STEPS.map((s, i) => {
-                const Icon = STEP_ICONS[i];
+                const stepIcons = getStepIcons();
+                const Icon = stepIcons[i];
                 return (
                   <div key={s} className="flex flex-col items-center gap-1 min-w-[60px]">
                     <div
