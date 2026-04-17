@@ -18,8 +18,7 @@ export const defaultDecorations = [
 ];
 
 export const defaultPricing = {
-  'party-hall': { 1: 2999, 2: 4999, 3: 6999 },
-  'private-theatre': { 1: 1999, 2: 3499, 3: 4999 },
+  'private-theatre-party-hall': { 1: 1999, 2: 3499, 3: 4999 },
 };
 
 /**

@@ -78,9 +78,14 @@ const Index = () => {
         </div>
 
         <div className="container relative z-10 mx-auto px-4 pt-32 pb-12 md:pt-24 md:pb-0">
-          <p className="mb-4 text-[10px] md:text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body animate-fade-in">
-            Private Theatre & Party Hall
-          </p>
+          <div className="mb-4 flex flex-wrap items-center gap-3 animate-fade-in">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20">
+              <Sparkles className="h-3 w-3" /> Celebrating 2 Years
+            </span>
+            <p className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground font-body">
+              Private Theatre & Party Hall
+            </p>
+          </div>
           <h1 className="mb-6 max-w-4xl 3xl:max-w-6xl font-display text-4xl font-bold leading-tight text-foreground md:text-7xl 3xl:text-9xl animate-slide-up">
             Create{" "}
             <span className="text-gradient-gold">Unforgettable</span>{" "}

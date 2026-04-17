@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 
 import { BRANCHES } from "@/lib/booking-data";
 import { API_BASE, api } from "@/lib/api";
-import { Eye, EyeOff, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download } from "lucide-react";
+import { getEffectivePrice } from "@/lib/utils";
+import { Eye, EyeOff, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2 } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -53,6 +54,15 @@ const formatServiceName = (serviceId: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+/**
+ * Extract a numeric price from either a number or price object
+ */
+const getPriceValue = (price: any): number => {
+  if (typeof price === 'number') return price;
+  if (typeof price === 'object' && price !== null && 'price' in price) return price.price || 0;
+  return 0;
+};
+
 const AdminDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
@@ -84,7 +94,7 @@ const AdminDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [pricingTab, setPricingTab] = useState<"services" | "cakes" | "decorations">("services");
-  const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
+  const [pricing, setPricing] = useState<Record<string, Record<any, any>>>({});
   const [cakes, setCakes] = useState<any[]>([]);
   const [decorations, setDecorations] = useState<any[]>([]);
   const [decorationPrice, setDecorationPrice] = useState(1500);
@@ -133,7 +143,7 @@ const AdminDashboard = () => {
       setPassword("");
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("adminBranch", data.branch);
-      
+
       const bData = await api.getBranches();
       setBranchList(bData);
     } catch (err) {
@@ -171,7 +181,7 @@ const AdminDashboard = () => {
       );
       setManualAvailableSlots(data.availableSlots);
       setManualBookedSlots(data.bookedSlots);
-      
+
       // If currently selected slot is not available, reset to first available
       if (!data.availableSlots.includes(manualBooking.timeSlot) || data.bookedSlots.includes(manualBooking.timeSlot)) {
         const firstAvailable = data.availableSlots.find(s => !data.bookedSlots.includes(s));
@@ -192,10 +202,10 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       let startDate: string | undefined;
       let endDate: string | undefined;
-      
+
       const getLocalIDODate = (date: Date) => {
         const offset = date.getTimezoneOffset();
         const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
@@ -222,7 +232,7 @@ const AdminDashboard = () => {
       ]);
       setBookings(bookingsData);
       setStats(statsData);
-      
+
       // Also fetch pricing data
       await fetchPricing();
     } catch (err) {
@@ -249,7 +259,7 @@ const AdminDashboard = () => {
       setTestimonials(await api.getTestimonials(selectedBranch));
       setHeroImages(await api.getHeroImages(selectedBranch));
       setSocialEditData(await api.getSocialLinks(selectedBranch));
-      
+
       const bList = await api.getBranches();
       setBranchList(bList);
       const currentBranch = bList.find(b => b.id === selectedBranch);
@@ -321,7 +331,7 @@ const AdminDashboard = () => {
       };
 
       await api.createBooking(bookingData);
-      
+
       // Reset form
       setManualBooking({
         branch: selectedBranch,
@@ -353,7 +363,7 @@ const AdminDashboard = () => {
     try {
       const response = await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -377,7 +387,7 @@ const AdminDashboard = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -401,7 +411,7 @@ const AdminDashboard = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -421,7 +431,7 @@ const AdminDashboard = () => {
     try {
       const response = await fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -439,7 +449,7 @@ const AdminDashboard = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -455,7 +465,7 @@ const AdminDashboard = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -468,9 +478,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleEditService = (service: string, duration: number, price: number) => {
+  const handleEditService = (service: string, duration: number, price: any) => {
     setEditingId(`${service}-${duration}`);
-    setEditValues({ service, duration, price });
+    const actualPrice = typeof price === 'object' ? (price.price || 0) : price;
+    const offerPrice = typeof price === 'object' ? price.offerPrice : undefined;
+    setEditValues({ service, duration, price: actualPrice, offerPrice });
   };
 
   const handleEditCake = (cake: any) => {
@@ -657,7 +669,7 @@ const AdminDashboard = () => {
           <p className="mb-6 text-center text-xs text-muted-foreground font-body">
             Your password determines which branch you manage
           </p>
-          
+
           <div className="relative mb-4">
             <input
               type={showPassword ? "text" : "password"}
@@ -687,7 +699,7 @@ const AdminDashboard = () => {
     );
   }
 
-  const filtered = bookings.filter((b) => 
+  const filtered = bookings.filter((b) =>
     b.branch === selectedBranch && (filter === "all" || b.paymentStatus === filter)
   );
 
@@ -716,55 +728,50 @@ const AdminDashboard = () => {
         <div className="mb-8 flex gap-2 border-b border-border">
           <button
             onClick={() => setActiveTab("bookings")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
-              activeTab === "bookings"
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "bookings"
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <Calendar className="inline h-4 w-4 mr-2" />
             Bookings
           </button>
           <button
             onClick={() => setActiveTab("manual")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
-              activeTab === "manual"
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "manual"
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <Plus className="inline h-4 w-4 mr-2" />
             Manual Booking (Cash)
           </button>
           <button
             onClick={() => setActiveTab("pricing")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
-              activeTab === "pricing"
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "pricing"
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <Settings className="inline h-4 w-4 mr-2" />
             Pricing
           </button>
           <button
             onClick={() => setActiveTab("gallery")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
-              activeTab === "gallery"
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "gallery"
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <Eye className="inline h-4 w-4 mr-2" />
             Gallery
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${
-              activeTab === "settings"
+            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "settings"
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <Settings className="inline h-4 w-4 mr-2" />
             Settings
@@ -785,9 +792,8 @@ const AdminDashboard = () => {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium capitalize transition-all font-body ${
-                    filter === f ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
-                  }`}
+                  className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium capitalize transition-all font-body ${filter === f ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
+                    }`}
                 >
                   {f === "pending" && <Clock className="h-3 w-3" />}
                   {f === "paid" && <CheckCircle className="h-3 w-3" />}
@@ -832,34 +838,30 @@ const AdminDashboard = () => {
             <div className="mb-4 flex flex-wrap gap-2">
               <button
                 onClick={() => setDateFilter("all")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                  dateFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
               >
                 All Time
               </button>
               <button
                 onClick={() => setDateFilter("today")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                  dateFilter === "today" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "today" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
               >
                 Today
               </button>
               <button
                 onClick={() => setDateFilter("yesterday")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                  dateFilter === "yesterday" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "yesterday" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
               >
                 Yesterday
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setDateFilter("specific")}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                    dateFilter === "specific" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "specific" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
                 >
                   Specific Date
                 </button>
@@ -901,15 +903,14 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3 text-muted-foreground">{b.date}</td>
                         <td className="px-4 py-3 text-muted-foreground">{b.timeSlot}</td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${
-                            b.paymentStatus === "paid" ? "bg-green-100 text-green-800" : b.paymentStatus === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                          }`}>
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${b.paymentStatus === "paid" ? "bg-green-100 text-green-800" : b.paymentStatus === "cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                            }`}>
                             {b.paymentStatus}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{b.paymentType || 'N/A'}</td>
-                        <td className="px-4 py-3 font-semibold text-green-600">₹{(b.amountPaid || 0).toLocaleString()}</td>
-                        <td className="px-4 py-3 font-semibold text-foreground">₹{b.totalPrice.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-green-600">₹{getPriceValue(b.amountPaid || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-foreground">₹{getPriceValue(b.totalPrice).toLocaleString()}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}
                         </td>
@@ -950,9 +951,8 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Status</p>
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-                            selectedBooking.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                          }`}>
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${selectedBooking.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                            }`}>
                             {selectedBooking.paymentStatus}
                           </span>
                         </div>
@@ -1023,9 +1023,9 @@ const AdminDashboard = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground">Total Amount</p>
-                          <p className="text-xl font-bold text-primary">₹{selectedBooking.totalPrice.toLocaleString()}</p>
+                          <p className="text-xl font-bold text-primary">₹{getPriceValue(selectedBooking.totalPrice).toLocaleString()}</p>
                           {selectedBooking.extraPersonsCharge ? (
-                             <p className="text-[10px] text-muted-foreground font-body">Inc. ₹{selectedBooking.extraPersonsCharge} extra charge</p>
+                            <p className="text-[10px] text-muted-foreground font-body">Inc. ₹{getPriceValue(selectedBooking.extraPersonsCharge)} extra charge</p>
                           ) : null}
                         </div>
                         <div>
@@ -1034,17 +1034,16 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Amount Paid</p>
-                          <p className="text-lg font-bold text-green-600">₹{(selectedBooking.amountPaid || 0).toLocaleString()}</p>
+                          <p className="text-lg font-bold text-green-600">₹{getPriceValue(selectedBooking.amountPaid || 0).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Balance Amount</p>
-                          <p className="text-lg font-bold text-red-600">₹{(selectedBooking.balanceAmount || 0).toLocaleString()}</p>
+                          <p className="text-lg font-bold text-red-600">₹{getPriceValue(selectedBooking.balanceAmount || 0).toLocaleString()}</p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-xs text-muted-foreground">Status</p>
-                          <p className={`text-sm font-semibold ${
-                            selectedBooking.paymentStatus === "paid" ? "text-green-600" : selectedBooking.paymentStatus === "cancelled" ? "text-red-600" : "text-yellow-600"
-                          }`}>
+                          <p className={`text-sm font-semibold ${selectedBooking.paymentStatus === "paid" ? "text-green-600" : selectedBooking.paymentStatus === "cancelled" ? "text-red-600" : "text-yellow-600"
+                            }`}>
                             {selectedBooking.paymentStatus.toUpperCase()}
                           </p>
                         </div>
@@ -1091,7 +1090,7 @@ const AdminDashboard = () => {
         {activeTab === "manual" && (
           <div className="max-w-2xl rounded-2xl border border-border bg-card p-8">
             <h2 className="mb-6 font-display text-2xl font-bold text-foreground">Create Manual Booking (Cash Payment)</h2>
-            
+
             <form onSubmit={handleManualBookingSubmit} className="space-y-6">
               {/* Branch */}
               <div>
@@ -1281,11 +1280,10 @@ const AdminDashboard = () => {
                 <button
                   key={tab}
                   onClick={() => setPricingTab(tab)}
-                  className={`pb-3 px-4 font-medium transition-colors text-sm ${
-                    pricingTab === tab
+                  className={`pb-3 px-4 font-medium transition-colors text-sm ${pricingTab === tab
                       ? "border-b-2 border-primary text-primary"
                       : "text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -1339,35 +1337,58 @@ const AdminDashboard = () => {
                         const isEditing = editingId === `${service}-${duration}`;
                         return (
                           <div key={`${service}-${duration}`} className="flex items-center justify-between bg-muted p-3 rounded-lg">
-                            <span className="font-medium">{duration} Hour{duration !== "1" ? "s" : ""}</span>
+                            <span className="font-medium text-xs">{duration} Hour{duration !== "1" ? "s" : ""}</span>
                             {isEditing ? (
-                              <div className="flex items-center gap-2">
-                                <span>₹</span>
-                                <input
-                                  type="number"
-                                  value={editValues.price}
-                                  onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                  className="w-24 px-2 py-1 border border-border rounded bg-background text-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                                <button
-                                  onClick={handleSaveService}
-                                  className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingId(null)}
-                                  className="px-3 py-1 border border-border rounded text-sm"
-                                >
-                                  Cancel
-                                </button>
+                              <div className="flex flex-col flex-1 gap-2 ml-4">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-[10px] font-bold text-muted-foreground block">Original</label>
+                                    <input
+                                      type="number"
+                                      value={editValues.price || ""}
+                                      onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                                      className="w-full px-2 py-1 text-xs border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-green-600 block">Offer</label>
+                                    <input
+                                      type="number"
+                                      placeholder="0"
+                                      value={editValues.offerPrice ?? ""}
+                                      onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                      className="w-full px-2 py-1 text-xs border border-green-200 rounded bg-background text-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 justify-end">
+                                  <button
+                                    onClick={handleSaveService}
+                                    className="px-3 py-1 bg-primary text-primary-foreground rounded text-[10px] font-bold"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingId(null)}
+                                    className="px-3 py-1 border border-border rounded text-[10px]"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-primary">₹{price}</span>
+                              <div className="flex items-center gap-3">
+                                {typeof price === 'object' && price.offerPrice ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-green-600">₹{price.offerPrice}</span>
+                                    <span className="text-[10px] line-through text-muted-foreground">₹{price.price}</span>
+                                  </div>
+                                ) : (
+                                  <span className="font-bold text-primary">₹{typeof price === 'object' ? price.price : price}</span>
+                                )}
                                 <button
                                   onClick={() => handleEditService(service, Number(duration), price)}
-                                  className="px-3 py-1 border border-border rounded text-sm"
+                                  className="px-2 py-1 border border-border rounded text-[10px] hover:border-primary transition-colors"
                                 >
                                   Edit
                                 </button>
@@ -1424,7 +1445,10 @@ const AdminDashboard = () => {
                 {cakes.map((cake) => {
                   const isEditing = editingId === cake.id;
                   return (
-                    <div key={cake.id} className="border border-border rounded-lg p-6">
+                    <div key={cake.id} className="border border-border rounded-xl p-4 bg-card relative overflow-hidden group hover:border-primary/50 transition-all">
+                      {cake.offerPrice && (
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full uppercase z-10">Offer</div>
+                      )}
                       {isEditing ? (
                         <div className="space-y-4">
                           <input
@@ -1432,23 +1456,28 @@ const AdminDashboard = () => {
                             placeholder="Cake name"
                             value={editValues.name || ""}
                             onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
                           />
-                          <input
-                            type="text"
-                            placeholder="Description"
-                            value={editValues.description || ""}
-                            onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
-                          />
-                          <div className="flex gap-2">
-                            <span>₹</span>
-                            <input
-                              type="number"
-                              value={editValues.price}
-                              onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                              className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background"
-                            />
+                          <div className="grid grid-cols-2 gap-3">
+                             <div>
+                                <label className="text-[10px] font-bold text-muted-foreground block mb-1">Price</label>
+                                <input
+                                  type="number"
+                                  value={editValues.price || ""}
+                                  onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-green-600 block mb-1">Offer Price</label>
+                                <input
+                                  type="number"
+                                  placeholder="Optional"
+                                  value={editValues.offerPrice || ""}
+                                  onChange={(e) => setEditValues({ ...editValues, offerPrice: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 border-2 border-green-500/30 rounded-lg text-sm bg-background text-green-600 font-bold"
+                                />
+                             </div>
                           </div>
                           <input
                             type="file"
@@ -1459,35 +1488,33 @@ const AdminDashboard = () => {
                           {uploadingImageId === `cake-${cake.id}` && (
                             <p className="text-xs text-primary">Uploading image...</p>
                           )}
-                          <div className="flex gap-2">
-                            <button onClick={handleSaveCake} className="px-4 py-2 bg-primary text-primary-foreground rounded">
-                              Save
-                            </button>
-                            <button onClick={() => setEditingId(null)} className="px-4 py-2 border border-border rounded">
-                              Cancel
-                            </button>
+                          <div className="flex gap-2 justify-end">
+                             <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border border-border rounded-lg text-xs">Cancel</button>
+                             <button onClick={handleSaveCake} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save Changes</button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold text-lg">{cake.name} ({cake.quantity || '1kg'})</h4>
-                            <p className="text-sm text-muted-foreground">{cake.description}</p>
-                            <p className="font-bold text-primary mt-2">₹{cake.price}</p>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-4">
+                            {cake.image && <img src={cake.image} alt={cake.name} className="w-12 h-12 rounded-lg object-cover border border-border" />}
+                            <div>
+                              <h4 className="font-bold text-foreground text-sm">{cake.name} ({cake.quantity || '1kg'})</h4>
+                              <p className="text-xs text-muted-foreground line-clamp-1">{cake.description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {cake.offerPrice ? (
+                                  <>
+                                     <span className="font-bold text-green-600">₹{cake.offerPrice}</span>
+                                     <span className="text-[10px] line-through text-muted-foreground/60">₹{cake.price}</span>
+                                  </>
+                                ) : (
+                                  <span className="font-bold text-primary">₹{cake.price}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditCake(cake)}
-                              className="px-3 py-1 border border-border rounded text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCake(cake.id || "")}
-                              className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
-                            >
-                              Delete
-                            </button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEditCake(cake)} className="p-2 text-muted-foreground hover:text-primary"><Edit className="h-4 w-4" /></button>
+                            <button onClick={() => handleDeleteCake(cake.id || "")} className="p-2 text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
                       )}
@@ -1570,7 +1597,10 @@ const AdminDashboard = () => {
                 {decorations.map((decoration) => {
                   const isEditing = editingId === decoration.id;
                   return (
-                    <div key={decoration.id} className="border border-border rounded-lg p-6">
+                    <div key={decoration.id} className="border border-border rounded-xl p-4 bg-card relative overflow-hidden group hover:border-primary/50 transition-all">
+                      {decoration.offerPrice && (
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full uppercase z-10">Offer</div>
+                      )}
                       {isEditing ? (
                         <div className="space-y-4">
                           <input
@@ -1578,23 +1608,28 @@ const AdminDashboard = () => {
                             placeholder="Decoration name"
                             value={editValues.name || ""}
                             onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
+                            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
                           />
-                          <input
-                            type="text"
-                            placeholder="Description"
-                            value={editValues.description || ""}
-                            onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
-                          />
-                          <div className="flex gap-2">
-                            <span>₹</span>
-                            <input
-                              type="number"
-                              value={editValues.price}
-                              onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                              className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background"
-                            />
+                          <div className="grid grid-cols-2 gap-3">
+                             <div>
+                                <label className="text-[10px] font-bold text-muted-foreground block mb-1">Price</label>
+                                <input
+                                  type="number"
+                                  value={editValues.price || ""}
+                                  onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-green-600 block mb-1">Offer Price</label>
+                                <input
+                                  type="number"
+                                  placeholder="Optional"
+                                  value={editValues.offerPrice || ""}
+                                  onChange={(e) => setEditValues({ ...editValues, offerPrice: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 border-2 border-green-500/30 rounded-lg text-sm bg-background text-green-600 font-bold"
+                                />
+                             </div>
                           </div>
                           <input
                             type="file"
@@ -1605,35 +1640,33 @@ const AdminDashboard = () => {
                           {uploadingImageId === `decoration-${decoration.id}` && (
                             <p className="text-xs text-primary">Uploading image...</p>
                           )}
-                          <div className="flex gap-2">
-                            <button onClick={handleSaveDecoration} className="px-4 py-2 bg-primary text-primary-foreground rounded">
-                              Save
-                            </button>
-                            <button onClick={() => setEditingId(null)} className="px-4 py-2 border border-border rounded">
-                              Cancel
-                            </button>
+                          <div className="flex gap-2 justify-end">
+                             <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border border-border rounded-lg text-xs">Cancel</button>
+                             <button onClick={handleSaveDecoration} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save Changes</button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold text-lg">{decoration.name}</h4>
-                            <p className="text-sm text-muted-foreground">{decoration.description}</p>
-                            <p className="font-bold text-primary mt-2">₹{decoration.price}</p>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-4">
+                            {decoration.image && <img src={decoration.image} alt={decoration.name} className="w-12 h-12 rounded-lg object-cover border border-border" />}
+                            <div>
+                              <h4 className="font-bold text-foreground text-sm">{decoration.name}</h4>
+                              <p className="text-xs text-muted-foreground line-clamp-1">{decoration.description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {decoration.offerPrice ? (
+                                  <>
+                                     <span className="font-bold text-green-600">₹{decoration.offerPrice}</span>
+                                     <span className="text-[10px] line-through text-muted-foreground/60">₹{decoration.price}</span>
+                                  </>
+                                ) : (
+                                  <span className="font-bold text-primary">₹{decoration.price}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditDecoration(decoration)}
-                              className="px-3 py-1 border border-border rounded text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDecoration(decoration.id || "")}
-                              className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
-                            >
-                              Delete
-                            </button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEditDecoration(decoration)} className="p-2 text-muted-foreground hover:text-primary"><Edit className="h-4 w-4" /></button>
+                            <button onClick={() => handleDeleteDecoration(decoration.id || "")} className="p-2 text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
                       )}
@@ -1671,7 +1704,7 @@ const AdminDashboard = () => {
                     >
                       ✕
                     </button>
-                    <div className="absolute bottom-1 left-2 bg-black/50 text-[10px] text-white px-1 rounded">#{idx+1}</div>
+                    <div className="absolute bottom-1 left-2 bg-black/50 text-[10px] text-white px-1 rounded">#{idx + 1}</div>
                   </div>
                 ))}
               </div>
@@ -1723,7 +1756,7 @@ const AdminDashboard = () => {
             <p className="text-sm text-muted-foreground font-body">
               Update the contact information, address, and social handles for this specific location.
             </p>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Branch Name</label>
@@ -1734,7 +1767,7 @@ const AdminDashboard = () => {
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Contact Phone</label>
                 <input

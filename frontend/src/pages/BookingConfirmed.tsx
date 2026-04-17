@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { BRANCHES } from "@/lib/booking-data";
 import { api } from "@/lib/api";
+import { getEffectivePrice, getOriginalPrice, hasOffer } from "@/lib/utils";
 
 const BookingConfirmed = () => {
   const location = useLocation();
@@ -196,7 +197,16 @@ const BookingConfirmed = () => {
                         <Cake className="h-4 w-4 text-primary" />
                         <span className="font-semibold text-foreground text-sm">{booking.selectedCake.name}</span>
                       </div>
-                      <span className="font-bold text-primary">₹{booking.selectedCake.price}</span>
+                      <div className="text-right">
+                        {hasOffer(booking.selectedCake) ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] line-through text-muted-foreground/60">₹{getOriginalPrice(booking.selectedCake)}</span>
+                            <span className="font-bold text-green-600">₹{getEffectivePrice(booking.selectedCake)}</span>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-primary">₹{booking.selectedCake.price}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   {booking.extraDecorations?.map((d: any) => (
@@ -205,7 +215,16 @@ const BookingConfirmed = () => {
                         <Gift className="h-4 w-4 text-primary" />
                         <span className="font-semibold text-foreground text-sm">{d.name}</span>
                       </div>
-                      <span className="font-bold text-primary">₹{d.price}</span>
+                      <div className="text-right">
+                        {hasOffer(d) ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] line-through text-muted-foreground/60">₹{getOriginalPrice(d)}</span>
+                            <span className="font-bold text-green-600">₹{getEffectivePrice(d)}</span>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-primary">₹{d.price}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -221,18 +240,18 @@ const BookingConfirmed = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center pb-3 border-b border-border">
                   <span className="text-sm text-muted-foreground font-body">Service & Decoration</span>
-                  <span className="font-semibold text-foreground">₹{((booking.totalPrice || 0) - (booking.selectedCake?.price || 0) - (booking.extraDecorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0)).toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">₹{((booking.totalPrice || 0) - (booking.selectedCake ? getEffectivePrice(booking.selectedCake) : 0) - (booking.extraDecorations?.reduce((sum: number, d: any) => sum + getEffectivePrice(d), 0) || 0)).toLocaleString()}</span>
                 </div>
                 {booking.selectedCake && (
                   <div className="flex justify-between items-center pb-3 border-b border-border">
                     <span className="text-sm text-muted-foreground font-body">{booking.selectedCake.name}</span>
-                    <span className="font-semibold text-foreground">₹{booking.selectedCake.price}</span>
+                    <span className="font-semibold text-foreground">₹{getEffectivePrice(booking.selectedCake).toLocaleString()}</span>
                   </div>
                 )}
                 {booking.extraDecorations?.length > 0 && (
                   <div className="flex justify-between items-center pb-3 border-b border-border">
                     <span className="text-sm text-muted-foreground font-body">Extra Decorations</span>
-                    <span className="font-semibold text-foreground">₹{booking.extraDecorations.reduce((sum: number, d: any) => sum + d.price, 0).toLocaleString()}</span>
+                    <span className="font-semibold text-foreground">₹{booking.extraDecorations.reduce((sum: number, d: any) => sum + getEffectivePrice(d), 0).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-3">

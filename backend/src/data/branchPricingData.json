@@ -75,14 +75,21 @@
     ],
     "pricing": {
       "private-theatre-party-hall": {
-        "1": 1,
-        "2": 2,
+        "1": {
+          "price": 1500,
+          "offerPrice": 1300
+        },
+        "2": {
+          "price": 2500,
+          "offerPrice": 2000
+        },
         "3": {
-          "price": 5000
+          "price": 5000,
+          "offerPrice": 3999
         }
       }
     },
-    "decorationPrice": 1500,
+    "decorationPrice": 0,
     "testimonials": [],
     "heroImages": [],
     "socialLinks": {
@@ -164,12 +171,21 @@
     ],
     "pricing": {
       "private-theatre-party-hall": {
-        "1": 1999,
-        "2": 3499,
-        "3": 4999
+        "1": {
+          "price": 1500,
+          "offerPrice": 1299
+        },
+        "2": {
+          "price": 2499,
+          "offerPrice": 2299
+        },
+        "3": {
+          "price": 4999,
+          "offerPrice": 3999
+        }
       }
     },
-    "decorationPrice": 1500,
+    "decorationPrice": 0,
     "testimonials": [],
     "heroImages": [],
     "socialLinks": {

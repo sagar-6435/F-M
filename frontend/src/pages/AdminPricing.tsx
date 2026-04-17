@@ -18,7 +18,7 @@ interface PricingItem {
 
 const AdminPricing = () => {
   const [activeTab, setActiveTab] = useState<"services" | "cakes" | "decorations">("services");
-  const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
+  const [pricing, setPricing] = useState<Record<string, Record<any, any>>>({});
   const [cakes, setCakes] = useState<PricingItem[]>([]);
   const [decorations, setDecorations] = useState<PricingItem[]>([]);
   const [decorationPrice, setDecorationPrice] = useState(1500);
@@ -77,7 +77,7 @@ const AdminPricing = () => {
             <LogIn className="h-6 w-6 text-primary" />
           </div>
           <h2 className="mb-6 text-center font-display text-2xl font-bold text-foreground">Admin Login</h2>
-          
+
           <input
             type="password"
             placeholder="Enter admin password"
@@ -137,9 +137,11 @@ const AdminPricing = () => {
     }
   };
 
-  const handleEditService = (service: string, duration: number, price: number) => {
+  const handleEditService = (service: string, duration: number, price: any) => {
     setEditingId(`${service}-${duration}`);
-    setEditValues({ service, duration, price });
+    const actualPrice = typeof price === 'object' ? (price.price || 0) : price;
+    const offerPrice = typeof price === 'object' ? price.offerPrice : undefined;
+    setEditValues({ service, duration, price: actualPrice, offerPrice });
   };
 
   const handleEditCake = (cake: PricingItem) => {
@@ -155,10 +157,10 @@ const AdminPricing = () => {
   const handleSaveService = async () => {
     try {
       console.log("Saving service pricing with values:", { ...editValues, branch: selectedBranch });
-      
+
       const response = await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -191,7 +193,7 @@ const AdminPricing = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -224,7 +226,7 @@ const AdminPricing = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -251,7 +253,7 @@ const AdminPricing = () => {
     try {
       const response = await fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -269,7 +271,7 @@ const AdminPricing = () => {
   const handleDeleteCake = async (id: string) => {
     if (confirm("Are you sure you want to delete this cake?")) {
       try {
-        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/cakes/${id}?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -285,7 +287,7 @@ const AdminPricing = () => {
   const handleDeleteDecoration = async (id: string) => {
     if (confirm("Are you sure you want to delete this decoration?")) {
       try {
-        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, { 
+        const response = await fetch(`${API_BASE}/decorations/${id}?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -346,11 +348,10 @@ const AdminPricing = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 font-medium transition-colors ${
-                activeTab === tab
+              className={`pb-3 px-4 font-medium transition-colors ${activeTab === tab
                   ? "border-b-2 border-primary text-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
@@ -428,7 +429,7 @@ const AdminPricing = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleEditService(service, Number(duration), typeof price === 'object' ? price : { price })}
+                              onClick={() => handleEditService(service, Number(duration), price)}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>

@@ -10,6 +10,7 @@ export interface CakeOption {
   id: string;
   name: string;
   price: number;
+  offerPrice?: number;
   description: string;
   image?: string;
   quantity?: string;
@@ -19,6 +20,7 @@ export interface ExtraDecoration {
   id: string;
   name: string;
   price: number;
+  offerPrice?: number;
   description: string;
   image?: string;
 }
@@ -101,20 +103,20 @@ export const OCCASIONS = [
 ];
 
 export const CAKE_OPTIONS: CakeOption[] = [
-  { id: "cake-1", name: "Classic Chocolate Truffle", price: 799, description: "Rich dark chocolate layers", image: "/placeholder.svg" },
-  { id: "cake-2", name: "Red Velvet Dream", price: 899, description: "Cream cheese frosted perfection", image: "/placeholder.svg" },
-  { id: "cake-3", name: "Butterscotch Crunch", price: 749, description: "Caramel & crunchy butterscotch", image: "/placeholder.svg" },
-  { id: "cake-4", name: "Fresh Fruit Delight", price: 999, description: "Seasonal fruits with cream", image: "/placeholder.svg" },
-  { id: "cake-5", name: "Black Forest Premium", price: 849, description: "Cherry-filled chocolate classic", image: "/placeholder.svg" },
+  { id: "cake-1", name: "Classic Chocolate Truffle", price: 799, offerPrice: 699, description: "Rich dark chocolate layers", image: "/placeholder.svg" },
+  { id: "cake-2", name: "Red Velvet Dream", price: 899, offerPrice: 799, description: "Cream cheese frosted perfection", image: "/placeholder.svg" },
+  { id: "cake-3", name: "Butterscotch Crunch", price: 749, offerPrice: 649, description: "Caramel & crunchy butterscotch", image: "/placeholder.svg" },
+  { id: "cake-4", name: "Fresh Fruit Delight", price: 999, offerPrice: 849, description: "Seasonal fruits with cream", image: "/placeholder.svg" },
+  { id: "cake-5", name: "Black Forest Premium", price: 849, offerPrice: 749, description: "Cherry-filled chocolate classic", image: "/placeholder.svg" },
 ];
 
 export const EXTRA_DECORATIONS: ExtraDecoration[] = [
-  { id: "extra-1", name: "Balloon Bouquet Setup", price: 1500, description: "100+ premium balloons" },
-  { id: "extra-2", name: "LED Neon Sign", price: 800, description: "Custom message neon display" },
-  { id: "extra-3", name: "Photo Wall / Backdrop", price: 2000, description: "Instagram-worthy backdrop" },
-  { id: "extra-4", name: "Fog Machine Effect", price: 500, description: "Dramatic fog entrance" },
-  { id: "extra-5", name: "Rose Petal Pathway", price: 1200, description: "Romantic rose petal setup" },
-  { id: "extra-6", name: "Confetti Cannon", price: 600, description: "Party poppers & confetti" },
+  { id: "extra-1", name: "Balloon Bouquet Setup", price: 1500, offerPrice: 1200, description: "100+ premium balloons" },
+  { id: "extra-2", name: "LED Neon Sign", price: 800, offerPrice: 600, description: "Custom message neon display" },
+  { id: "extra-3", name: "Photo Wall / Backdrop", price: 2000, offerPrice: 1700, description: "Instagram-worthy backdrop" },
+  { id: "extra-4", name: "Fog Machine Effect", price: 500, offerPrice: 400, description: "Dramatic fog entrance" },
+  { id: "extra-5", name: "Rose Petal Pathway", price: 1200, offerPrice: 999, description: "Romantic rose petal setup" },
+  { id: "extra-6", name: "Confetti Cannon", price: 600, offerPrice: 450, description: "Party poppers & confetti" },
 ];
 
 export interface TimeSlot {
@@ -151,8 +153,12 @@ export const TIME_SLOTS: Record<number, TimeSlot[]> = {
   ],
 };
 
-export const BASE_PRICES: Record<string, Record<number, number>> = {
-  "private-theatre-party-hall": { 1: 1999, 2: 3499, 3: 4999 },
+export const BASE_PRICES: Record<string, Record<number, any>> = {
+  "private-theatre-party-hall": { 
+    1: { price: 1999, offerPrice: 1799 }, 
+    2: { price: 3499, offerPrice: 2999 }, 
+    3: { price: 4999, offerPrice: 3999 } 
+  },
 };
 
 export const DECORATION_PRICE = 1500;

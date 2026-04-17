@@ -19,9 +19,15 @@ router.put('/pricing', verifyAdmin, async (req, res) => {
   const resolved = await catalogController.getCatalogOrSendError(req, res, true);
   if (!resolved) return;
   const { branch, catalog } = resolved;
-  const { service, duration, price } = req.body;
+  const { service, duration, price, offerPrice } = req.body;
   if (!catalog.pricing[service]) catalog.pricing[service] = {};
-  catalog.pricing[service][duration] = price;
+  
+  if (offerPrice !== undefined && offerPrice !== null && offerPrice !== "") {
+    catalog.pricing[service][duration] = { price: Number(price), offerPrice: Number(offerPrice) };
+  } else {
+    catalog.pricing[service][duration] = Number(price);
+  }
+  
   await catalogController.saveCatalogForBranch(branch, catalog);
   res.json(catalog.pricing);
 });
@@ -64,17 +70,17 @@ router.post('/cakes', verifyAdmin, async (req, res) => {
   if (!resolved) return;
   const { branch, catalog } = resolved;
   const { name, price, description, image, originalPrice, offerPrice } = req.body;
-  
+
   try {
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
       imageUrl = await uploadToCloudinary(image, 'cakes', getRootFolderForBranch(branch));
     }
-    const cake = { 
-      id: `cake-${uuidv4()}`, 
-      name, 
-      price, 
-      description, 
+    const cake = {
+      id: `cake-${uuidv4()}`,
+      name,
+      price,
+      description,
       image: imageUrl,
       ...(originalPrice !== undefined && { originalPrice }),
       ...(offerPrice !== undefined && { offerPrice })
@@ -93,7 +99,7 @@ router.put('/cakes/:id', verifyAdmin, async (req, res) => {
   const { branch, catalog } = resolved;
   const item = catalog.cakes.find(c => c.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Cake not found' });
-  
+
   try {
     const updateData = { ...req.body };
     if (updateData.image && updateData.image.startsWith('data:image')) {
@@ -130,17 +136,17 @@ router.post('/decorations', verifyAdmin, async (req, res) => {
   if (!resolved) return;
   const { branch, catalog } = resolved;
   const { name, price, description, image, originalPrice, offerPrice } = req.body;
-  
+
   try {
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
       imageUrl = await uploadToCloudinary(image, 'decorations', getRootFolderForBranch(branch));
     }
-    const decoration = { 
-      id: `extra-${uuidv4()}`, 
-      name, 
-      price, 
-      description, 
+    const decoration = {
+      id: `extra-${uuidv4()}`,
+      name,
+      price,
+      description,
       image: imageUrl,
       ...(originalPrice !== undefined && { originalPrice }),
       ...(offerPrice !== undefined && { offerPrice })
@@ -159,7 +165,7 @@ router.put('/decorations/:id', verifyAdmin, async (req, res) => {
   const { branch, catalog } = resolved;
   const item = catalog.decorations.find(d => d.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Decoration not found' });
-  
+
   try {
     const updateData = { ...req.body };
     if (updateData.image && updateData.image.startsWith('data:image')) {
@@ -212,12 +218,12 @@ router.put('/social-links', verifyAdmin, async (req, res) => {
   if (!resolved) return;
   const { branch, catalog } = resolved;
   const { instagram, facebook, whatsapp } = req.body;
-  
+
   if (!catalog.socialLinks) catalog.socialLinks = {};
   if (instagram !== undefined) catalog.socialLinks.instagram = instagram;
   if (facebook !== undefined) catalog.socialLinks.facebook = facebook;
   if (whatsapp !== undefined) catalog.socialLinks.whatsapp = whatsapp;
-  
+
   await catalogController.saveCatalogForBranch(branch, catalog);
   res.json(catalog.socialLinks);
 });

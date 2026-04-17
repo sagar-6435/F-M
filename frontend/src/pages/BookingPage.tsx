@@ -192,9 +192,9 @@ const BookingPage = () => {
       console.log(`Calculating price for ${booking.service} ${booking.duration}h: `, servicePrice);
       if (servicePrice !== undefined) {
         // Handle both old format (number) and new format (object)
-        if (typeof servicePrice === 'object' && servicePrice.price) {
-          const effectivePrice = servicePrice.offerPrice || servicePrice.price;
-          console.log(`Using offer price: ${effectivePrice}`);
+        if (typeof servicePrice === 'object' && servicePrice.price !== undefined) {
+          const effectivePrice = (servicePrice.offerPrice !== undefined && servicePrice.offerPrice !== null) ? servicePrice.offerPrice : servicePrice.price;
+          console.log(`Using effective price: ${effectivePrice}`);
           total += effectivePrice;
         } else {
           console.log(`Using regular price: ${servicePrice}`);
@@ -428,6 +428,22 @@ const BookingPage = () => {
           </div>
         ) : (
           <>
+            {/* Anniversary Banner */}
+            <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-gold p-[1px] glow-gold animate-pulse-slow">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-[calc(1rem-1px)] bg-card/90 px-4 py-3 text-center md:flex-row md:gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <span className="font-display text-sm font-bold text-foreground">2nd Anniversary offer</span>
+                </div>
+                <p className="text-xs text-muted-foreground font-body">Get exclusive discounts on all bookings and services. Limited time offer!</p>
+                <div className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary border border-primary/20">
+                  Up to 20% OFF
+                </div>
+              </div>
+            </div>
+
             {/* Progress */}
             <div className="mb-10 flex items-center justify-between overflow-x-auto pb-2">
               {STEPS.map((s, i) => {
@@ -647,7 +663,7 @@ const BookingPage = () => {
             <div className="space-y-6">
               <div className="rounded-xl bg-primary/5 p-4 border border-primary/20">
                 <p className="text-xs text-primary font-body font-semibold flex items-center gap-2">
-                   <Sparkles className="h-3 w-3" /> Decoration is mandatory and included (₹{decorationPrice})
+                   <Sparkles className="h-3 w-3" /> Select one of the option
                 </p>
               </div>
               <div>
@@ -744,7 +760,7 @@ const BookingPage = () => {
           {/* Step 4: Extra Decorations */}
           {step === 4 && (
             <div className="space-y-3">
-              <p className="mb-2 text-xs text-muted-foreground font-body">Select any extras (with images):</p>
+              <p className="mb-2 text-xs text-muted-foreground font-body">Select any extras</p>
               {decorations.map((item) => {
                 const selected = booking.extraDecorations.some((d) => d.id === item.id);
                 return (
@@ -801,13 +817,20 @@ const BookingPage = () => {
                 { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
                 { label: "Decoration", value: `Mandatory (+₹${decorationPrice})` },
                 { 
-                  label: "Service Pricing", 
+                  label: "Offer price", 
                   value: (() => {
                     const servicePrice = pricing[booking.service]?.[booking.duration];
                     if (!servicePrice) return "N/A";
-                    if (typeof servicePrice === 'object' && servicePrice.price) {
-                      if (servicePrice.offerPrice) {
-                        return `₹${servicePrice.price} → ₹${servicePrice.offerPrice} (Offer)`;
+                    if (typeof servicePrice === 'object' && servicePrice.price !== undefined) {
+                      const hasOfferPrice = servicePrice.offerPrice !== undefined && servicePrice.offerPrice !== null;
+                      if (hasOfferPrice) {
+                        return (
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className="line-through text-muted-foreground/60 italic">₹{servicePrice.price}</span>
+                            <span className="text-secondary font-bold text-lg animate-pulse">₹{servicePrice.offerPrice}</span>
+                            <span className="text-[9px] bg-secondary/20 px-1.5 py-0.5 rounded-full text-secondary font-bold uppercase tracking-wider animate-bounce">Offer</span>
+                          </div>
+                        );
                       }
                       return `₹${servicePrice.price}`;
                     }
@@ -817,15 +840,25 @@ const BookingPage = () => {
                 { 
                   label: "Cake", 
                   value: booking.selectedCake 
-                    ? hasOffer(booking.selectedCake)
-                      ? `${booking.selectedCake.name} (₹${getEffectivePrice(booking.selectedCake)})`
-                      : `${booking.selectedCake.name} (₹${booking.selectedCake.price})`
+                    ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold">{booking.selectedCake.name}</span>
+                        {hasOffer(booking.selectedCake) ? (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="line-through text-muted-foreground/60 text-[10px]">₹{getOriginalPrice(booking.selectedCake)}</span>
+                            <span className="text-green-500 font-bold">₹{getEffectivePrice(booking.selectedCake)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-primary font-bold">₹{booking.selectedCake.price}</span>
+                        )}
+                      </div>
+                    )
                     : "None" 
                 },
               ].map((item) => (
-                <div key={item.label} className="flex justify-between border-b border-border pb-2">
+                <div key={item.label} className="flex justify-between border-b border-border pb-3 items-center">
                   <span className="text-xs text-muted-foreground font-body">{item.label}</span>
-                  <span className="text-xs font-medium text-foreground font-body">{item.value}</span>
+                  <div className="text-xs font-medium text-foreground font-body">{item.value as any}</div>
                 </div>
               ))}
               

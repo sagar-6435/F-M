@@ -58,29 +58,37 @@ export const api = {
   },
 
   async getCakes(branch?: string): Promise<CakeOption[]> {
-    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
-    const res = await fetch(`${API_BASE}/cakes${query}`);
+    const query = new URLSearchParams();
+    if (branch) query.append("branch", branch);
+    query.append("t", Date.now().toString());
+    const res = await fetch(`${API_BASE}/cakes?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch cakes");
     return res.json();
   },
 
   async getDecorations(branch?: string): Promise<ExtraDecoration[]> {
-    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
-    const res = await fetch(`${API_BASE}/decorations${query}`);
+    const query = new URLSearchParams();
+    if (branch) query.append("branch", branch);
+    query.append("t", Date.now().toString());
+    const res = await fetch(`${API_BASE}/decorations?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch decorations");
     return res.json();
   },
 
-  async getPricing(branch?: string): Promise<Record<string, Record<number, number>>> {
-    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
-    const res = await fetch(`${API_BASE}/pricing${query}`);
+  async getPricing(branch?: string): Promise<Record<string, Record<number, any>>> {
+    const query = new URLSearchParams();
+    if (branch) query.append("branch", branch);
+    query.append("t", Date.now().toString());
+    const res = await fetch(`${API_BASE}/pricing?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch pricing");
     return res.json();
   },
 
   async getDecorationPrice(branch?: string): Promise<number> {
-    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
-    const res = await fetch(`${API_BASE}/decoration-price${query}`);
+    const query = new URLSearchParams();
+    if (branch) query.append("branch", branch);
+    query.append("t", Date.now().toString());
+    const res = await fetch(`${API_BASE}/decoration-price?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch decoration price");
     const data = await res.json();
     return data.decorationPrice;
