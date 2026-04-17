@@ -14,6 +14,8 @@ export interface CakeOption {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
+  offerPrice?: number;
   description: string;
   image?: string;
   quantity?: string;
@@ -23,6 +25,8 @@ export interface ExtraDecoration {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
+  offerPrice?: number;
   description: string;
   image?: string;
 }

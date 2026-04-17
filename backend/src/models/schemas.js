@@ -22,6 +22,15 @@ export const defaultPricing = {
   'private-theatre': { 1: 1999, 2: 3499, 3: 4999 },
 };
 
+/**
+ * Gets the effective price for an item (offer price if available, otherwise regular price)
+ * @param {object} item - Item with price fields
+ * @returns {number} The price to use
+ */
+export const getEffectivePrice = (item) => {
+  return item?.offerPrice !== undefined && item.offerPrice !== null ? item.offerPrice : item?.price || 0;
+};
+
 export const bookingSchema = new mongoose.Schema({
   id: String,
   branch: String,

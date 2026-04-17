@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { api, API_BASE, Branch, CakeOption, ExtraDecoration } from "../lib/api";
 import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-data";
+import { getEffectivePrice, getOriginalPrice, hasOffer } from "../lib/utils";
 
 const formatServiceName = (serviceId: string) => {
   if (serviceId === "private-theatre-party-hall") return "Private Theatre + Party Hall";
@@ -189,8 +190,8 @@ const BookingPage = () => {
       total += pricing[booking.service]?.[booking.duration] || 0;
     }
     if (booking.decorationRequired) total += decorationPrice;
-    if (booking.selectedCake) total += booking.selectedCake.price;
-    booking.extraDecorations.forEach((d) => (total += d.price));
+    if (booking.selectedCake) total += getEffectivePrice(booking.selectedCake);
+    booking.extraDecorations.forEach((d) => (total += getEffectivePrice(d)));
     
     // Extra person charge for Branch 1
     let extraCharge = 0;
@@ -708,7 +709,14 @@ const BookingPage = () => {
                         <p className="font-bold text-foreground text-sm font-body">{cake.name}</p>
                         <p className="text-[10px] text-muted-foreground font-body line-clamp-1">{cake.description}</p>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="text-sm font-bold text-primary font-body">₹{cake.price}</span>
+                          {hasOffer(cake) ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-green-500 font-body">₹{getEffectivePrice(cake)}</span>
+                              <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(cake)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-bold text-primary font-body">₹{cake.price}</span>
+                          )}
                           {booking.selectedCake?.id === cake.id && <Check className="h-4 w-4 text-primary" />}
                         </div>
                       </div>
@@ -751,7 +759,14 @@ const BookingPage = () => {
                           <p className="text-[10px] text-muted-foreground font-body">{item.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-primary font-body">₹{item.price}</span>
+                      {hasOffer(item) ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-green-500 font-body">₹{getEffectivePrice(item)}</span>
+                          <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(item)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-primary font-body">₹{item.price}</span>
+                      )}
                     </div>
                   </button>
                 );
@@ -771,7 +786,14 @@ const BookingPage = () => {
                 { label: "Name", value: booking.name },
                 { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
                 { label: "Decoration", value: `Mandatory (+₹${decorationPrice})` },
-                { label: "Cake", value: booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : "None" },
+                { 
+                  label: "Cake", 
+                  value: booking.selectedCake 
+                    ? hasOffer(booking.selectedCake)
+                      ? `${booking.selectedCake.name} (₹${getEffectivePrice(booking.selectedCake)})`
+                      : `${booking.selectedCake.name} (₹${booking.selectedCake.price})`
+                    : "None" 
+                },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between border-b border-border pb-2">
                   <span className="text-xs text-muted-foreground font-body">{item.label}</span>
@@ -793,10 +815,14 @@ const BookingPage = () => {
                     {booking.extraDecorations.map((d) => (
                       <div key={d.id} className="flex justify-between">
                         <span className="text-[10px] text-foreground font-body">{d.name}</span>
-                        <span className="text-[10px] text-primary font-body">₹{d.price}</span>
+                        <span className="text-[10px] text-primary font-body">
+                          ₹{getEffectivePrice(d)}
+                        </span>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
                 </div>
               )}
               <div className="flex justify-between pt-2">

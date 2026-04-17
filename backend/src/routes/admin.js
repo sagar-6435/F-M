@@ -46,14 +46,13 @@ router.get('/gallery', verifyAdmin, async (req, res) => {
 router.put('/gallery/:type/:id', verifyAdmin, async (req, res) => {
   const branch = req.query.branch || req.body.branch || 'branch-1';
   const { type, id } = req.params;
-  const { image } = req.body;
-  if (!image) return res.status(400).json({ error: 'Image required' });
+  const { image, price, originalPrice, offerPrice, name, description } = req.body;
   if (type !== 'cake' && type !== 'decoration') return res.status(400).json({ error: 'Invalid type' });
   
   try {
     // If it's a data URL (base64 from frontend), upload to Cloudinary
     let imageUrl = image;
-    if (image.startsWith('data:image')) {
+    if (image && image.startsWith('data:image')) {
       const rootFolder = getRootFolderForBranch(branch);
       console.log(`☁️ Uploading ${type} image to Cloudinary [${rootFolder}]...`);
       imageUrl = await uploadToCloudinary(image, type + 's', rootFolder);
@@ -66,12 +65,19 @@ router.put('/gallery/:type/:id', verifyAdmin, async (req, res) => {
     const item = list.find((entry) => entry.id === id);
     if (!item) return res.status(404).json({ error: `${type} not found` });
     
-    item.image = imageUrl;
+    // Update fields
+    if (imageUrl) item.image = imageUrl;
+    if (price !== undefined) item.price = price;
+    if (originalPrice !== undefined) item.originalPrice = originalPrice;
+    if (offerPrice !== undefined) item.offerPrice = offerPrice;
+    if (name !== undefined) item.name = name;
+    if (description !== undefined) item.description = description;
+    
     await catalogController.saveCatalogForBranch(branch, catalog);
     res.json(item);
   } catch (err) {
-    console.error('Upload failed:', err);
-    res.status(500).json({ error: 'Failed to upload/save image' });
+    console.error('Update failed:', err);
+    res.status(500).json({ error: 'Failed to update item' });
   }
 });
 

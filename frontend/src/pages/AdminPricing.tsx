@@ -8,6 +8,8 @@ interface PricingItem {
   id?: string;
   name?: string;
   price: number;
+  originalPrice?: number;
+  offerPrice?: number;
   description?: string;
   image?: string;
   service?: string;
@@ -383,14 +385,41 @@ const AdminPricing = () => {
                         onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                         className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
-                      <div className="flex gap-2">
-                        <span>₹</span>
-                        <input
-                          type="number"
-                          value={editValues.price}
-                          onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                          className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Regular Price"
+                            value={editValues.price}
+                            onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                            className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Original Price"
+                            value={editValues.originalPrice || ""}
+                            onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                            className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Offer Price"
+                            value={editValues.offerPrice || ""}
+                            onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                            className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary text-green-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        <p>💡 For Anniversary with offer: Set Original Price and Offer Price</p>
+                        <p>Regular Price will be used as fallback if no offer is set</p>
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={handleSaveCake} className="bg-primary text-primary-foreground">
@@ -406,7 +435,16 @@ const AdminPricing = () => {
                       <div>
                         <h4 className="font-semibold text-lg">{cake.name}</h4>
                         <p className="text-sm text-muted-foreground">{cake.description}</p>
-                        <p className="font-bold text-primary mt-2">₹{cake.price}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          {cake.offerPrice !== undefined && cake.offerPrice !== null ? (
+                            <>
+                              <p className="font-bold text-green-500">₹{cake.offerPrice}</p>
+                              <p className="text-sm line-through text-muted-foreground">₹{cake.originalPrice || cake.price}</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-primary">₹{cake.price}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -454,14 +492,40 @@ const AdminPricing = () => {
                   onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                   className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <div className="flex gap-2">
-                  <span>₹</span>
-                  <input
-                    type="number"
-                    value={editValues.price}
-                    onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                    className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Regular Price"
+                      value={editValues.price}
+                      onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                      className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Original Price"
+                      value={editValues.originalPrice || ""}
+                      onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Offer Price"
+                      value={editValues.offerPrice || ""}
+                      onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary text-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <p>💡 For Anniversary with offer: Set Original Price and Offer Price</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={handleSaveCake} className="bg-primary text-primary-foreground">
@@ -531,14 +595,40 @@ const AdminPricing = () => {
                         onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                         className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
-                      <div className="flex gap-2">
-                        <span>₹</span>
-                        <input
-                          type="number"
-                          value={editValues.price}
-                          onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                          className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Regular Price"
+                            value={editValues.price}
+                            onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                            className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Original Price"
+                            value={editValues.originalPrice || ""}
+                            onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                            className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <span>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Offer Price"
+                            value={editValues.offerPrice || ""}
+                            onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                            className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary text-green-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        <p>💡 For Anniversary with offer: Set Original Price and Offer Price</p>
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={handleSaveDecoration} className="bg-primary text-primary-foreground">
@@ -554,7 +644,16 @@ const AdminPricing = () => {
                       <div>
                         <h4 className="font-semibold text-lg">{decoration.name}</h4>
                         <p className="text-sm text-muted-foreground">{decoration.description}</p>
-                        <p className="font-bold text-primary mt-2">₹{decoration.price}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          {decoration.offerPrice !== undefined && decoration.offerPrice !== null ? (
+                            <>
+                              <p className="font-bold text-green-500">₹{decoration.offerPrice}</p>
+                              <p className="text-sm line-through text-muted-foreground">₹{decoration.originalPrice || decoration.price}</p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-primary">₹{decoration.price}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -602,14 +701,40 @@ const AdminPricing = () => {
                   onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                   className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <div className="flex gap-2">
-                  <span>₹</span>
-                  <input
-                    type="number"
-                    value={editValues.price}
-                    onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                    className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Regular Price"
+                      value={editValues.price}
+                      onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                      className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Original Price"
+                      value={editValues.originalPrice || ""}
+                      onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      placeholder="Offer Price"
+                      value={editValues.offerPrice || ""}
+                      onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary text-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <p>💡 For Anniversary with offer: Set Original Price and Offer Price</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={handleSaveDecoration} className="bg-primary text-primary-foreground">
