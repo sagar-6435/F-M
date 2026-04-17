@@ -823,8 +823,7 @@ const BookingPage = () => {
                   </div>
                 </div>
               )}
-                </div>
-              )}
+              
               <div className="flex justify-between pt-2">
                 <span className="text-lg font-bold text-foreground font-display">Grand Total</span>
                 <span className="text-lg font-bold text-primary font-display">₹{totalPrice.toLocaleString()}</span>
