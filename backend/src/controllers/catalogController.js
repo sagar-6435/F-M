@@ -57,10 +57,24 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
         await doc.save();
       }
     }
-    return cloneBranchPricingDb(doc.toObject());
+    
+    const catalogObj = doc.toObject();
+    console.log(`[DB-RETRIEVE] Retrieved catalog for ${branchId}:`, {
+      pricingStructure: JSON.stringify(catalogObj.pricing),
+      hasOffers: Object.keys(catalogObj.pricing).some(service => 
+        Object.values(catalogObj.pricing[service]).some(price => typeof price === 'object' && price.offerPrice)
+      )
+    });
+    
+    return cloneBranchPricingDb(catalogObj);
   }
 
   const memoryCatalog = branchPricingDbs[branchId];
+  if (memoryCatalog) {
+    console.log(`[MEMORY-RETRIEVE] Using memory catalog for ${branchId}:`, {
+      pricingStructure: JSON.stringify(memoryCatalog.pricing)
+    });
+  }
   return memoryCatalog ? cloneBranchPricingDb(memoryCatalog) : null;
 };
 
@@ -71,7 +85,14 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
 
   const models = getBranchModels(branchId);
   if (models) {
-    await models.BranchCatalog.findOneAndUpdate(
+    console.log(`[DB-SAVE] Saving catalog for ${branchId}:`, {
+      pricingStructure: JSON.stringify(catalog.pricing),
+      hasOffers: Object.keys(catalog.pricing).some(service => 
+        Object.values(catalog.pricing[service]).some(price => typeof price === 'object' && price.offerPrice)
+      )
+    });
+
+    const doc = await models.BranchCatalog.findOneAndUpdate(
       { branch: branchId },
       {
         branch: branchId,
@@ -85,6 +106,14 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    // Explicitly mark pricing as modified so Mongoose persists it
+    doc.markModified('pricing');
+    await doc.save();
+    
+    console.log(`[DB-SAVE] Saved successfully. Verifying from DB:`, {
+      savedPricing: JSON.stringify(doc.pricing)
+    });
   }
 };
 
