@@ -7,9 +7,9 @@ import { mongoConnections, getBranchModels } from '../config/mongo.js';
 import { branchDbs } from '../config/constants.js';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { getRootFolderForBranch } from '../utils/branchConfig.js';
 
 const router = express.Router();
-const getRootFolderForBranch = (branchId) => branchId === 'branch-2' ? 'f-m-bvrm' : 'f-m-elr';
 
 router.post('/login', adminController.login);
 router.post('/logout', (req, res) => res.json({ message: 'Logout successful' }));
