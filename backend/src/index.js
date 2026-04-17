@@ -122,7 +122,7 @@ app.use((err, req, res, next) => {
     await loadTimeSlots(branchDbs);
     await loadBranchPricingData();
 
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`Server running `));
   } catch (error) {
     console.error('Startup Error:', error);
   }
