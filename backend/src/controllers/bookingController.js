@@ -43,35 +43,45 @@ export const createBooking = async (req, res) => {
 
     let existingBookings = [];
     if (models) {
-      existingBookings = await models.Booking.find({ branch, date: booking.date, service: booking.service, paymentStatus: 'paid' });
+      // Find both paid (confirmed) and pending (in-process) bookings for conflict check
+      existingBookings = await models.Booking.find({ 
+        branch, 
+        date: booking.date, 
+        service: booking.service,
+        paymentStatus: { $in: ['paid', 'pending'] } 
+      });
     } else if (branchDb) {
-      existingBookings = branchDb.bookings.filter(b => b.date === booking.date && b.service === booking.service && b.paymentStatus === 'paid');
+      existingBookings = branchDb.bookings.filter(b => 
+        b.date === booking.date && 
+        b.service === booking.service && 
+        ['paid', 'pending'].includes(b.paymentStatus)
+      );
     }
 
     const startMinutes = parse12HourTime(booking.timeSlot);
     let conflictFound = false;
+    let conflictingBooking = null;
+    
     for (const b of existingBookings) {
       if (isOverlappingWithBuffer(startMinutes, booking.duration, b.timeSlot, b.duration)) {
+        // Only a conflict if it's NOT the same person retrying the same slot
+        if (b.phone === booking.phone && b.timeSlot === booking.timeSlot && b.paymentStatus === 'pending') {
+          console.log(`ℹ Retrying existing pending booking ${b.id} for ${booking.phone}`);
+          return res.status(200).json(b);
+        }
+        
+        // If it's a PAID booking, or a PENDING booking from someone else, it's a conflict
         conflictFound = true;
+        conflictingBooking = b;
         break;
       }
     }
-
+    
     if (conflictFound) {
-      // Check if it's the SAME booking (idempotency for retries)
-      const sameBooking = existingBookings.find(b => 
-        b.timeSlot === booking.timeSlot && 
-        b.phone === booking.phone && 
-        b.paymentStatus === 'pending'
-      );
-
-      if (sameBooking) {
-        console.log(`ℹ Retrying existing pending booking ${sameBooking.id} for ${booking.phone}`);
-        return res.status(200).json(sameBooking);
-      }
-
+      console.warn(`✖ Booking conflict: Requested ${booking.timeSlot} (${booking.duration}h) overlaps with ${conflictingBooking.paymentStatus} booking ${conflictingBooking.id} (${conflictingBooking.timeSlot}, ${conflictingBooking.duration}h)`);
       return res.status(409).json({
-        error: 'Slot not available (overlaps with existing booking or buffer time)',
+        error: `Slot not available at ${booking.timeSlot} for ${booking.duration}h. It overlaps with another booking.`,
+        conflictingId: conflictingBooking.id
       });
     }
 

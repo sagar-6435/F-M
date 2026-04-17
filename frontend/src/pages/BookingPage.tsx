@@ -9,7 +9,7 @@ import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-d
 import { getEffectivePrice, getOriginalPrice, hasOffer } from "../lib/utils";
 
 const formatServiceName = (serviceId: string) => {
-  if (serviceId === "private-theatre-party-hall") return "Private Theatre + Party Hall";
+  if (serviceId === "private-theatre-party-hall") return "Standard Pack";
   return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -437,9 +437,9 @@ const BookingPage = () => {
                   </div>
                   <span className="font-display text-sm font-bold text-foreground">2nd Anniversary offer</span>
                 </div>
-                <p className="text-xs text-muted-foreground font-body">Get exclusive discounts on all bookings and services. Limited time offer!</p>
+                <p className="text-xs text-muted-foreground font-body">Discount On Premium Pack</p>
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary border border-primary/20">
-                  Up to 20% OFF
+                  Up to 20% OFF 
                 </div>
               </div>
             </div>
@@ -483,17 +483,26 @@ const BookingPage = () => {
             <div className="space-y-6">
               <div>
                 <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Branch</label>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   {branches.map((b) => (
                     <button
                       key={b.id}
                       onClick={() => update({ branch: b.id })}
-                      className={`rounded-xl border p-4 text-left transition-all ${
-                        booking.branch === b.id ? "border-primary glow-gold bg-muted" : "border-border hover:border-primary"
+                      className={`rounded-2xl border-2 p-6 text-left transition-all ${
+                        booking.branch === b.id ? "border-primary glow-gold bg-muted shadow-lg" : "border-border hover:border-primary hover:shadow-md"
                       }`}
                     >
-                      <p className="font-semibold text-foreground text-sm font-body">{b.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground font-body">{b.address}</p>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`p-2 rounded-lg ${ booking.branch === b.id ? "bg-primary/20" : "bg-muted" }`}>
+                          <MapPin className={`h-5 w-5 ${ booking.branch === b.id ? "text-primary" : "text-muted-foreground" }`} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-foreground text-base font-body">{b.name}</p>
+                          {booking.branch === b.id && <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">Selected ✓</span>}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.address}</p>
+                      {b.phone && <p className="mt-2 text-xs text-primary font-body font-medium">📞 {b.phone}</p>}
                     </button>
                   ))}
                 </div>
@@ -759,48 +768,55 @@ const BookingPage = () => {
 
           {/* Step 4: Extra Decorations */}
           {step === 4 && (
-            <div className="space-y-3">
-              <p className="mb-2 text-xs text-muted-foreground font-body">Select any extras</p>
-              {decorations.map((item) => {
-                const selected = booking.extraDecorations.some((d) => d.id === item.id);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      const extras = selected
-                        ? booking.extraDecorations.filter((d) => d.id !== item.id)
-                        : [...booking.extraDecorations, item];
-                      update({ extraDecorations: extras });
-                    }}
-                    className={`w-full rounded-xl border p-3 text-left transition-all ${
-                      selected ? "border-primary bg-muted" : "border-border hover:border-primary"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {item.image && (
-                           <img src={item.image} alt={item.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground font-body">Select any extras to add to your experience</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {decorations.map((item) => {
+                  const selected = booking.extraDecorations.some((d) => d.id === item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        const extras = selected
+                          ? booking.extraDecorations.filter((d) => d.id !== item.id)
+                          : [...booking.extraDecorations, item];
+                        update({ extraDecorations: extras });
+                      }}
+                      className={`rounded-xl border overflow-hidden transition-all text-left ${
+                        selected ? "border-primary bg-muted shadow-md ring-1 ring-primary/30" : "border-border hover:border-primary"
+                      }`}
+                    >
+                      <div className="aspect-video bg-muted overflow-hidden relative">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">No image</div>
                         )}
-                        <div className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-primary bg-primary" : "border-border"}`}>
-                          {selected && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground text-xs font-body">{item.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-body">{item.description}</p>
+                        {selected && (
+                          <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-0.5">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <p className="font-bold text-foreground text-sm font-body">{item.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-body line-clamp-1 mt-0.5">{item.description}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          {hasOffer(item) ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-green-500 font-body">₹{getEffectivePrice(item)}</span>
+                              <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(item)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-bold text-primary font-body">₹{item.price}</span>
+                          )}
+                          {selected && <span className="text-[10px] font-semibold text-primary">Added ✓</span>}
                         </div>
                       </div>
-                      {hasOffer(item) ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-green-500 font-body">₹{getEffectivePrice(item)}</span>
-                          <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(item)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-primary font-body">₹{item.price}</span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -815,7 +831,7 @@ const BookingPage = () => {
                 { label: "Members", value: `${booking.membersCount} Persons` },
                 { label: "Name", value: booking.name },
                 { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
-                { label: "Decoration", value: `Mandatory (+₹${decorationPrice})` },
+                { label: "Decoration", value: `Yes` },
                 { 
                   label: "Offer price", 
                   value: (() => {

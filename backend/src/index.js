@@ -61,15 +61,17 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/api/admin', adminRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/catalog', catalogRoutes); // consolidated prices, cakes, decorations
 app.use('/api/branches', branchRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/catalog', catalogRoutes); // consolidated catalog operations
 
-// Compatibility aliases for original endpoint structure (optional, but good for stability)
-app.use('/api', catalogRoutes); // for /api/pricing, /api/cakes, etc.
-app.use('/api/booking', bookingRoutes); // for legacy /api/booking/init/:id and other singular paths
+// Unified access to catalog components (pricing, cakes, etc.) under /api/
+app.use('/api', catalogRoutes); 
+
+// Legacy compatibility (if needed)
+app.use('/api/booking', bookingRoutes);
 
 
 
