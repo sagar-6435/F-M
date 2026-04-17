@@ -98,11 +98,24 @@ const AdminPricing = () => {
         fetch(`${API_BASE}/decoration-price?branch=${encodeURIComponent(selectedBranch)}`, { headers }),
       ]);
 
-      if (pricingRes.ok) setPricing(await pricingRes.json());
-      if (cakesRes.ok) setCakes(await cakesRes.json());
-      if (decorationsRes.ok) setDecorations(await decorationsRes.json());
+      if (pricingRes.ok) {
+        const pricing = await pricingRes.json();
+        console.log("Fetched pricing:", pricing);
+        setPricing(pricing);
+      }
+      if (cakesRes.ok) {
+        const cakes = await cakesRes.json();
+        console.log("Fetched cakes:", cakes);
+        setCakes(cakes);
+      }
+      if (decorationsRes.ok) {
+        const decorations = await decorationsRes.json();
+        console.log("Fetched decorations:", decorations);
+        setDecorations(decorations);
+      }
       if (decorationPriceRes.ok) {
         const data = await decorationPriceRes.json();
+        console.log("Fetched decoration price:", data);
         setDecorationPrice(data.decorationPrice);
       }
     } catch (error) {
@@ -153,6 +166,8 @@ const AdminPricing = () => {
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("cake-") ? "PUT" : "POST";
 
+      console.log("Saving cake with data:", { ...editValues, branch: selectedBranch });
+
       const response = await fetch(url, {
         method,
         headers: { 
@@ -162,12 +177,19 @@ const AdminPricing = () => {
         body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
+      const data = await response.json();
+      console.log("Response status:", response.status, data);
+
       if (response.ok) {
         await fetchPricing();
         setEditingId(null);
+        alert("Cake saved successfully!");
+      } else {
+        alert(`Error: ${data.error || "Failed to save cake"}`);
       }
     } catch (error) {
       console.error("Error saving cake:", error);
+      alert(`Error: ${error.message}`);
     }
   };
 
@@ -177,6 +199,8 @@ const AdminPricing = () => {
       const url = `${baseUrl}?branch=${encodeURIComponent(selectedBranch)}`;
       const method = editValues.id?.startsWith("extra-") ? "PUT" : "POST";
 
+      console.log("Saving decoration with data:", { ...editValues, branch: selectedBranch });
+
       const response = await fetch(url, {
         method,
         headers: { 
@@ -186,12 +210,19 @@ const AdminPricing = () => {
         body: JSON.stringify({ ...editValues, branch: selectedBranch }),
       });
 
+      const data = await response.json();
+      console.log("Response status:", response.status, data);
+
       if (response.ok) {
         await fetchPricing();
         setEditingId(null);
+        alert("Decoration saved successfully!");
+      } else {
+        alert(`Error: ${data.error || "Failed to save decoration"}`);
       }
     } catch (error) {
       console.error("Error saving decoration:", error);
+      alert(`Error: ${error.message}`);
     }
   };
 
