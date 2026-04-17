@@ -357,19 +357,7 @@ const AdminPricing = () => {
                         <span className="font-medium">{duration} Hour{duration !== "1" ? "s" : ""}</span>
                         {isEditing ? (
                           <div className="flex flex-col flex-1 gap-2">
-                            <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Regular</label>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs">₹</span>
-                                  <input
-                                    type="number"
-                                    value={editValues.price}
-                                    onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                    className="flex-1 px-2 py-1 text-xs border border-primary rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                  />
-                                </div>
-                              </div>
+                            <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Original</label>
                                 <div className="flex items-center gap-1">
@@ -465,21 +453,8 @@ const AdminPricing = () => {
                         className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <div className="space-y-3">
-                        <label className="text-sm font-semibold text-muted-foreground">Price Settings</label>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-xs font-semibold text-muted-foreground mb-2 block">Regular Price</label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-foreground">₹</span>
-                              <input
-                                type="number"
-                                placeholder="Regular"
-                                value={editValues.price}
-                                onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                            </div>
-                          </div>
+                        <label className="text-sm font-semibold text-muted-foreground">Anniversary Offer Pricing</label>
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs font-semibold text-muted-foreground mb-2 block">Original Price</label>
                             <div className="flex items-center gap-2">
@@ -508,10 +483,9 @@ const AdminPricing = () => {
                           </div>
                         </div>
                         <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3 rounded text-xs text-green-700 dark:text-green-300">
-                          <p className="font-semibold mb-1">💡 Anniversary Offer Setup:</p>
-                          <p>• Set <strong>Original Price</strong> (regular price before offer)</p>
-                          <p>• Set <strong>Offer Price</strong> (special anniversary price) in green</p>
-                          <p>• Customer sees: ~~₹{editValues.originalPrice || editValues.price}~~ <span className="text-green-600 font-bold">₹{editValues.offerPrice}</span></p>
+                          <p className="font-semibold mb-1">Customer will see:</p>
+                          <p className="line-through">₹{editValues.originalPrice}</p>
+                          <p className="text-green-600 font-bold text-sm">₹{editValues.offerPrice}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -689,21 +663,8 @@ const AdminPricing = () => {
                         className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <div className="space-y-3">
-                        <label className="text-sm font-semibold text-muted-foreground">Price Settings</label>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-xs font-semibold text-muted-foreground mb-2 block">Regular Price</label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-foreground">₹</span>
-                              <input
-                                type="number"
-                                placeholder="Regular"
-                                value={editValues.price}
-                                onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                            </div>
-                          </div>
+                        <label className="text-sm font-semibold text-muted-foreground">Anniversary Offer Pricing</label>
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs font-semibold text-muted-foreground mb-2 block">Original Price</label>
                             <div className="flex items-center gap-2">
@@ -732,9 +693,9 @@ const AdminPricing = () => {
                           </div>
                         </div>
                         <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3 rounded text-xs text-green-700 dark:text-green-300">
-                          <p className="font-semibold mb-1">💡 Anniversary Offer Setup:</p>
-                          <p>• Set <strong>Original Price</strong> (regular price before offer)</p>
-                          <p>• Set <strong>Offer Price</strong> (special anniversary price) in green</p>
+                          <p className="font-semibold mb-1">Customer will see:</p>
+                          <p className="line-through">₹{editValues.originalPrice}</p>
+                          <p className="text-green-600 font-bold text-sm">₹{editValues.offerPrice}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
