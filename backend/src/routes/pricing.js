@@ -17,13 +17,19 @@ router.put('/', verifyAdmin, async (req, res) => {
   if (!result) return;
   const { branch, catalog } = result;
 
-  const { service, duration, price } = req.body;
+  const { service, duration, price, originalPrice, offerPrice } = req.body;
   
   if (!catalog.pricing[service]) {
     catalog.pricing[service] = {};
   }
   
-  catalog.pricing[service][duration] = price;
+  // Support both old format (simple number) and new format (object with prices)
+  catalog.pricing[service][duration] = {
+    price: price,
+    ...(originalPrice !== undefined && { originalPrice }),
+    ...(offerPrice !== undefined && { offerPrice })
+  };
+  
   await catalogController.saveCatalogForBranch(branch, catalog);
   res.json(catalog.pricing);
 });

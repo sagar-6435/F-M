@@ -62,7 +62,7 @@ const BookingPage = () => {
   const [occasions, setOccasions] = useState<string[]>([]);
   const [cakes, setCakes] = useState<CakeOption[]>([]);
   const [decorations, setDecorations] = useState<ExtraDecoration[]>([]);
-  const [pricing, setPricing] = useState<Record<string, Record<number, number>>>({});
+  const [pricing, setPricing] = useState<Record<string, Record<any, any>>>({});
   const [decorationPrice, setDecorationPrice] = useState(DECORATION_PRICE);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
@@ -187,7 +187,15 @@ const BookingPage = () => {
   const totalPrice = useMemo(() => {
     let total = 0;
     if (booking.service && booking.duration) {
-      total += pricing[booking.service]?.[booking.duration] || 0;
+      const servicePrice = pricing[booking.service]?.[booking.duration];
+      if (servicePrice !== undefined) {
+        // Handle both old format (number) and new format (object)
+        if (typeof servicePrice === 'object' && servicePrice.price) {
+          total += servicePrice.offerPrice || servicePrice.price;
+        } else {
+          total += servicePrice;
+        }
+      }
     }
     if (booking.decorationRequired) total += decorationPrice;
     if (booking.selectedCake) total += getEffectivePrice(booking.selectedCake);
@@ -786,6 +794,20 @@ const BookingPage = () => {
                 { label: "Name", value: booking.name },
                 { label: "Occasion", value: booking.occasion === "Other" ? booking.customOccasion || "Other" : booking.occasion },
                 { label: "Decoration", value: `Mandatory (+₹${decorationPrice})` },
+                { 
+                  label: "Service Pricing", 
+                  value: (() => {
+                    const servicePrice = pricing[booking.service]?.[booking.duration];
+                    if (!servicePrice) return "N/A";
+                    if (typeof servicePrice === 'object' && servicePrice.price) {
+                      if (servicePrice.offerPrice) {
+                        return `₹${servicePrice.price} → ₹${servicePrice.offerPrice} (Offer)`;
+                      }
+                      return `₹${servicePrice.price}`;
+                    }
+                    return `₹${servicePrice}`;
+                  })()
+                },
                 { 
                   label: "Cake", 
                   value: booking.selectedCake 

@@ -347,38 +347,77 @@ const AdminPricing = () => {
                       <div key={`${service}-${duration}`} className="flex items-center justify-between bg-muted p-3 rounded-lg">
                         <span className="font-medium">{duration} Hour{duration !== "1" ? "s" : ""}</span>
                         {isEditing ? (
-                          <div className="flex items-center gap-2">
-                            <span>₹</span>
-                            <input
-                            type="number"
-                            value={editValues.price}
-                            onChange={(e) =>
-                           setEditValues({ ...editValues, price: Number(e.target.value) })
-                             }
-                            className="w-24 px-2 py-1 border border-primary rounded bg-card text-foreground placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={handleSaveService}
-                              className="bg-primary text-primary-foreground"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                          <div className="flex flex-col flex-1 gap-2">
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Regular</label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs">₹</span>
+                                  <input
+                                    type="number"
+                                    value={editValues.price}
+                                    onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                                    className="flex-1 px-2 py-1 text-xs border border-primary rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Original</label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs">₹</span>
+                                  <input
+                                    type="number"
+                                    value={editValues.originalPrice || ""}
+                                    onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                    className="flex-1 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold text-green-600 mb-1 block">🎉 Offer</label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-green-600 font-bold">₹</span>
+                                  <input
+                                    type="number"
+                                    value={editValues.offerPrice || ""}
+                                    onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                    className="flex-1 px-2 py-1 text-xs border-2 border-green-500 rounded bg-card text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-semibold"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                onClick={handleSaveService}
+                                className="bg-primary text-primary-foreground text-xs"
+                              >
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingId(null)}
+                                className="text-xs"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-primary">₹{price}</span>
+                          <div className="flex items-center gap-4">
+                            {typeof price === 'object' && price.offerPrice ? (
+                              <>
+                                <span className="font-bold text-green-500">₹{price.offerPrice}</span>
+                                <span className="text-sm line-through text-muted-foreground">₹{price.originalPrice || price.price}</span>
+                              </>
+                            ) : (
+                              <span className="font-bold text-primary">₹{typeof price === 'object' ? price.price : price}</span>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleEditService(service, Number(duration), price)}
+                              onClick={() => handleEditService(service, Number(duration), typeof price === 'object' ? price : { price })}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
