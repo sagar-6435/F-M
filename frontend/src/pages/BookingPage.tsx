@@ -110,6 +110,7 @@ const BookingPage = () => {
       try {
         const initialBranch = booking.branch || "branch-1";
         const data = await api.getBookingInit(initialBranch);
+        console.log("Booking init data received - pricing:", data.pricing);
         
         setBranches(data.branches);
         setOccasions(data.occasions);
@@ -188,11 +189,15 @@ const BookingPage = () => {
     let total = 0;
     if (booking.service && booking.duration) {
       const servicePrice = pricing[booking.service]?.[booking.duration];
+      console.log(`Calculating price for ${booking.service} ${booking.duration}h: `, servicePrice);
       if (servicePrice !== undefined) {
         // Handle both old format (number) and new format (object)
         if (typeof servicePrice === 'object' && servicePrice.price) {
-          total += servicePrice.offerPrice || servicePrice.price;
+          const effectivePrice = servicePrice.offerPrice || servicePrice.price;
+          console.log(`Using offer price: ${effectivePrice}`);
+          total += effectivePrice;
         } else {
+          console.log(`Using regular price: ${servicePrice}`);
           total += servicePrice;
         }
       }
@@ -207,6 +212,7 @@ const BookingPage = () => {
       extraCharge = (booking.membersCount - 10) * 150;
     }
     total += extraCharge;
+    console.log("Total price calculated:", total);
     return total;
   }, [booking, pricing, decorationPrice]);
   

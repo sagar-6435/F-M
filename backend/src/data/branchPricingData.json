@@ -77,9 +77,7 @@
       "private-theatre-party-hall": {
         "1": 1,
         "2": 2,
-        "3": {
-          "price": 5000
-        }
+        "3": 5000
       }
     },
     "decorationPrice": 1500,

@@ -142,6 +142,8 @@ const AdminPricing = () => {
 
   const handleSaveService = async () => {
     try {
+      console.log("Saving service pricing with values:", { ...editValues, branch: selectedBranch });
+      
       const response = await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
         method: "PUT",
         headers: { 
@@ -152,11 +154,18 @@ const AdminPricing = () => {
       });
 
       if (response.ok) {
-        setPricing(await response.json());
+        const updated = await response.json();
+        console.log("Pricing updated successfully:", updated);
+        setPricing(updated);
         setEditingId(null);
+        alert(`Service pricing saved!\nService: ${editValues.service}, Duration: ${editValues.duration}h\nPrice: ₹${editValues.price}, Original: ₹${editValues.originalPrice}, Offer: ₹${editValues.offerPrice}`);
+      } else {
+        console.error("Error saving pricing:", response.status, await response.text());
+        alert("Failed to save pricing");
       }
     } catch (error) {
       console.error("Error saving pricing:", error);
+      alert("Error saving pricing: " + error);
     }
   };
 

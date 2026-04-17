@@ -8,6 +8,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   const result = await catalogController.getCatalogOrSendError(req, res);
   if (!result) return;
+  console.log(`[PRICING] GET /pricing - returning:`, JSON.stringify(result.catalog.pricing));
   res.json(result.catalog.pricing);
 });
 
@@ -18,6 +19,7 @@ router.put('/', verifyAdmin, async (req, res) => {
   const { branch, catalog } = result;
 
   const { service, duration, price, originalPrice, offerPrice } = req.body;
+  console.log(`[PRICING] Updating ${service} ${duration}h: price=${price}, original=${originalPrice}, offer=${offerPrice}`);
   
   if (!catalog.pricing[service]) {
     catalog.pricing[service] = {};
@@ -30,7 +32,12 @@ router.put('/', verifyAdmin, async (req, res) => {
     ...(offerPrice !== undefined && { offerPrice })
   };
   
+  console.log(`[PRICING] Stored pricing:`, JSON.stringify(catalog.pricing[service][duration]));
+  
   await catalogController.saveCatalogForBranch(branch, catalog);
+  
+  console.log(`[PRICING] After save, full pricing:`, JSON.stringify(catalog.pricing[service]));
+  
   res.json(catalog.pricing);
 });
 

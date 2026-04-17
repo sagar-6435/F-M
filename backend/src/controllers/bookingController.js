@@ -378,10 +378,13 @@ export const getBookingInit = async (req, res) => {
       return res.status(404).json({ error: 'Branch not found' });
     }
 
+    const pricingData = catalog?.pricing || defaultPricing;
+    console.log(`[BOOKING-INIT] Branch ${branchId} - pricing data:`, JSON.stringify(pricingData));
+
     res.json({
       branches: globalDb.branches,
       occasions: globalDb.occasions,
-      pricing: catalog?.pricing || defaultPricing,
+      pricing: pricingData,
       cakes: catalog?.cakes || defaultCakes,
       decorations: catalog?.decorations || defaultDecorations,
       decorationPrice: catalog?.decorationPrice ?? 1500
