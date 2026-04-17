@@ -30,8 +30,20 @@ const AdminPricing = () => {
   const [selectedBranch, setSelectedBranch] = useState<"branch-1" | "branch-2">("branch-1");
   const [token, setToken] = useState<string | null>(null);
 
+  // Check for saved token on component mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('adminToken');
+    if (savedToken) {
+      console.log('Restoring session from localStorage');
+      setToken(savedToken);
+      setIsLoggedIn(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn && token) {
+      // Save token to localStorage when logged in
+      localStorage.setItem('adminToken', token);
       fetchPricing();
     }
   }, [isLoggedIn, token, selectedBranch]);
@@ -317,6 +329,8 @@ const AdminPricing = () => {
                 setIsLoggedIn(false);
                 setPassword("");
                 setToken(null);
+                localStorage.removeItem('adminToken');
+                console.log('Logged out and cleared session');
               }}
               className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium transition-all font-body hover:border-primary/50"
             >
