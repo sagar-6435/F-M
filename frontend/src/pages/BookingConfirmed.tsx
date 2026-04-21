@@ -298,7 +298,6 @@ const BookingConfirmed = () => {
                 </div>
                 </div>
               </div>
-            </div>
 
             {/* Next Steps Section */}
             <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 mb-6">
