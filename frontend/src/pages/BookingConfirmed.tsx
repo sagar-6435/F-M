@@ -1,4 +1,4 @@
-import { CheckCircle, ArrowRight, Calendar, Clock, MapPin, Users, Cake, Gift, CreditCard, Mail, Phone, FileText, Download } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Clock, MapPin, Users, Cake, Gift, CreditCard, Phone, FileText, Download } from "lucide-react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { BRANCHES } from "@/lib/booking-data";
@@ -296,12 +296,6 @@ const BookingConfirmed = () => {
                     <p className="font-semibold text-foreground">{booking.phone}</p>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Mail className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-muted-foreground font-body">Email</p>
-                    <p className="font-semibold text-foreground">{booking.email}</p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -310,16 +304,9 @@ const BookingConfirmed = () => {
             <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 mb-6">
               <h2 className="font-display text-lg font-bold text-foreground mb-4">What's Next?</h2>
               <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">1</div>
-                  <div>
-                    <p className="font-semibold text-foreground text-sm">Confirmation Email</p>
-                    <p className="text-xs text-muted-foreground font-body">Check your email for booking confirmation and receipt</p>
-                  </div>
-                </div>
                 {booking.balanceAmount > 0 && (
                   <div className="flex gap-3">
-                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">2</div>
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">1</div>
                     <div>
                       <p className="font-semibold text-foreground text-sm">Pay Balance Amount</p>
                       <p className="text-xs text-muted-foreground font-body">Pay ₹{booking.balanceAmount.toLocaleString()} on the event day at the branch</p>
@@ -327,7 +314,7 @@ const BookingConfirmed = () => {
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">{booking.balanceAmount > 0 ? 3 : 2}</div>
+                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold text-xs">{booking.balanceAmount > 0 ? 2 : 1}</div>
                   <div>
                     <p className="font-semibold text-foreground text-sm">Reach Early</p>
                     <p className="text-xs text-muted-foreground font-body">Please arrive 10-15 minutes before your scheduled time</p>
