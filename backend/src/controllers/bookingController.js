@@ -396,8 +396,24 @@ export const getBookingInit = async (req, res) => {
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
 
+    // Fetch all branches with potential DB-stored details
+    const branches = [];
+    const branchIds = Object.keys(branchDbs);
+    for (const bId of branchIds) {
+      const bCatalog = await getCatalogForBranch(bId);
+      if (bCatalog) {
+        branches.push({
+          id: bId,
+          name: bCatalog.name || (globalDb.branches.find(b => b.id === bId)?.name) || bId,
+          address: bCatalog.address || (globalDb.branches.find(b => b.id === bId)?.address) || '',
+          phone: bCatalog.phone || (globalDb.branches.find(b => b.id === bId)?.phone) || '',
+          mapLink: bCatalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || ''
+        });
+      }
+    }
+
     res.json({
-      branches: globalDb.branches,
+      branches,
       occasions: globalDb.occasions,
       pricing: pricingData,
       cakes: catalog?.cakes || defaultCakes,

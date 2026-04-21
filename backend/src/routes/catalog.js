@@ -243,6 +243,39 @@ router.put('/social-links', verifyAdmin, async (req, res) => {
   res.json(catalog.socialLinks);
 });
 
+// Branch Details
+router.get('/branch-details', async (req, res) => {
+  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+  if (!resolved) return;
+  const { catalog } = resolved;
+  res.json({
+    name: catalog.name,
+    address: catalog.address,
+    phone: catalog.phone,
+    mapLink: catalog.mapLink
+  });
+});
+
+router.put('/branch-details', verifyAdmin, async (req, res) => {
+  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+  if (!resolved) return;
+  const { branch, catalog } = resolved;
+  const { name, address, phone, mapLink } = req.body;
+
+  if (name !== undefined) catalog.name = name;
+  if (address !== undefined) catalog.address = address;
+  if (phone !== undefined) catalog.phone = phone;
+  if (mapLink !== undefined) catalog.mapLink = mapLink;
+
+  await catalogController.saveCatalogForBranch(branch, catalog);
+  res.json({
+    name: catalog.name,
+    address: catalog.address,
+    phone: catalog.phone,
+    mapLink: catalog.mapLink
+  });
+});
+
 // General info
 router.get('/occasions', (req, res) => res.json(globalDb.occasions));
 router.get('/services', (req, res) => res.json(globalDb.services));

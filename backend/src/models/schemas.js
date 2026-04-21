@@ -74,6 +74,10 @@ export const timeSlotSchema = new mongoose.Schema({
 export const branchCatalogSchema = new mongoose.Schema(
   {
     branch: { type: String, required: true, unique: true },
+    name: { type: String },
+    address: { type: String },
+    phone: { type: String },
+    mapLink: { type: String },
     pricing: { type: mongoose.Schema.Types.Mixed, default: () => JSON.parse(JSON.stringify(defaultPricing)) },
     decorationPrice: { type: Number, default: 1500 },
     cakes: { type: [mongoose.Schema.Types.Mixed], default: () => JSON.parse(JSON.stringify(defaultCakes.map(c => ({ ...c, quantity: '1kg' })))) },

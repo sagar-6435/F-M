@@ -107,6 +107,10 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
       { branch: branchId },
       {
         branch: branchId,
+        name: catalog.name,
+        address: catalog.address,
+        phone: catalog.phone,
+        mapLink: catalog.mapLink,
         pricing: catalog.pricing,
         cakes: catalog.cakes,
         decorations: catalog.decorations,

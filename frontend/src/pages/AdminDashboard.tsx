@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-import { BRANCHES } from "@/lib/booking-data";
+
 import { API_BASE, api } from "@/lib/api";
 import { getEffectivePrice } from "@/lib/utils";
 import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2 } from "lucide-react";
@@ -1731,7 +1731,7 @@ const AdminDashboard = () => {
         {activeTab === "settings" && (
           <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-6">
             <h2 className="font-display text-2xl font-bold text-foreground">
-              Settings for {BRANCHES.find((b) => b.id === selectedBranch)?.name || "Branch"}
+              Settings for {branchList.find((b) => b.id === selectedBranch)?.name || "Branch"}
             </h2>
             <p className="text-sm text-muted-foreground font-body">
               Update the contact information, address, and social handles for this specific location.

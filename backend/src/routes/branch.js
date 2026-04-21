@@ -1,16 +1,33 @@
 import express from 'express';
 import { globalDb, branchDbs, branchPricingDbs, createBranchPricingDb } from '../config/constants.js';
+import * as catalogController from '../controllers/catalogController.js';
 import { saveBranchPricingData } from '../controllers/catalogController.js';
 import { verifyAdmin } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    if (!globalDb || !globalDb.branches) return res.status(500).json({ error: 'Server data configuration error' });
-    res.json(globalDb.branches);
+    const branches = [];
+    const branchIds = Object.keys(branchDbs); // Get all branch IDs
+    
+    for (const bId of branchIds) {
+      const catalog = await catalogController.getCatalogForBranch(bId);
+      if (catalog) {
+        branches.push({
+          id: bId,
+          name: catalog.name || (globalDb.branches.find(b => b.id === bId)?.name) || bId,
+          address: catalog.address || (globalDb.branches.find(b => b.id === bId)?.address) || '',
+          phone: catalog.phone || (globalDb.branches.find(b => b.id === bId)?.phone) || '',
+          mapLink: catalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || ''
+        });
+      }
+    }
+    
+    res.json(branches);
   } catch (error) {
+    console.error('Error fetching branches:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -32,22 +49,32 @@ router.post('/', verifyAdmin, (req, res) => {
   res.status(201).json(branch);
 });
 
-router.put('/:id', verifyAdmin, (req, res) => {
+router.put('/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, address, phone, capacity, amenities } = req.body;
-  const branchIndex = globalDb.branches.findIndex(b => b.id === id);
-  if (branchIndex === -1) return res.status(404).json({ error: 'Branch not found' });
+  const { name, address, phone, mapLink } = req.body;
   
-  const branch = globalDb.branches[branchIndex];
-  if (name) branch.name = name;
-  if (address) branch.address = address;
-  if (phone) branch.phone = phone;
-  if (capacity !== undefined) branch.capacity = capacity;
-  if (amenities) branch.amenities = amenities;
-  branch.updatedAt = new Date();
-  
-  saveBranchPricingData(); // Persist changes
-  res.json(branch);
+  try {
+    const catalog = await catalogController.getCatalogForBranch(id);
+    if (!catalog) return res.status(404).json({ error: 'Branch catalog not found' });
+    
+    if (name) catalog.name = name;
+    if (address) catalog.address = address;
+    if (phone) catalog.phone = phone;
+    if (mapLink !== undefined) catalog.mapLink = mapLink;
+    
+    await catalogController.saveCatalogForBranch(id, catalog);
+    
+    // Also update globalDb in memory for legacy support
+    const branchIndex = globalDb.branches.findIndex(b => b.id === id);
+    if (branchIndex !== -1) {
+      Object.assign(globalDb.branches[branchIndex], { name, address, phone, mapLink });
+    }
+    
+    res.json({ id, name, address, phone, mapLink });
+  } catch (error) {
+    console.error('Error updating branch:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;
