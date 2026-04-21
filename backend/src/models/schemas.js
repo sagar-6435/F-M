@@ -46,7 +46,6 @@ export const bookingSchema = new mongoose.Schema({
   endTimeWithBufferMinutes: Number,
   name: String,
   phone: String,
-  email: String,
   decorationRequired: Boolean,
   occasion: String,
   customOccasion: String,

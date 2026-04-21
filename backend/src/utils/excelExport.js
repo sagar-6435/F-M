@@ -38,7 +38,6 @@ export const exportBookingToExcel = async (booking) => {
           'Duration (hrs)',
           'Customer Name',
           'Phone',
-          'Email',
           'Occasion',
           'Decoration Required',
           'Cake Selected',
@@ -69,7 +68,6 @@ export const exportBookingToExcel = async (booking) => {
       'Duration (hrs)': booking.duration,
       'Customer Name': booking.name,
       'Phone': booking.phone,
-      'Email': booking.email,
       'Occasion': booking.customOccasion || booking.occasion,
       'Decoration Required': booking.decorationRequired ? 'Yes' : 'No',
       'Cake Selected': booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : 'None',
@@ -94,7 +92,6 @@ export const exportBookingToExcel = async (booking) => {
       { wch: 14 }, // Duration
       { wch: 18 }, // Customer Name
       { wch: 15 }, // Phone
-      { wch: 25 }, // Email
       { wch: 20 }, // Occasion
       { wch: 18 }, // Decoration
       { wch: 25 }, // Cake

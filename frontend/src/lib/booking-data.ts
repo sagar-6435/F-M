@@ -33,7 +33,6 @@ export interface BookingData {
   timeSlot: string;
   name: string;
   phone: string;
-  email: string;
   membersCount: number;
   extraPersonsCharge: number;
   decorationRequired: boolean;
@@ -173,7 +172,6 @@ export const INITIAL_BOOKING: BookingData = {
   extraPersonsCharge: 0,
   name: "",
   phone: "",
-  email: "",
   decorationRequired: true,
   occasion: "",
   cakeRequired: false,

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { BRANCHES } from "@/lib/booking-data";
 import { API_BASE, api } from "@/lib/api";
 import { getEffectivePrice } from "@/lib/utils";
-import { Eye, EyeOff, Clock, CheckCircle, Phone, Mail, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2 } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -15,7 +15,6 @@ interface Booking {
   duration: number;
   name: string;
   phone: string;
-  email: string;
   occasion: string;
   totalPrice: number;
   paymentStatus: "pending" | "paid" | "cancelled";
@@ -43,7 +42,6 @@ interface ManualBookingForm {
   duration: number;
   name: string;
   phone: string;
-  email: string;
   occasion: string;
   totalPrice: number;
 }
@@ -87,7 +85,6 @@ const AdminDashboard = () => {
     duration: 1,
     name: "",
     phone: "",
-    email: "",
     occasion: "Birthday",
     totalPrice: 0,
   });
@@ -341,7 +338,6 @@ const AdminDashboard = () => {
         duration: 1,
         name: "",
         phone: "",
-        email: "",
         occasion: "Birthday",
         totalPrice: 0,
       });
@@ -1006,10 +1002,6 @@ const AdminDashboard = () => {
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <p className="text-sm text-foreground">{selectedBooking.phone}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm text-foreground">{selectedBooking.email}</p>
-                        </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Occasion</p>
                           <p className="text-sm text-foreground">{selectedBooking.occasion}</p>
@@ -1217,19 +1209,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Email & Occasion */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Email</label>
-                  <input
-                    type="email"
-                    value={manualBooking.email}
-                    onChange={(e) => setManualBooking({ ...manualBooking, email: e.target.value })}
-                    required
-                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
-                    placeholder="customer@example.com"
-                  />
-                </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground font-body">Occasion</label>
                   <select

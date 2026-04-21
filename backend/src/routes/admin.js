@@ -220,7 +220,6 @@ router.get('/bookings/download', verifyAdmin, async (req, res) => {
       'Duration (hrs)': booking.duration,
       'Customer Name': booking.name,
       'Phone': booking.phone,
-      'Email': booking.email,
       'Occasion': booking.customOccasion || booking.occasion,
       'Decoration Required': booking.decorationRequired ? 'Yes' : 'No',
       'Cake Selected': booking.selectedCake ? `${booking.selectedCake.name} (₹${booking.selectedCake.price})` : 'None',
@@ -233,7 +232,7 @@ router.get('/bookings/download', verifyAdmin, async (req, res) => {
     const worksheet = XLSX.utils.json_to_sheet(bookingRows);
     const columnWidths = [
       { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 15 },
-      { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
+      { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 20 },
       { wch: 18 }, { wch: 25 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, { wch: 20 }
     ];
     worksheet['!cols'] = columnWidths;

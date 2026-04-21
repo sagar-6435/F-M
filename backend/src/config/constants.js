@@ -22,9 +22,9 @@ export const defaultPricing = {
     3: { price: 5000, offerPrice: 3999 }
   },
   'premium-pack': {
-    1: { price: 3500, offerPrice: 2800 },
-    2: { price: 4500, offerPrice: 3600 },
-    3: { price: 5000, offerPrice: 4000 }
+    1: { price: 4500, offerPrice: 3999 },
+    2: { price: 5500, offerPrice: 4999 },
+    3: { price: 7500, offerPrice: 5999 }
   }
 };
 

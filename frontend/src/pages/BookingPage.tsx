@@ -10,7 +10,7 @@ import { getEffectivePrice, getOriginalPrice, hasOffer } from "../lib/utils";
 
 const formatServiceName = (serviceId: string) => {
   if (serviceId === "private-theatre-party-hall") return "Standard Pack";
-  if (serviceId === "premium-pack") return "Premium Pack";
+  if (serviceId === "premium-pack") return "Premium Pack Starting From ₹2199 ";
   return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -286,7 +286,7 @@ const BookingPage = () => {
       case 1:
         const isBhimavaram = booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
         const isCountOk = isBhimavaram ? booking.membersCount <= 10 : true;
-        return !!booking.date && !!booking.duration && !!booking.timeSlot && !!booking.name && !!booking.phone && !!booking.email && booking.membersCount > 0 && isCountOk;
+        return !!booking.date && !!booking.duration && !!booking.timeSlot && !!booking.name && !!booking.phone && booking.membersCount > 0 && isCountOk;
       case 2: return !!booking.occasion;
       default: return true;
     }
@@ -451,7 +451,6 @@ const BookingPage = () => {
           },
           prefill: {
             name: booking.name,
-            email: booking.email,
             contact: booking.phone
           },
           theme: {
@@ -718,15 +717,7 @@ const BookingPage = () => {
                           />
                         </div>
                       </div>
-                      <div>
-                        <label className="mb-1 text-xs text-muted-foreground font-body">Email</label>
-                        <input
-                          type="email"
-                          value={booking.email}
-                          onChange={(e) => update({ email: e.target.value })}
-                          className="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-body focus:border-primary focus:outline-none"
-                          placeholder="Email"
-                        />
+                        </div>
                       </div>
                     </div>
                   </div>
