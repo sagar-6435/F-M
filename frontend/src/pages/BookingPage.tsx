@@ -717,8 +717,6 @@ const BookingPage = () => {
                           />
                         </div>
                       </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -997,7 +995,7 @@ const BookingPage = () => {
                         }`}
                     >
                       <div className="text-left">
-                        <p className="font-bold text-sm text-foreground">Fixed Advance</p>
+                        <p className="font-bold text-sm text-foreground">Advance</p>
                         <p className="text-[10px] text-muted-foreground">Confirm your booking now</p>
                       </div>
                       <div className="text-right">
