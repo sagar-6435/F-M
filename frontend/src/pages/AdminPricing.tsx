@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Edit2, Trash2, Plus, Save, X, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BRANCHES } from "@/lib/booking-data";
-import { API_BASE } from "@/lib/api";
+import { BRANCHES, fetchBranches as fetchSharedBranches } from "@/lib/booking-data";
+import { api, API_BASE, type Branch } from "@/lib/api";
 
 interface PricingItem {
   id?: string;
@@ -27,17 +27,28 @@ const AdminPricing = () => {
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState<"branch-1" | "branch-2">("branch-1");
+  const [selectedBranch, setSelectedBranch] = useState<string>("branch-1");
   const [token, setToken] = useState<string | null>(null);
+  const [branchList, setBranchList] = useState<Branch[]>([]);
 
   // Check for saved token on component mount
   useEffect(() => {
     const savedToken = localStorage.getItem('adminToken');
     if (savedToken) {
-      console.log('Restoring session from localStorage');
       setToken(savedToken);
       setIsLoggedIn(true);
     }
+    
+    // Fetch dynamic branches
+    const loadBranches = async () => {
+      try {
+        const data = await api.getBranches();
+        setBranchList(data);
+      } catch (error) {
+        console.error("Failed to load branches:", error);
+      }
+    };
+    loadBranches();
   }, []);
 
   useEffect(() => {
@@ -314,16 +325,16 @@ const AdminPricing = () => {
           <div>
             <h1 className="font-display text-4xl italic text-primary">Pricing Management</h1>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              {BRANCHES.find((b) => b.id === selectedBranch)?.name}
+              {(branchList.length > 0 ? branchList : BRANCHES).find((b) => b.id === selectedBranch)?.name}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <select
               value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value as "branch-1" | "branch-2")}
+              onChange={(e) => setSelectedBranch(e.target.value)}
               className="rounded-full border border-border bg-muted px-4 py-2 text-xs font-medium text-foreground focus:border-primary focus:outline-none"
             >
-              {BRANCHES.map((b) => (
+              {(branchList.length > 0 ? branchList : BRANCHES).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>

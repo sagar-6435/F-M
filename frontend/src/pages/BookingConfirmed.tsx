@@ -1,7 +1,8 @@
 import { CheckCircle, ArrowRight, Calendar, Clock, MapPin, Users, Cake, Gift, CreditCard, Phone, FileText, Download } from "lucide-react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { BRANCHES } from "@/lib/booking-data";
+import { BRANCHES } from "../lib/booking-data";
+import { type Branch } from "@/lib/api";
 import { api } from "@/lib/api";
 import { getEffectivePrice, getOriginalPrice, hasOffer } from "@/lib/utils";
 
@@ -10,6 +11,17 @@ const BookingConfirmed = () => {
   const [searchParams] = useSearchParams();
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [branchList, setBranchList] = useState<Branch[]>([]);
+
+  useEffect(() => {
+    const loadBranches = async () => {
+      try {
+        const data = await api.getBranches();
+        setBranchList(data);
+      } catch (err) {}
+    };
+    loadBranches();
+  }, []);
 
   useEffect(() => {
     const checkPaymentStatus = async () => {
@@ -154,7 +166,7 @@ const BookingConfirmed = () => {
                   <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Branch</p>
                   <p className="font-semibold text-foreground">
                     {(() => {
-                      const b = BRANCHES.find((br) => br.id === booking.branch);
+                      const b = (branchList.length > 0 ? branchList : BRANCHES).find((br) => br.id === booking.branch);
                       return b ? b.name : booking.branch;
                     })()}
                   </p>
@@ -163,7 +175,7 @@ const BookingConfirmed = () => {
                   <p className="text-xs text-muted-foreground font-body uppercase tracking-wide mb-1">Address</p>
                   <p className="font-semibold text-foreground">
                     {(() => {
-                      const b = BRANCHES.find((br) => br.id === booking.branch);
+                      const b = (branchList.length > 0 ? branchList : BRANCHES).find((br) => br.id === booking.branch);
                       return b ? b.address : "N/A";
                     })()}
                   </p>

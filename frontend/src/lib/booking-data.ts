@@ -1,3 +1,5 @@
+import { API_BASE } from "./api";
+
 export interface Branch {
   id: string;
   name: string;
@@ -77,12 +79,14 @@ export const fetchBranches = async (forceRefresh = false): Promise<Branch[]> => 
   
   try {
     // Add timestamp to bypass cache
-    const response = await fetch(`/api/branches?t=${now}`);
+    const response = await fetch(`${API_BASE}/branches?t=${now}`);
     if (response.ok) {
       const branches = await response.json();
-      BRANCHES = branches;
-      branchesLastFetched = now;
-      return branches;
+      if (Array.isArray(branches)) {
+        BRANCHES = branches;
+        branchesLastFetched = now;
+        return branches;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch branches:', error);

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectToMongo } from './config/mongo.js';
+import { connectToMongo, getBranchModels } from './config/mongo.js';
 import { branchDbs, globalDb } from './config/constants.js';
 import { loadBookings, loadTimeSlots } from './utils/persistence.js';
 import { loadBranchPricingData } from './controllers/catalogController.js';

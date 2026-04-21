@@ -706,7 +706,7 @@ const AdminDashboard = () => {
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              {BRANCHES.find((b) => b.id === selectedBranch)?.name}
+              {branchList.find((b) => b.id === selectedBranch)?.name}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -1092,7 +1092,7 @@ const AdminDashboard = () => {
                   onChange={(e) => setManualBooking({ ...manualBooking, branch: e.target.value })}
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                 >
-                  {BRANCHES.map((b) => (
+                  {branchList.map((b) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
