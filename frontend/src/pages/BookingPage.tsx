@@ -1019,6 +1019,12 @@ const BookingPage = () => {
                     </button>
                   </div>
 
+                  <div className="rounded-lg bg-orange-50 p-3 border border-orange-100">
+                    <p className="text-[10px] text-orange-800 text-center font-medium italic">
+                      * Note: Advance amount is non-refundable
+                    </p>
+                  </div>
+
                   <div className="space-y-3 pt-2">
                     <button
                       onClick={() => handlePayment('razorpay')}
