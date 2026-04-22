@@ -40,7 +40,7 @@ export interface TestimonialImage {
 
 export const api = {
   async getBranches(): Promise<Branch[]> {
-    const res = await fetch(`${API_BASE}/branches`);
+    const res = await fetch(`${API_BASE}/branches?t=${Date.now()}`);
     if (!res.ok) throw new Error("Failed to fetch branches");
     return res.json();
   },
@@ -253,7 +253,7 @@ export const api = {
   },
 
   async getSocialLinks(branch: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/catalog/social-links?branch=${encodeURIComponent(branch)}`);
+    const res = await fetch(`${API_BASE}/catalog/social-links?branch=${encodeURIComponent(branch)}&t=${Date.now()}`);
     if (!res.ok) throw new Error("Failed to fetch social links");
     return res.json();
   },
@@ -272,7 +272,7 @@ export const api = {
   },
 
   async getBranchDetails(branch: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/catalog/branch-details?branch=${encodeURIComponent(branch)}`);
+    const res = await fetch(`${API_BASE}/catalog/branch-details?branch=${encodeURIComponent(branch)}&t=${Date.now()}`);
     if (!res.ok) throw new Error("Failed to fetch branch details");
     return res.json();
   },

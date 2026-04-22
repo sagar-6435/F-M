@@ -98,45 +98,55 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
 };
 
 export const saveCatalogForBranch = async (branchId, catalog) => {
+  console.log(`[CATALOG-SAVE] Initiating save for ${branchId}. Data:`, {
+    name: catalog.name,
+    address: catalog.address,
+    phone: catalog.phone,
+    mapLink: catalog.mapLink,
+    pricingKeys: catalog.pricing ? Object.keys(catalog.pricing) : []
+  });
+
   // Always update memory cache and persist to file as a secondary backup
   branchPricingDbs[branchId] = cloneBranchPricingDb(catalog);
   await saveBranchPricingData();
 
   const models = getBranchModels(branchId);
   if (models) {
-    console.log(`[DB-SAVE] Saving catalog for ${branchId}:`, {
-      pricingStructure: JSON.stringify(catalog.pricing),
-      hasOffers: Object.keys(catalog.pricing).some(service => 
-        Object.values(catalog.pricing[service]).some(price => typeof price === 'object' && price.offerPrice)
-      )
-    });
+    try {
+      // Use findOne and update to ensure hooks and proper Map handling
+      let doc = await models.BranchCatalog.findOne({ branch: branchId });
+      
+      if (!doc) {
+        doc = new models.BranchCatalog({ branch: branchId });
+      }
 
-    const doc = await models.BranchCatalog.findOneAndUpdate(
-      { branch: branchId },
-      {
-        branch: branchId,
-        name: catalog.name,
-        address: catalog.address,
-        phone: catalog.phone,
-        mapLink: catalog.mapLink,
-        pricing: catalog.pricing,
-        cakes: catalog.cakes,
-        decorations: catalog.decorations,
-        decorationPrice: catalog.decorationPrice,
-        testimonials: catalog.testimonials,
-        heroImages: catalog.heroImages || [],
-        socialLinks: catalog.socialLinks || { instagram: "", facebook: "", whatsapp: "" },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+      // Update fields
+      if (catalog.name !== undefined) doc.name = catalog.name;
+      if (catalog.address !== undefined) doc.address = catalog.address;
+      if (catalog.phone !== undefined) doc.phone = catalog.phone;
+      if (catalog.mapLink !== undefined) doc.mapLink = catalog.mapLink;
+      if (catalog.pricing !== undefined) doc.pricing = catalog.pricing;
+      if (catalog.cakes !== undefined) doc.cakes = catalog.cakes;
+      if (catalog.decorations !== undefined) doc.decorations = catalog.decorations;
+      if (catalog.decorationPrice !== undefined) doc.decorationPrice = catalog.decorationPrice;
+      if (catalog.testimonials !== undefined) doc.testimonials = catalog.testimonials;
+      if (catalog.heroImages !== undefined) doc.heroImages = catalog.heroImages;
+      if (catalog.socialLinks !== undefined) doc.socialLinks = catalog.socialLinks;
 
-    // Explicitly mark pricing as modified so Mongoose persists it
-    doc.markModified('pricing');
-    await doc.save();
-    
-    console.log(`[DB-SAVE] Saved successfully. Verifying from DB:`, {
-      savedPricing: JSON.stringify(doc.pricing)
-    });
+      if (doc.markModified) {
+        doc.markModified('pricing');
+        doc.markModified('cakes');
+        doc.markModified('decorations');
+        doc.markModified('testimonials');
+        doc.markModified('socialLinks');
+      }
+
+      await doc.save();
+      console.log(`[DB-SAVE] Successfully persisted catalog for ${branchId} to database.`);
+    } catch (err) {
+      console.error(`[DB-SAVE-ERROR] Failed to save catalog for ${branchId}:`, err);
+      throw err;
+    }
   }
 };
 
