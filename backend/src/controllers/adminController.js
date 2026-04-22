@@ -69,9 +69,19 @@ export const getDashboardStats = async (req, res) => {
     const totalBookings = allBookings.length;
     const paidBookings = allBookings.filter(b => b.paymentStatus === 'paid').length;
     const pendingBookings = allBookings.filter(b => b.paymentStatus === 'pending').length;
-    const totalRevenue = allBookings.filter(b => b.paymentStatus === 'paid').reduce((sum, b) => sum + b.totalPrice, 0);
     
-    res.json({ totalBookings, paidBookings, pendingBookings, totalRevenue });
+    const totalRevenue = allBookings.filter(b => b.paymentStatus === 'paid').reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    const totalAmountPaid = allBookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
+    const totalBalanceAmount = allBookings.filter(b => b.paymentStatus !== 'cancelled').reduce((sum, b) => sum + (b.balanceAmount || 0), 0);
+    
+    res.json({ 
+      totalBookings, 
+      paidBookings, 
+      pendingBookings, 
+      totalRevenue,
+      totalAmountPaid,
+      totalBalanceAmount
+    });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard stats' });

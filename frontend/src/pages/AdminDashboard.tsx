@@ -32,6 +32,8 @@ interface DashboardStats {
   paidBookings: number;
   pendingBookings: number;
   totalRevenue: number;
+  totalAmountPaid: number;
+  totalBalanceAmount: number;
 }
 
 interface ManualBookingForm {
@@ -814,19 +816,21 @@ const AdminDashboard = () => {
 
             {/* Stats */}
             {stats && (
-              <div className="mb-8 grid gap-4 md:grid-cols-4">
+              <div className="mb-8 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {[
-                  { label: "Total Bookings", value: stats.totalBookings, icon: Calendar },
-                  { label: "Paid", value: stats.paidBookings, icon: CheckCircle },
-                  { label: "Pending", value: stats.pendingBookings, icon: Clock },
-                  { label: "Revenue", value: `₹${stats.totalRevenue.toLocaleString()}`, icon: CheckCircle },
+                  { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "text-primary" },
+                  { label: "Paid Slots", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
+                  { label: "Pending Slots", value: stats.pendingBookings, icon: Clock, color: "text-yellow-600" },
+                  { label: "Total Value", value: `₹${stats.totalRevenue.toLocaleString()}`, icon: CheckCircle, color: "text-foreground" },
+                  { label: "Amount Received", value: `₹${stats.totalAmountPaid.toLocaleString()}`, icon: CheckCircle, color: "text-green-600" },
+                  { label: "Total Balance", value: `₹${stats.totalBalanceAmount.toLocaleString()}`, icon: CheckCircle, color: "text-red-600" },
                 ].map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-border bg-card p-6">
+                  <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
                     <div className="flex items-center gap-3">
-                      <stat.icon className="h-5 w-5 text-primary" />
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
                       <div>
-                        <p className="text-xs text-muted-foreground font-body">{stat.label}</p>
-                        <p className="text-2xl font-bold text-foreground font-display">{stat.value}</p>
+                        <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">{stat.label}</p>
+                        <p className={`text-lg font-bold font-display ${stat.color}`}>{stat.value}</p>
                       </div>
                     </div>
                   </div>
@@ -897,7 +901,7 @@ const AdminDashboard = () => {
                 <table className="w-full text-sm font-body">
                   <thead className="border-b border-border bg-muted">
                     <tr>
-                      {["ID", "Name", "Service", "Date", "Time", "Status", "Payment", "Paid", "Total", "Booked At", ""].map((h) => (
+                      {["ID", "Name", "Service", "Date", "Time", "Status", "Payment", "Paid", "Balance", "Total", "Booked At", ""].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -918,6 +922,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{b.paymentType || 'N/A'}</td>
                         <td className="px-4 py-3 font-semibold text-green-600">₹{getPriceValue(b.amountPaid || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-red-600">₹{getPriceValue(b.balanceAmount || 0).toLocaleString()}</td>
                         <td className="px-4 py-3 font-semibold text-foreground">₹{getPriceValue(b.totalPrice).toLocaleString()}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}
