@@ -146,7 +146,10 @@ export const getCatalogOrSendError = async (req, res, includeBody = true) => {
 };
 export const getReviews = async () => {
   const Review = getReviewModel();
-  if (!Review) return [];
+  if (!Review) {
+    console.warn('[REVIEWS] Review model not available - DB might not be connected');
+    return [];
+  }
   return Review.find().sort({ createdAt: -1 });
 };
 
