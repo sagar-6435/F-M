@@ -71,15 +71,23 @@ export const branchDbs = {
   'branch-2': { bookings: [], timeSlots: [] },
 };
 
-export const createBranchPricingDb = () => ({
-  cakes: JSON.parse(JSON.stringify(defaultCakes.map(c => ({ ...c, quantity: '1kg' })))),
-  decorations: JSON.parse(JSON.stringify(defaultDecorations)),
-  pricing: JSON.parse(JSON.stringify(defaultPricing)),
-  decorationPrice: 1500,
-  testimonials: [],
-  heroImages: [],
-  socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
-});
+export const createBranchPricingDb = (branchId) => {
+  const branchInfo = branchId ? globalDb.branches.find(b => b.id === branchId) : null;
+  return {
+    branchId: branchId,
+    name: branchInfo?.name,
+    address: branchInfo?.address,
+    phone: branchInfo?.phone,
+    mapLink: branchInfo?.mapLink,
+    cakes: JSON.parse(JSON.stringify(defaultCakes.map(c => ({ ...c, quantity: '1kg' })))),
+    decorations: JSON.parse(JSON.stringify(defaultDecorations)),
+    pricing: JSON.parse(JSON.stringify(defaultPricing)),
+    decorationPrice: 1500,
+    testimonials: [],
+    heroImages: [],
+    socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
+  };
+};
 
 export const branchPricingDbs = {
   'branch-1': createBranchPricingDb(),
@@ -87,6 +95,10 @@ export const branchPricingDbs = {
 };
 
 export const cloneBranchPricingDb = (data = {}) => ({
+  name: data.name,
+  address: data.address,
+  phone: data.phone,
+  mapLink: data.mapLink,
   cakes: JSON.parse(JSON.stringify(data.cakes || defaultCakes.map(c => ({ ...c, quantity: '1kg' })))),
   decorations: JSON.parse(JSON.stringify(data.decorations || defaultDecorations)),
   pricing: JSON.parse(JSON.stringify(data.pricing || defaultPricing)),

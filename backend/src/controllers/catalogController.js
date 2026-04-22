@@ -41,7 +41,7 @@ export const loadBranchPricingData = async () => {
 export const getCatalogForBranch = async (branchId = 'branch-1') => {
   const models = getBranchModels(branchId);
   if (models) {
-    const defaultData = createBranchPricingDb();
+    const defaultData = createBranchPricingDb(branchId);
     let doc = await models.BranchCatalog.findOne({ branch: branchId });
     
     if (!doc) {
@@ -70,6 +70,14 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
     }
     
     const catalogObj = doc.toObject();
+    
+    // Fallback to globalDb for branch info if missing in DB doc
+    const branchInfo = globalDb.branches.find(b => b.id === branchId) || {};
+    if (!catalogObj.name) catalogObj.name = branchInfo.name;
+    if (!catalogObj.address) catalogObj.address = branchInfo.address;
+    if (!catalogObj.phone) catalogObj.phone = branchInfo.phone;
+    if (!catalogObj.mapLink && branchInfo.mapLink) catalogObj.mapLink = branchInfo.mapLink;
+
     console.log(`[DB-RETRIEVE] Retrieved catalog for ${branchId}:`, {
       pricingStructure: JSON.stringify(catalogObj.pricing),
       hasOffers: Object.keys(catalogObj.pricing).some(service => 
