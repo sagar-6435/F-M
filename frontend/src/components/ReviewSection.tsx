@@ -214,7 +214,7 @@ const ReviewSection = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 font-body">Your Story</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 font-body">Your review</label>
                   <textarea
                     required
                     rows={4}

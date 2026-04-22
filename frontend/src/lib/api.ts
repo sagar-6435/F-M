@@ -271,6 +271,25 @@ export const api = {
     return res.json();
   },
 
+  async getBranchDetails(branch: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/catalog/branch-details?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch branch details");
+    return res.json();
+  },
+
+  async updateBranch(token: string, branch: string, data: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/catalog/branch-details?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to update branch details");
+    return res.json();
+  },
+
   async updateBooking(token: string, bookingId: string, data: any): Promise<any> {
     const res = await fetch(`${API_BASE}/bookings/${bookingId}`, {
       method: "PUT",
