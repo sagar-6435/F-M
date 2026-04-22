@@ -74,7 +74,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "specific" | "all">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "tomorrow" | "specific" | "all">("all");
   const [customDate, setCustomDate] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "settings">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
@@ -217,6 +217,11 @@ const AdminDashboard = () => {
         const yesterdayDoc = new Date(todayDoc);
         yesterdayDoc.setDate(yesterdayDoc.getDate() - 1);
         startDate = getLocalIDODate(yesterdayDoc);
+        endDate = startDate;
+      } else if (dateFilter === "tomorrow") {
+        const tomorrowDoc = new Date(todayDoc);
+        tomorrowDoc.setDate(tomorrowDoc.getDate() + 1);
+        startDate = getLocalIDODate(tomorrowDoc);
         endDate = startDate;
       } else if (dateFilter === "specific" && customDate) {
         startDate = customDate;
@@ -852,6 +857,13 @@ const AdminDashboard = () => {
                   }`}
               >
                 Yesterday
+              </button>
+              <button
+                onClick={() => setDateFilter("tomorrow")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "tomorrow" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+              >
+                Tomorrow
               </button>
               <div className="flex items-center gap-2">
                 <button
