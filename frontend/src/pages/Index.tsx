@@ -5,6 +5,7 @@ import heroImg from "@/assets/hero-theatre.jpg";
 import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
 import { api, type Branch } from "@/lib/api";
+import ReviewSection from "@/components/ReviewSection";
 
 const Index = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -192,6 +193,8 @@ const Index = () => {
           )}
         </div>
       </section>
+
+      <ReviewSection />
 
       {/* Footer */}
       <footer className="border-t border-border py-16 bg-card/50">

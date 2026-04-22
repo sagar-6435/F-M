@@ -354,16 +354,20 @@ export const api = {
     window.URL.revokeObjectURL(downloadUrl);
   },
 
-  updateBranch: async (token: string, branchId: string, data: any): Promise<any> => {
-    const res = await fetch(`${API_BASE}/branches/${branchId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+  async getReviews(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/reviews`);
+    if (!res.ok) throw new Error("Failed to fetch reviews");
+    return res.json();
+  },
+
+  async addReview(name: string, rating: number, comment: string, branch?: string): Promise<any> {
+    const query = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    const res = await fetch(`${API_BASE}/reviews${query}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, rating, comment }),
     });
-    if (!res.ok) throw new Error("Failed to update branch");
+    if (!res.ok) throw new Error("Failed to add review");
     return res.json();
   },
 };

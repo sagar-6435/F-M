@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getBranchModels } from '../config/mongo.js';
-import { cloneBranchPricingDb, branchPricingDbs, createBranchPricingDb, defaultPricing } from '../config/constants.js';
+import { getBranchModels, getReviewModel } from '../config/mongo.js';
+import { cloneBranchPricingDb, branchPricingDbs, createBranchPricingDb, defaultPricing, globalDb } from '../config/constants.js';
 import { promises as fs } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -143,4 +143,19 @@ export const getCatalogOrSendError = async (req, res, includeBody = true) => {
     return null;
   }
   return { branch, catalog };
+};
+export const getReviews = async () => {
+  const Review = getReviewModel();
+  if (!Review) return [];
+  return Review.find().sort({ createdAt: -1 });
+};
+
+export const getAllReviews = async () => {
+  return getReviews();
+};
+
+export const addReview = async (branchId, reviewData) => {
+  const Review = getReviewModel();
+  if (!Review) throw new Error('Review database not connected');
+  return Review.create({ ...reviewData, branch: branchId });
 };

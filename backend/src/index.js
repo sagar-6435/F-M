@@ -118,6 +118,7 @@ app.use((err, req, res, next) => {
     // Mongo Connections
     await connectToMongo('branch-1', process.env.MONGODB_URI_BRANCH1);
     await connectToMongo('branch-2', process.env.MONGODB_URI_BRANCH2);
+    await connectToMongo('reviews', process.env.MONGODB_URI_REVIEWS);
 
     // Persistence
     await loadBookings(branchDbs);

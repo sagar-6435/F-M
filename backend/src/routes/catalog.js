@@ -280,4 +280,30 @@ router.put('/branch-details', verifyAdmin, async (req, res) => {
 router.get('/occasions', (req, res) => res.json(globalDb.occasions));
 router.get('/services', (req, res) => res.json(globalDb.services));
 
+// Reviews
+router.get('/reviews', async (req, res) => {
+  try {
+    const reviews = await catalogController.getAllReviews();
+    res.json(reviews);
+  } catch (err) {
+    console.error('Fetch Reviews Error:', err);
+    res.status(500).json({ error: 'Failed to fetch reviews', details: err.message });
+  }
+});
+
+router.post('/reviews', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const { name, rating, comment } = req.body;
+    if (!name || !rating || !comment) {
+      return res.status(400).json({ error: 'Name, rating and comment are required' });
+    }
+    const review = await catalogController.addReview(branch, { name, rating, comment });
+    res.status(201).json(review);
+  } catch (err) {
+    console.error('Add Review Error:', err);
+    res.status(500).json({ error: 'Failed to add review', details: err.message });
+  }
+});
+
 export default router;

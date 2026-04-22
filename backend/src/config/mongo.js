@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
-import { bookingSchema, timeSlotSchema, branchCatalogSchema } from '../models/schemas.js';
+import { bookingSchema, timeSlotSchema, branchCatalogSchema, reviewSchema } from '../models/schemas.js';
 
 export const mongoConnections = {
   'branch-1': null,
   'branch-2': null,
+  'reviews': null,
 };
 
 export const connectToMongo = async (branchId, uri) => {
@@ -20,6 +21,12 @@ export const connectToMongo = async (branchId, uri) => {
   }
 };
 
+export const getReviewModel = () => {
+  const conn = mongoConnections['reviews'];
+  if (!conn) return null;
+  return conn.models.Review || conn.model('Review', reviewSchema, 'reviews');
+};
+
 export const getBranchModels = (branchId) => {
   const conn = mongoConnections[branchId];
   if (!conn) return null;
@@ -30,5 +37,6 @@ export const getBranchModels = (branchId) => {
     Booking: conn.models[`Booking_${branchId}`] || conn.model(`Booking_${branchId}`, bookingSchema, 'bookings'),
     TimeSlot: conn.models[`TimeSlot_${branchId}`] || conn.model(`TimeSlot_${branchId}`, timeSlotSchema, 'timeslots'),
     BranchCatalog: conn.models[`BranchCatalog_${branchId}`] || conn.model(`BranchCatalog_${branchId}`, branchCatalogSchema, 'catalogs'),
+    Review: conn.models[`Review_${branchId}`] || conn.model(`Review_${branchId}`, reviewSchema, 'reviews'),
   };
 };

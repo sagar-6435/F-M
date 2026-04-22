@@ -9,8 +9,8 @@ import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-d
 import { getEffectivePrice, getOriginalPrice, hasOffer } from "../lib/utils";
 
 const formatServiceName = (serviceId: string) => {
-  if (serviceId === "private-theatre-party-hall") return "Standard Pack";
-  if (serviceId === "premium-pack") return "Premium Pack Starting From ₹2199 ";
+  if (serviceId === "private-theatre-party-hall") return "Standard Pack Starting From ₹1499";
+  if (serviceId === "premium-pack") return "Premium Pack Starting From ₹2799 ";
   return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
