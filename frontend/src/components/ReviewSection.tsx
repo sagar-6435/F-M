@@ -152,12 +152,14 @@ const ReviewSection = () => {
                   <div className="flex gap-4 mt-10 justify-center lg:justify-start">
                     <button 
                       onClick={scrollPrev}
+                      aria-label="Previous review"
                       className="group p-4 rounded-full border border-white/5 bg-white/5 text-white hover:border-primary/50 transition-all hover:bg-primary/10"
                     >
                       <ChevronLeft className="h-6 w-6 group-hover:-translate-x-1 transition-transform" />
                     </button>
                     <button 
                       onClick={scrollNext}
+                      aria-label="Next review"
                       className="group p-4 rounded-full border border-white/5 bg-white/5 text-white hover:border-primary/50 transition-all hover:bg-primary/10"
                     >
                       <ChevronRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
@@ -203,6 +205,7 @@ const ReviewSection = () => {
                         key={star}
                         type="button"
                         onClick={() => setFormData({ ...formData, rating: star })}
+                        aria-label={`Rate ${star} stars`}
                         className="transition-all hover:scale-110 active:scale-90"
                       >
                         <Star 
