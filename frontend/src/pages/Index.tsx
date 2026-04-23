@@ -1,9 +1,9 @@
 import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import heroImg from "@/assets/hero-theatre.jpg";
-import partyImg from "@/assets/party-hall.jpg";
-import theatreImg from "@/assets/private-theatre.jpg";
+const heroImg = "/images/hero-theatre.jpg";
+const partyImg = "/images/party-hall.jpg";
+const theatreImg = "/images/private-theatre.jpg";
 import { api, type Branch } from "@/lib/api";
 import ReviewSection from "@/components/ReviewSection";
 
