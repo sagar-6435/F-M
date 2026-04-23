@@ -53,6 +53,7 @@ const Index = () => {
     <div className="min-h-screen">
       {/* Hero */}
       <section className="relative flex min-h-[90vh] md:min-h-screen items-center overflow-hidden">
+        <div className="hero-placeholder" />
         <div className="absolute inset-0">
           {heroImages.map((img, idx) => (
             <div 
