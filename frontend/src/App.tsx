@@ -50,7 +50,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {loading && <Loader onComplete={() => setLoading(false)} />}
         <div className="min-h-screen">
           <Toaster />
           <Sonner />
