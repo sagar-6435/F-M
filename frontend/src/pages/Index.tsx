@@ -59,7 +59,14 @@ const Index = () => {
               key={idx}
               className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentHero ? "opacity-100" : "opacity-0"}`}
             >
-              <img src={img} alt={`Premium experience ${idx}`} className="h-full w-full object-cover" width={1920} height={1080} />
+              <img 
+                src={img} 
+                alt={`Premium experience ${idx}`} 
+                className="h-full w-full object-cover" 
+                width={1920} 
+                height={1080}
+                fetchPriority={idx === 0 ? "high" : "low"}
+              />
             </div>
           ))}
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
@@ -71,6 +78,7 @@ const Index = () => {
                 <button 
                   key={i} 
                   onClick={() => setCurrentHero(i)}
+                  aria-label={`Go to slide ${i + 1}`}
                   className={`h-1.5 transition-all rounded-full ${i === currentHero ? "w-8 bg-primary" : "w-2 bg-white/30"}`}
                 />
               ))}
@@ -212,12 +220,12 @@ const Index = () => {
                     <p className="text-xs font-bold uppercase tracking-widest text-primary font-body">{branch.name.split("-")[1]?.trim() || branch.name}</p>
                     <div className="flex justify-center items-center gap-4">
                       {socials.instagram && (
-                        <a href={socials.instagram} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-primary hover:text-primary hover:glow-gold">
+                        <a href={socials.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-primary hover:text-primary hover:glow-gold">
                           <Instagram className="h-5 w-5" />
                         </a>
                       )}
                       {socials.facebook && (
-                        <a href={socials.facebook} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-primary hover:text-primary hover:glow-gold">
+                        <a href={socials.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-primary hover:text-primary hover:glow-gold">
                           <Facebook className="h-5 w-5" />
                         </a>
                       )}
@@ -225,6 +233,7 @@ const Index = () => {
                         href={`https://wa.me/91${(socials.whatsapp || branch.phone).replace(/\+/g, "").replace(/\s/g, "")}`} 
                         target="_blank" 
                         rel="noopener noreferrer" 
+                        aria-label="WhatsApp"
                         className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-[#25D366] hover:text-[#25D366] hover:glow-gold"
                       >
                         <MessageCircle className="h-5 w-5" />
