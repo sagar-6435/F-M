@@ -306,7 +306,7 @@ router.put('/social-links', verifyAdmin, async (req, res) => {
     res.json(catalog.socialLinks);
   } catch (err) {
     console.error('Update Social Links Error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', message: err.message, stack: err.stack });
   }
 });
 
@@ -349,7 +349,7 @@ router.put('/branch-details', verifyAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error('Update Branch Details Error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', message: err.message, stack: err.stack });
   }
 });
 
