@@ -35,7 +35,7 @@ const AboutUs = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Experience movies and personal videos on the big screen with Dolby Atmos sound and 4K projection. 
-                  Perfect for surprises, bachelors, or just a movie night with family.
+                  We offer the best <strong>private theatre for couples in Eluru</strong> and family-friendly theatre for surprise parties.
                 </p>
               </div>
               <div className="p-6 rounded-xl border border-border bg-muted/50">
@@ -44,8 +44,8 @@ const AboutUs = () => {
                   <h4 className="font-bold text-foreground">Party Hall</h4>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Elegant spaces designed for birthdays, anniversaries, and special gatherings. We handle 
-                  the decoration so you can focus on the memories.
+                  Elegant spaces designed for birthdays, anniversaries, and special gatherings. We are the most 
+                  trusted <strong>birthday party hall in Bhimavaram</strong> with custom setup and balloon decorations.
                 </p>
               </div>
             </div>
