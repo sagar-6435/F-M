@@ -107,7 +107,8 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
   });
 
   // Always update memory cache and persist to file as a secondary backup
-  branchPricingDbs[branchId] = cloneBranchPricingDb(catalog);
+  const plainCatalog = (catalog && typeof catalog.toObject === 'function') ? catalog.toObject() : catalog;
+  branchPricingDbs[branchId] = cloneBranchPricingDb(plainCatalog);
   await saveBranchPricingData();
 
   const models = getBranchModels(branchId);

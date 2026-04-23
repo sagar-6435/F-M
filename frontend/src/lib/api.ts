@@ -267,8 +267,12 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to update social links");
-    return res.json();
+    const dataRes = await res.json();
+    if (!res.ok) {
+      console.error("Server Error updating social links:", dataRes);
+      throw new Error(dataRes.message || "Failed to update social links");
+    }
+    return dataRes;
   },
 
   async getBranchDetails(branch: string): Promise<any> {
@@ -286,8 +290,12 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed to update branch details");
-    return res.json();
+    const dataRes = await res.json();
+    if (!res.ok) {
+      console.error("Server Error updating branch details:", dataRes);
+      throw new Error(dataRes.message || "Failed to update branch details");
+    }
+    return dataRes;
   },
 
   async updateBooking(token: string, bookingId: string, data: any): Promise<any> {
