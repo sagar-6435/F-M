@@ -10,80 +10,110 @@ const router = express.Router();
 
 // Pricing
 router.get('/pricing', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.json(resolved.catalog.pricing);
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json(resolved.catalog.pricing);
+  } catch (err) {
+    console.error('Get Pricing Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.put('/pricing', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { service, duration, price, offerPrice } = req.body;
-  if (!catalog.pricing[service]) catalog.pricing[service] = {};
-  
-  if (offerPrice !== undefined && offerPrice !== null && offerPrice !== "") {
-    catalog.pricing[service][duration] = { price: Number(price), offerPrice: Number(offerPrice) };
-  } else {
-    catalog.pricing[service][duration] = Number(price);
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { service, duration, price, offerPrice } = req.body;
+    if (!catalog.pricing[service]) catalog.pricing[service] = {};
+    
+    if (offerPrice !== undefined && offerPrice !== null && offerPrice !== "") {
+      catalog.pricing[service][duration] = { price: Number(price), offerPrice: Number(offerPrice) };
+    } else {
+      catalog.pricing[service][duration] = Number(price);
+    }
+    
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.pricing);
+  } catch (err) {
+    console.error('Update Pricing Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json(catalog.pricing);
 });
 
 router.get('/pricing/:service/:duration', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  const { service, duration } = req.params;
-  const price = resolved.catalog.pricing[service]?.[duration];
-  if (price === undefined) return res.status(404).json({ error: 'Pricing not found' });
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.json({ service, duration, price });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    const { service, duration } = req.params;
+    const price = resolved.catalog.pricing[service]?.[duration];
+    if (price === undefined) return res.status(404).json({ error: 'Pricing not found' });
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json({ service, duration, price });
+  } catch (err) {
+    console.error('Get Specific Pricing Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Decoration Price
 router.get('/decoration-price', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.json({ decorationPrice: resolved.catalog.decorationPrice });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json({ decorationPrice: resolved.catalog.decorationPrice });
+  } catch (err) {
+    console.error('Get Decoration Price Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.put('/decoration-price', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { price } = req.body;
-  if (price !== undefined) catalog.decorationPrice = price;
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json({ decorationPrice: catalog.decorationPrice });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { price } = req.body;
+    if (price !== undefined) catalog.decorationPrice = price;
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json({ decorationPrice: catalog.decorationPrice });
+  } catch (err) {
+    console.error('Update Decoration Price Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Cakes
 router.get('/cakes', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.json(resolved.catalog.cakes);
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json(resolved.catalog.cakes);
+  } catch (err) {
+    console.error('Get Cakes Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.post('/cakes', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { name, price, description, image, originalPrice, offerPrice } = req.body;
-
   try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { name, price, description, image, originalPrice, offerPrice } = req.body;
+
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
       imageUrl = await uploadToCloudinary(image, 'cakes', getRootFolderForBranch(branch));
@@ -101,6 +131,7 @@ router.post('/cakes', verifyAdmin, async (req, res) => {
     await catalogController.saveCatalogForBranch(branch, catalog);
     res.status(201).json(cake);
   } catch (err) {
+    console.error('Add Cake Error:', err);
     res.status(500).json({ error: 'Failed to upload/save cake' });
   }
 });
@@ -126,33 +157,43 @@ router.put('/cakes/:id', verifyAdmin, async (req, res) => {
 });
 
 router.delete('/cakes/:id', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const index = catalog.cakes.findIndex(c => c.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Cake not found' });
-  catalog.cakes.splice(index, 1);
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json({ message: 'Cake deleted' });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const index = catalog.cakes.findIndex(c => c.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Cake not found' });
+    catalog.cakes.splice(index, 1);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json({ message: 'Cake deleted' });
+  } catch (err) {
+    console.error('Delete Cake Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Decorations
 router.get('/decorations', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.json(resolved.catalog.decorations);
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json(resolved.catalog.decorations);
+  } catch (err) {
+    console.error('Get Decorations Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.post('/decorations', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { name, price, description, image, originalPrice, offerPrice } = req.body;
-
   try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { name, price, description, image, originalPrice, offerPrice } = req.body;
+
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
       imageUrl = await uploadToCloudinary(image, 'decorations', getRootFolderForBranch(branch));
@@ -170,6 +211,7 @@ router.post('/decorations', verifyAdmin, async (req, res) => {
     await catalogController.saveCatalogForBranch(branch, catalog);
     res.status(201).json(decoration);
   } catch (err) {
+    console.error('Add Decoration Error:', err);
     res.status(500).json({ error: 'Failed to upload/save decoration' });
   }
 });
@@ -195,85 +237,120 @@ router.put('/decorations/:id', verifyAdmin, async (req, res) => {
 });
 
 router.delete('/decorations/:id', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const index = catalog.decorations.findIndex(d => d.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Decoration not found' });
-  catalog.decorations.splice(index, 1);
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json({ message: 'Decoration deleted' });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const index = catalog.decorations.findIndex(d => d.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Decoration not found' });
+    catalog.decorations.splice(index, 1);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json({ message: 'Decoration deleted' });
+  } catch (err) {
+    console.error('Delete Decoration Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Testimonials (Public)
 router.get('/testimonials', async (req, res) => {
-  const branch = req.query.branch || 'branch-1';
-  const catalog = await catalogController.getCatalogForBranch(branch);
-  if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
-  res.json(catalog.testimonials || []);
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    res.json(catalog.testimonials || []);
+  } catch (err) {
+    console.error('Get Testimonials Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Alias for compatibility
 router.get('/gallery/testimonials', async (req, res) => {
-  const branch = req.query.branch || 'branch-1';
-  const catalog = await catalogController.getCatalogForBranch(branch);
-  if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
-  res.json(catalog.testimonials || []);
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    res.json(catalog.testimonials || []);
+  } catch (err) {
+    console.error('Get Gallery Testimonials Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Social Links
 router.get('/social-links', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  res.json(resolved.catalog.socialLinks || { instagram: "", facebook: "", whatsapp: "" });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    res.json(resolved.catalog.socialLinks || { instagram: "", facebook: "", whatsapp: "" });
+  } catch (err) {
+    console.error('Get Social Links Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.put('/social-links', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { instagram, facebook, whatsapp } = req.body;
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { instagram, facebook, whatsapp } = req.body;
 
-  if (!catalog.socialLinks) catalog.socialLinks = {};
-  if (instagram !== undefined) catalog.socialLinks.instagram = instagram;
-  if (facebook !== undefined) catalog.socialLinks.facebook = facebook;
-  if (whatsapp !== undefined) catalog.socialLinks.whatsapp = whatsapp;
+    if (!catalog.socialLinks) catalog.socialLinks = {};
+    if (instagram !== undefined) catalog.socialLinks.instagram = instagram;
+    if (facebook !== undefined) catalog.socialLinks.facebook = facebook;
+    if (whatsapp !== undefined) catalog.socialLinks.whatsapp = whatsapp;
 
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json(catalog.socialLinks);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.socialLinks);
+  } catch (err) {
+    console.error('Update Social Links Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Branch Details
 router.get('/branch-details', async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, false);
-  if (!resolved) return;
-  const { catalog } = resolved;
-  res.json({
-    name: catalog.name,
-    address: catalog.address,
-    phone: catalog.phone,
-    mapLink: catalog.mapLink
-  });
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, false);
+    if (!resolved) return;
+    const { catalog } = resolved;
+    res.json({
+      name: catalog.name,
+      address: catalog.address,
+      phone: catalog.phone,
+      mapLink: catalog.mapLink
+    });
+  } catch (err) {
+    console.error('Get Branch Details Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 router.put('/branch-details', verifyAdmin, async (req, res) => {
-  const resolved = await catalogController.getCatalogOrSendError(req, res, true);
-  if (!resolved) return;
-  const { branch, catalog } = resolved;
-  const { name, address, phone, mapLink } = req.body;
+  try {
+    const resolved = await catalogController.getCatalogOrSendError(req, res, true);
+    if (!resolved) return;
+    const { branch, catalog } = resolved;
+    const { name, address, phone, mapLink } = req.body;
 
-  if (name !== undefined) catalog.name = name;
-  if (address !== undefined) catalog.address = address;
-  if (phone !== undefined) catalog.phone = phone;
-  if (mapLink !== undefined) catalog.mapLink = mapLink;
+    if (name !== undefined) catalog.name = name;
+    if (address !== undefined) catalog.address = address;
+    if (phone !== undefined) catalog.phone = phone;
+    if (mapLink !== undefined) catalog.mapLink = mapLink;
 
-  await catalogController.saveCatalogForBranch(branch, catalog);
-  res.json({
-    name: catalog.name,
-    address: catalog.address,
-    phone: catalog.phone,
-    mapLink: catalog.mapLink
-  });
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json({
+      name: catalog.name,
+      address: catalog.address,
+      phone: catalog.phone,
+      mapLink: catalog.mapLink
+    });
+  } catch (err) {
+    console.error('Update Branch Details Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // General info

@@ -30,17 +30,22 @@ router.get('/all-bookings', verifyAdmin, async (req, res) => {
 
 // Gallery & Testimonials (Admin)
 router.get('/gallery', verifyAdmin, async (req, res) => {
-  const branch = req.query.branch || 'branch-1';
-  const type = req.query.type;
-  const catalog = await catalogController.getCatalogForBranch(branch);
-  if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
-  const cakes = catalog.cakes.map((item) => ({ ...item, type: 'cake' }));
-  const decorations = catalog.decorations.map((item) => ({ ...item, type: 'decoration' }));
-  let items = [...cakes, ...decorations];
-  if (type === 'cake' || type === 'decoration') {
-    items = items.filter((item) => item.type === type);
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const type = req.query.type;
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const cakes = catalog.cakes.map((item) => ({ ...item, type: 'cake' }));
+    const decorations = catalog.decorations.map((item) => ({ ...item, type: 'decoration' }));
+    let items = [...cakes, ...decorations];
+    if (type === 'cake' || type === 'decoration') {
+      items = items.filter((item) => item.type === type);
+    }
+    res.json(items);
+  } catch (err) {
+    console.error('Get Gallery Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  res.json(items);
 });
 
 router.put('/gallery/:type/:id', verifyAdmin, async (req, res) => {
