@@ -674,17 +674,22 @@ const AdminDashboard = () => {
           </p>
 
           <div className="relative mb-4">
+            <label htmlFor="admin-password" id="admin-password-label" className="sr-only">Branch Password</label>
             <input
+              id="admin-password"
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter branch password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleLogin()}
               className="w-full rounded-xl border border-border bg-muted px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+              autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-primary"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -1103,8 +1108,10 @@ const AdminDashboard = () => {
             <form onSubmit={handleManualBookingSubmit} className="space-y-6">
               {/* Branch */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Branch</label>
+                <label htmlFor="manual-branch" className="mb-2 block text-sm font-medium text-foreground font-body">Branch</label>
                 <select
+                  id="manual-branch"
+                  name="branch"
                   value={manualBooking.branch}
                   onChange={(e) => setManualBooking({ ...manualBooking, branch: e.target.value })}
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
@@ -1117,8 +1124,10 @@ const AdminDashboard = () => {
 
               {/* Service */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Service</label>
+                <label htmlFor="manual-service" className="mb-2 block text-sm font-medium text-foreground font-body">Service</label>
                 <select
+                  id="manual-service"
+                  name="service"
                   value={manualBooking.service}
                   onChange={(e) => setManualBooking({ ...manualBooking, service: e.target.value })}
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
@@ -1133,8 +1142,10 @@ const AdminDashboard = () => {
 
               {/* Date */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Date</label>
+                <label htmlFor="manual-date" className="mb-2 block text-sm font-medium text-foreground font-body">Date</label>
                 <input
+                  id="manual-date"
+                  name="date"
                   type="date"
                   value={manualBooking.date}
                   onChange={(e) => setManualBooking({ ...manualBooking, date: e.target.value })}
@@ -1146,8 +1157,10 @@ const AdminDashboard = () => {
               {/* Time Slot & Duration */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Time Slot</label>
+                  <label htmlFor="manual-timeSlot" className="mb-2 block text-sm font-medium text-foreground font-body">Time Slot</label>
                   <select
+                    id="manual-timeSlot"
+                    name="timeSlot"
                     value={manualBooking.timeSlot}
                     onChange={(e) => setManualBooking({ ...manualBooking, timeSlot: e.target.value })}
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
@@ -1180,8 +1193,10 @@ const AdminDashboard = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Duration (hours)</label>
+                  <label htmlFor="manual-duration" className="mb-2 block text-sm font-medium text-foreground font-body">Duration (hours)</label>
                   <select
+                    id="manual-duration"
+                    name="duration"
                     value={manualBooking.duration}
                     onChange={(e) => {
                       const newDuration = parseInt(e.target.value);
@@ -1199,8 +1214,10 @@ const AdminDashboard = () => {
               {/* Customer Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Name</label>
+                  <label htmlFor="manual-name" className="mb-2 block text-sm font-medium text-foreground font-body">Name</label>
                   <input
+                    id="manual-name"
+                    name="name"
                     type="text"
                     value={manualBooking.name}
                     onChange={(e) => setManualBooking({ ...manualBooking, name: e.target.value })}
@@ -1210,10 +1227,12 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Phone</label>
+                  <label htmlFor="manual-phone" className="mb-2 block text-sm font-medium text-foreground font-body">Phone</label>
                   <div className="flex items-center rounded-xl border border-border bg-muted overflow-hidden">
                     <span className="px-4 py-3 text-foreground font-body">+91</span>
                     <input
+                      id="manual-phone"
+                      name="phone"
                       type="tel"
                       value={manualBooking.phone}
                       onChange={(e) => setManualBooking({ ...manualBooking, phone: e.target.value })}
@@ -1228,7 +1247,6 @@ const AdminDashboard = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-foreground font-body">Occasion</label>
                   <select
                     value={manualBooking.occasion}
                     onChange={(e) => setManualBooking({ ...manualBooking, occasion: e.target.value })}
@@ -1243,8 +1261,10 @@ const AdminDashboard = () => {
 
               {/* Total Price */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground font-body">Total Price (₹)</label>
+                <label htmlFor="manual-totalPrice" className="mb-2 block text-sm font-medium text-foreground font-body">Total Price (₹)</label>
                 <input
+                  id="manual-totalPrice"
+                  name="totalPrice"
                   type="number"
                   value={manualBooking.totalPrice}
                   onChange={(e) => setManualBooking({ ...manualBooking, totalPrice: parseFloat(e.target.value) })}

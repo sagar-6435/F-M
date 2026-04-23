@@ -604,8 +604,10 @@ const BookingPage = () => {
                 <div className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground font-body">Select Date</label>
+                      <label htmlFor="booking-date" className="mb-2 block text-sm font-medium text-foreground font-body">Select Date</label>
                       <input
+                        id="booking-date"
+                        name="date"
                         type="date"
                         value={booking.date}
                         min={new Date().toISOString().split("T")[0]}
@@ -614,8 +616,10 @@ const BookingPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground font-body">Members Count</label>
+                      <label htmlFor="booking-membersCount" className="mb-2 block text-sm font-medium text-foreground font-body">Members Count</label>
                       <input
+                        id="booking-membersCount"
+                        name="membersCount"
                         type="number"
                         min="1"
                         max={(booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram")) ? 10 : undefined}
@@ -694,26 +698,32 @@ const BookingPage = () => {
                     <h4 className="mb-4 text-sm font-semibold text-foreground font-body">Your Information</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <label className="mb-1 text-xs text-muted-foreground font-body">Full Name</label>
+                        <label htmlFor="booking-name" className="mb-1 text-xs text-muted-foreground font-body">Full Name</label>
                         <input
+                          id="booking-name"
+                          name="name"
                           type="text"
                           value={booking.name}
                           onChange={(e) => update({ name: e.target.value })}
                           className="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-body focus:border-primary focus:outline-none"
                           placeholder="Name"
+                          autoComplete="name"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 text-xs text-muted-foreground font-body">Phone</label>
+                        <label htmlFor="booking-phone" className="mb-1 text-xs text-muted-foreground font-body">Phone</label>
                         <div className="flex items-center rounded-xl border border-border bg-muted overflow-hidden">
                           <span className="pl-3 pr-1 text-sm text-foreground">+91</span>
                           <input
+                            id="booking-phone"
+                            name="phone"
                             type="tel"
                             value={booking.phone}
                             onChange={(e) => update({ phone: e.target.value })}
                             className="w-full bg-transparent px-2 py-2.5 text-sm font-body focus:outline-none"
                             maxLength={10}
                             placeholder="Number"
+                            autoComplete="tel-national"
                           />
                         </div>
                       </div>
@@ -746,7 +756,10 @@ const BookingPage = () => {
                     </div>
                     {booking.occasion === "Other" && (
                       <div className="mt-4">
+                        <label htmlFor="booking-customOccasion" className="sr-only">Specific Occasion</label>
                         <input
+                          id="booking-customOccasion"
+                          name="customOccasion"
                           type="text"
                           placeholder="Please specify your occasion"
                           value={booking.customOccasion || ""}
