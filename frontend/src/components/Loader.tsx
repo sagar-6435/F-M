@@ -10,9 +10,9 @@ const Loader = ({ onComplete }: LoaderProps) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    // Artificial progress to engage user
-    const duration = 2500; // 2.5 seconds for a premium feel
-    const intervalTime = 50;
+    // Reduced progress duration for better performance score (Lighthouse 90+)
+    const duration = 600; 
+    const intervalTime = 30;
     const increment = 100 / (duration / intervalTime);
 
     const timer = setInterval(() => {

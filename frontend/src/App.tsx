@@ -51,7 +51,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         {loading && <Loader onComplete={() => setLoading(false)} />}
-        <div className={loading ? "opacity-0" : "opacity-100 transition-opacity duration-1000"}>
+        <div className="min-h-screen">
           <Toaster />
           <Sonner />
           <BrowserRouter>

@@ -9,7 +9,7 @@ import ReviewSection from "@/components/ReviewSection";
 
 const Index = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [heroImages, setHeroImages] = useState<string[]>([]);
+  const [heroImages, setHeroImages] = useState<string[]>([heroImg]);
   const [branchSocials, setBranchSocials] = useState<Record<string, any>>({});
   const [currentHero, setCurrentHero] = useState(0);
   const [loading, setLoading] = useState(true);
