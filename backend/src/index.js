@@ -13,52 +13,17 @@ import catalogRoutes from './routes/catalog.js';
 import branchRoutes from './routes/branch.js';
 import paymentRoutes from './routes/payment.js';
 
+import { corsOptions } from './middleware/cors.js';
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:8080',
-      'http://localhost:5000',
-      'https://friendsandmemories.vercel.app',
-      'https://f-m-8146.onrender.com'
-    ];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log(`CORS request from: ${origin}`);
-      callback(null, true);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200,
-  maxAge: 86400
-};
-
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
-
-// Additional CORS headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
-  res.header('Access-Control-Expose-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
 
 // Routes
 app.use('/api/branches', branchRoutes);
@@ -125,7 +90,7 @@ app.use((err, req, res, next) => {
     await loadTimeSlots(branchDbs);
     await loadBranchPricingData();
 
-    app.listen(PORT, () => console.log(`Server running `));
+    app.listen(PORT, () => console.log(`Server running on port ${PORT} 🚀`));
   } catch (error) {
     console.error('Startup Error:', error);
   }

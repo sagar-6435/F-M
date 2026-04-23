@@ -7,7 +7,7 @@ export const corsOptions = {
       'http://localhost:8080',
       'https://friendsandmemories.vercel.app',
       'https://friendsandmemories.in',
-      'https://www.friendsandmemories.in',
+      'https://www.friendsandmemories.in', 
       'https://f-m-8146.onrender.com'
     ];
     

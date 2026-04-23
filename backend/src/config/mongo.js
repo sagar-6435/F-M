@@ -8,7 +8,10 @@ export const mongoConnections = {
 };
 
 export const connectToMongo = async (branchId, uri) => {
-  if (!uri) return;
+  if (!uri) {
+    console.warn(`! No MongoDB URI provided for ${branchId} - falling back to memory/file storage`);
+    return;
+  }
   try {
     const conn = await mongoose.createConnection(uri, {
       useNewUrlParser: true,
