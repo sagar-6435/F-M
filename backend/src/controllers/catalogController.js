@@ -114,36 +114,26 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
   const models = getBranchModels(branchId);
   if (models) {
     try {
-      // Use findOne and update to ensure hooks and proper Map handling
-      let doc = await models.BranchCatalog.findOne({ branch: branchId });
-      
-      if (!doc) {
-        doc = new models.BranchCatalog({ branch: branchId });
-      }
+      // Build update object to avoid VersionError from concurrent saves
+      const updateData = {};
+      if (catalog.name !== undefined) updateData.name = catalog.name;
+      if (catalog.address !== undefined) updateData.address = catalog.address;
+      if (catalog.phone !== undefined) updateData.phone = catalog.phone;
+      if (catalog.mapLink !== undefined) updateData.mapLink = catalog.mapLink;
+      if (catalog.pricing !== undefined) updateData.pricing = catalog.pricing;
+      if (catalog.cakes !== undefined) updateData.cakes = catalog.cakes;
+      if (catalog.decorations !== undefined) updateData.decorations = catalog.decorations;
+      if (catalog.decorationPrice !== undefined) updateData.decorationPrice = catalog.decorationPrice;
+      if (catalog.testimonials !== undefined) updateData.testimonials = catalog.testimonials;
+      if (catalog.heroImages !== undefined) updateData.heroImages = catalog.heroImages;
+      if (catalog.socialLinks !== undefined) updateData.socialLinks = catalog.socialLinks;
 
-      // Update fields
-      if (catalog.name !== undefined) doc.name = catalog.name;
-      if (catalog.address !== undefined) doc.address = catalog.address;
-      if (catalog.phone !== undefined) doc.phone = catalog.phone;
-      if (catalog.mapLink !== undefined) doc.mapLink = catalog.mapLink;
-      if (catalog.pricing !== undefined) doc.pricing = catalog.pricing;
-      if (catalog.cakes !== undefined) doc.cakes = catalog.cakes;
-      if (catalog.decorations !== undefined) doc.decorations = catalog.decorations;
-      if (catalog.decorationPrice !== undefined) doc.decorationPrice = catalog.decorationPrice;
-      if (catalog.testimonials !== undefined) doc.testimonials = catalog.testimonials;
-      if (catalog.heroImages !== undefined) doc.heroImages = catalog.heroImages;
-      if (catalog.socialLinks !== undefined) doc.socialLinks = catalog.socialLinks;
-
-      if (doc.markModified) {
-        doc.markModified('pricing');
-        doc.markModified('cakes');
-        doc.markModified('decorations');
-        doc.markModified('testimonials');
-        doc.markModified('socialLinks');
-      }
-
-      await doc.save();
-      console.log(`[DB-SAVE] Successfully persisted catalog for ${branchId} to database.`);
+      await models.BranchCatalog.findOneAndUpdate(
+        { branch: branchId },
+        { $set: updateData },
+        { upsert: true, new: true, runValidators: true }
+      );
+      console.log(`[DB-SAVE] Successfully persisted catalog for ${branchId} to database using atomic update.`);
     } catch (err) {
       console.error(`[DB-SAVE-ERROR] Failed to save catalog for ${branchId}:`, err);
       throw err;
