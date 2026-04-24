@@ -205,6 +205,42 @@ const Index = () => {
         </div>
       </section>
 
+      {/* SEO Keywords Section */}
+      <section className="py-24 border-t border-border bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="mb-10 font-display text-3xl font-bold text-foreground">Premium Celebration Venues in Andhra Pradesh</h2>
+            <div className="grid md:grid-cols-2 gap-12 text-sm text-muted-foreground leading-relaxed font-body">
+              <div className="space-y-4">
+                <p>
+                  Looking for the <strong>best birthday celebration places</strong> or a <strong>surprise birthday party hall</strong>? 
+                  Friends & Memories offers the most elegant <strong>private theatre booking near me</strong> services in Eluru and Bhimavaram. 
+                  Whether it's a <strong>mini theatre booking</strong> for a movie night or a <strong>romantic proposal place</strong>, 
+                  our venues are designed to make your moments special.
+                </p>
+                <p>
+                  We are the top-rated <strong>party hall in Bhimavaram</strong> and <strong>private theatre in Eluru</strong>. 
+                  Our <strong>birthday party hall booking</strong> process is simple and online, making it the most 
+                  convenient <strong>celebration venue booking</strong> platform in AP.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <p>
+                  Our <strong>mini theatre for birthday celebration</strong> comes with high-end 4K projectors and 
+                  professional sound systems. For those seeking a <strong>private theatre for couples</strong> or a 
+                  <strong>couple celebration room</strong>, we provide complete privacy with custom decorations.
+                </p>
+                <p>
+                  From <strong>engagement celebration halls</strong> to <strong>small party places for friends</strong>, 
+                  we cater to all group sizes. If you are on a budget, we offer <strong>low price party hall near me</strong> 
+                  options and <strong>affordable private theatre</strong> packages without compromising on quality.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <ReviewSection />
 
       {/* Footer */}
