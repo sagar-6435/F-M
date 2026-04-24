@@ -830,7 +830,7 @@ const BookingPage = () => {
                                       e.stopPropagation();
                                       update({ selectedCake: { ...cake, ...v } });
                                     }}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                       booking.selectedCake?.id === cake.id && booking.selectedCake.quantity === v.quantity
                                         ? "bg-primary text-white border-primary shadow-sm"
                                         : "bg-background text-muted-foreground border-border hover:border-primary/50"
