@@ -18,7 +18,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="container 3xl:max-w-[1800px] 4xl:max-w-[2400px] mx-auto flex items-center justify-between px-4 py-4 3xl:py-8">
         <Link to="/" className="flex items-center gap-3 md:gap-6 shrink-0 transition-opacity hover:opacity-80">
-          <img src="/logo.png" alt="F&M Logo" className="h-8 w-8 md:h-10 md:w-10 3xl:h-14 3xl:w-14 object-contain" />
+          <img src="/logo.png" alt="F&M Logo" className="h-8 w-auto md:h-10 3xl:h-14 object-contain" />
           <span
             className="text-base md:text-xl 3xl:text-3xl font-bold tracking-widest text-primary uppercase"
             style={{ fontFamily: "var(--font-brand)" }}

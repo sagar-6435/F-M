@@ -799,7 +799,7 @@ const BookingPage = () => {
                           className={`rounded-xl border overflow-hidden transition-all text-left ${booking.selectedCake?.id === cake.id ? "border-primary bg-muted shadow-md" : "border-border hover:border-primary"
                             }`}
                         >
-                          <div className="aspect-video bg-muted overflow-hidden relative">
+                          <div className="aspect-square bg-muted overflow-hidden relative">
                             {cake.image ? (
                               <img src={cake.image} alt={cake.name} className="w-full h-full object-cover" />
                             ) : (
@@ -850,7 +850,7 @@ const BookingPage = () => {
                           className={`rounded-xl border overflow-hidden transition-all text-left ${selected ? "border-primary bg-muted shadow-md ring-1 ring-primary/30" : "border-border hover:border-primary"
                             }`}
                         >
-                          <div className="aspect-video bg-muted overflow-hidden relative">
+                          <div className="aspect-square bg-muted overflow-hidden relative">
                             {item.image ? (
                               <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                             ) : (

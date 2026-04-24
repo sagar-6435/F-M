@@ -1792,8 +1792,8 @@ const AdminDashboard = () => {
               {uploadingHero && <p className="text-xs text-primary">Uploading hero image...</p>}
               <div className="grid gap-3 md:grid-cols-3">
                 {heroImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-video rounded-xl border border-border overflow-hidden group">
-                    <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-cover" />
+                  <div key={idx} className="relative aspect-video rounded-xl border border-border overflow-hidden group bg-black">
+                    <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-contain" />
                     <button
                       onClick={() => handleDeleteHero(idx)}
                       className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1828,7 +1828,7 @@ const AdminDashboard = () => {
               <div className="grid gap-3 md:grid-cols-2">
                 {testimonials.map((item) => (
                   <div key={item.id} className="rounded-xl border border-border p-3 space-y-2">
-                    <img src={item.image} alt={item.title || "Testimonial"} className="h-32 w-full rounded-lg object-cover" />
+                    <img src={item.image} alt={item.title || "Testimonial"} className="h-48 w-full rounded-lg object-contain bg-black/50 border border-border" />
                     <p className="text-sm font-medium text-foreground">{item.title || "Customer Memory"}</p>
                     <button
                       onClick={() => handleDeleteTestimonial(item.id)}

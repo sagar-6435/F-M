@@ -135,7 +135,7 @@ const GalleryPage = () => {
               <img
                 src={galleryImages[selectedImage].src}
                 alt={galleryImages[selectedImage].alt}
-                className="w-full h-auto rounded-lg"
+                className="w-full max-h-[85vh] object-contain rounded-lg"
               />
 
               {/* Image info */}
