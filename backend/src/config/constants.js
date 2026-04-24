@@ -50,7 +50,7 @@ export const globalDb = {
       phone: '+91 99127 10933',
       mapLink: 'https://maps.app.goo.gl/hc31fqJaDx6Veqkv7',
       capacity: 80,
-      amenities: ['AC', 'Sound System', 'LED Screen'],
+      amenities: ['AC', 'Sound System', '4K Screen'],
       createdAt: new Date(),
       updatedAt: new Date(),
     },

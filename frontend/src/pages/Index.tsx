@@ -102,7 +102,7 @@ const Index = () => {
             Memories
           </h1>
           <p className="mb-8 md:mb-10 max-w-xl 3xl:max-w-4xl text-base md:text-lg 3xl:text-3xl leading-relaxed text-muted-foreground font-body animate-slide-up delay-100">
-            Book the <strong>best private theatre in Eluru</strong> or a <strong>premium party hall in Bhimavaram</strong> for birthdays, anniversaries, proposals, or just a night out with friends. Affordable packages with custom decorations and cake.
+            Book the <strong>best private theatre in Eluru</strong> or a <strong>premium private theatre in Bhimavaram</strong> for birthdays, anniversaries, proposals, or just a night out with friends. Affordable packages with custom decorations and cake.
           </p>
           <div className="flex flex-wrap items-center gap-4 animate-slide-up delay-200">
             <Link
@@ -148,7 +148,7 @@ const Index = () => {
                 <div className="p-8">
                   <h3 className="mb-3 font-display text-3xl font-bold text-gradient-gold">{service.title}</h3>
                   <p className="mb-5 text-sm leading-relaxed text-muted-foreground font-body">
-                    Looking for a <strong>party hall with decoration in Bhimavaram</strong> or a <strong>private theatre with cake in Eluru</strong>? Our combined pack offers the perfect celebration space for any occasion.
+                    Looking for a <strong>private party theatre in Bhimavaram</strong> or a <strong>private theatre with cake in Eluru</strong>? Our combined pack offers the perfect celebration space for any occasion.
                   </p>
                   <div className="grid md:grid-cols-2 gap-4 mb-8">
                     {service.features.map((f) => (
@@ -261,7 +261,7 @@ const Index = () => {
             </div>
 
             <p className="text-xs text-muted-foreground font-body border-t border-border/50 pt-6 w-full text-center">
-              © 2024 Friends & Memories. Your go-to place for <strong>private theatre booking in Eluru</strong> and <strong>celebration hall in Bhimavaram</strong>.
+              © 2024 Friends & Memories. Your go-to place for <strong>private theatre booking in Eluru</strong> and <strong>best private theatre in Bhimavaram</strong>.
             </p>
           </div>
         </div>
