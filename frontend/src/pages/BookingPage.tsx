@@ -367,9 +367,9 @@ const BookingPage = () => {
           order_id: paymentResponse.orderId,
           amount: paymentResponse.amount,
           currency: paymentResponse.currency,
-          name: "F&M Cakes & Desserts",
-          description: "Cake Booking Payment",
-          image: "https://razorpay.com/i/logo.png",
+          name: "Friends&Memories",
+          description: "Order Payment",
+          image: "/logo.png",
           notes: {
             bookingId: createdBooking.id,
             paymentType: paymentType
@@ -454,7 +454,7 @@ const BookingPage = () => {
             contact: booking.phone
           },
           theme: {
-            color: "#FFD700",
+            color: "#F59E0B",
             backdrop_color: "rgba(0, 0, 0, 0.1)"
           },
           retry: {
