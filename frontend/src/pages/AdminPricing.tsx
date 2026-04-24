@@ -379,11 +379,12 @@ const AdminPricing = () => {
               <div key={service} className="border border-border rounded-lg p-6">
                 <h3 className="font-semibold text-lg mb-4 capitalize">{service.replace("-", " ")}</h3>
                 <div className="space-y-3">
-                  {Object.entries(durations).map(([duration, price]) => {
+                  {[1, 2, 3, 4].map((duration) => {
+                    const price = (durations as any)[duration] || (durations as any)[String(duration)] || 0;
                     const isEditing = editingId === `${service}-${duration}`;
                     return (
                       <div key={`${service}-${duration}`} className="flex items-center justify-between bg-muted p-3 rounded-lg">
-                        <span className="font-medium">{duration} Hour{duration !== "1" ? "s" : ""}</span>
+                        <span className="font-medium">{duration} Hour{duration !== 1 ? "s" : ""}</span>
                         {isEditing ? (
                           <div className="flex flex-col flex-1 gap-2">
                             <div className="grid grid-cols-2 gap-3">
@@ -481,6 +482,13 @@ const AdminPricing = () => {
                         onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                         className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       />
+                      <input
+                        type="text"
+                        placeholder="Quantity (e.g. 1/2 kg, 1kg, 2kg)"
+                        value={editValues.quantity || ""}
+                        onChange={(e) => setEditValues({ ...editValues, quantity: e.target.value })}
+                        className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
                       <div className="space-y-3">
                         <label className="text-sm font-semibold text-muted-foreground">Anniversary Offer Pricing</label>
                         <div className="grid grid-cols-2 gap-4">
@@ -531,16 +539,18 @@ const AdminPricing = () => {
                       <div>
                         <h4 className="font-semibold text-lg">{cake.name}</h4>
                         <p className="text-sm text-muted-foreground">{cake.description}</p>
-                        <div className="flex items-center gap-3 mt-2">
-                          {cake.offerPrice !== undefined && cake.offerPrice !== null ? (
-                            <>
-                              <p className="font-bold text-green-500">₹{cake.offerPrice}</p>
-                              <p className="text-sm line-through text-muted-foreground">₹{cake.originalPrice || cake.price}</p>
-                            </>
-                          ) : (
-                            <p className="font-bold text-primary">₹{cake.price}</p>
-                          )}
-                        </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(cake.variants || [{ quantity: cake.quantity || '1kg', price: cake.price, offerPrice: cake.offerPrice }]).map((v: any, i: number) => (
+                              <div key={i} className="bg-muted px-3 py-1 rounded-full border border-border text-xs">
+                                <span className="font-bold text-foreground">{v.quantity}: </span>
+                                {v.offerPrice ? (
+                                  <span className="text-green-600 font-bold">₹{v.offerPrice} <span className="text-muted-foreground/50 line-through font-normal text-[10px]">₹{v.price}</span></span>
+                                ) : (
+                                  <span className="text-primary font-bold">₹{v.price}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -566,7 +576,7 @@ const AdminPricing = () => {
             <Button
               onClick={() => {
                 setEditingId("new-cake");
-                setEditValues({ name: "", price: 0, description: "" });
+                setEditValues({ name: "", description: "", variants: [{ quantity: "1kg", price: 0 }] });
               }}
               className="w-full bg-primary text-primary-foreground"
             >
@@ -588,40 +598,78 @@ const AdminPricing = () => {
                   onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
                   className="w-full px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex gap-2">
-                    <span>₹</span>
-                    <input
-                      type="number"
-                      placeholder="Regular Price"
-                      value={editValues.price}
-                      onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                      className="flex-1 px-3 py-2 border border-primary rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                <div className="space-y-3 border-t border-border pt-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-muted-foreground uppercase">Price Variants</label>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditValues({ ...editValues, variants: [...(editValues.variants || []), { quantity: "", price: 0 }] })}
+                      className="text-xs"
+                    >
+                      + Add Variant
+                    </Button>
                   </div>
-                  <div className="flex gap-2">
-                    <span>₹</span>
-                    <input
-                      type="number"
-                      placeholder="Original Price"
-                      value={editValues.originalPrice || ""}
-                      onChange={(e) => setEditValues({ ...editValues, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
-                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <span>₹</span>
-                    <input
-                      type="number"
-                      placeholder="Offer Price"
-                      value={editValues.offerPrice || ""}
-                      onChange={(e) => setEditValues({ ...editValues, offerPrice: e.target.value ? Number(e.target.value) : undefined })}
-                      className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-card placeholder:text-muted-foreground caret-foreground focus:outline-none focus:ring-2 focus:ring-primary text-green-500"
-                    />
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <p>💡 For Anniversary with offer: Set Original Price and Offer Price</p>
+                  {(editValues.variants || []).map((v: any, idx: number) => (
+                    <div key={idx} className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Quantity (e.g. 1kg)"
+                          value={v.quantity}
+                          onChange={(e) => {
+                            const newVariants = [...editValues.variants];
+                            newVariants[idx].quantity = e.target.value;
+                            setEditValues({ ...editValues, variants: newVariants });
+                          }}
+                          className="px-3 py-1.5 text-xs border border-border rounded bg-card"
+                        />
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">₹</span>
+                          <input
+                            type="number"
+                            placeholder="Price"
+                            value={v.price}
+                            onChange={(e) => {
+                              const newVariants = [...editValues.variants];
+                              newVariants[idx].price = Number(e.target.value);
+                              setEditValues({ ...editValues, variants: newVariants });
+                            }}
+                            className="w-full px-3 py-1.5 text-xs border border-border rounded bg-card"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-green-600">₹</span>
+                          <input
+                            type="number"
+                            placeholder="Offer Price"
+                            value={v.offerPrice || ""}
+                            onChange={(e) => {
+                              const newVariants = [...editValues.variants];
+                              newVariants[idx].offerPrice = e.target.value ? Number(e.target.value) : undefined;
+                              setEditValues({ ...editValues, variants: newVariants });
+                            }}
+                            className="w-full px-3 py-1.5 text-xs border border-green-200 rounded bg-card text-green-600 font-bold"
+                          />
+                        </div>
+                        {editValues.variants?.length > 1 && (
+                          <Button 
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const newVariants = editValues.variants.filter((_: any, i: number) => i !== idx);
+                              setEditValues({ ...editValues, variants: newVariants });
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={handleSaveCake} className="bg-primary text-primary-foreground">

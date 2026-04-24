@@ -112,7 +112,7 @@ router.post('/cakes', verifyAdmin, async (req, res) => {
     const resolved = await catalogController.getCatalogOrSendError(req, res, true);
     if (!resolved) return;
     const { branch, catalog } = resolved;
-    const { name, price, description, image, originalPrice, offerPrice } = req.body;
+    const { name, price, description, image, originalPrice, offerPrice, quantity } = req.body;
 
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
@@ -124,6 +124,7 @@ router.post('/cakes', verifyAdmin, async (req, res) => {
       price,
       description,
       image: imageUrl,
+      quantity: quantity || '1kg',
       ...(originalPrice !== undefined && { originalPrice }),
       ...(offerPrice !== undefined && { offerPrice })
     };

@@ -101,7 +101,7 @@ const AdminDashboard = () => {
   const [editValues, setEditValues] = useState<any>({});
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0, fourHours: 0 });
-  const [newCake, setNewCake] = useState({ name: "", description: "", price: 0, image: "", quantity: "1kg" });
+  const [newCake, setNewCake] = useState({ name: "", description: "", image: "", variants: [{ quantity: "1kg", price: 0, offerPrice: undefined }] });
   const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "" });
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [uploadingHero, setUploadingHero] = useState(false);
@@ -1429,11 +1429,12 @@ const AdminDashboard = () => {
                   <div key={service} className="border border-border rounded-lg p-6">
                     <h3 className="font-semibold text-lg mb-4 capitalize">{service.replace("-", " ")}</h3>
                     <div className="space-y-3">
-                      {Object.entries(durations).map(([duration, price]) => {
+                      {[1, 2, 3, 4].map((duration) => {
+                        const price = (durations as any)[duration] || (durations as any)[String(duration)] || 0;
                         const isEditing = editingId === `${service}-${duration}`;
                         return (
                           <div key={`${service}-${duration}`} className="flex items-center justify-between bg-muted p-3 rounded-lg">
-                            <span className="font-medium text-xs">{duration} Hour{duration !== "1" ? "s" : ""}</span>
+                            <span className="font-medium text-xs">{duration} Hour{duration !== 1 ? "s" : ""}</span>
                             {isEditing ? (
                               <div className="flex flex-col flex-1 gap-2 ml-4">
                                 <div className="grid grid-cols-2 gap-2">
@@ -1518,13 +1519,76 @@ const AdminDashboard = () => {
                     onChange={(e) => setNewCake({ ...newCake, description: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                   />
-                  <input
-                    type="number"
-                    placeholder="Price"
-                    value={newCake.price}
-                    onChange={(e) => setNewCake({ ...newCake, price: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
-                  />
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-muted-foreground uppercase">Price Variants</label>
+                      <button 
+                        onClick={() => setNewCake({ ...newCake, variants: [...newCake.variants, { quantity: "", price: 0 }] })}
+                        className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-full font-bold hover:bg-primary/20 transition-colors"
+                      >
+                        + Add Variant
+                      </button>
+                    </div>
+                    {newCake.variants.map((v, idx) => (
+                      <div key={idx} className="grid grid-cols-3 gap-2 items-end bg-muted/30 p-2 rounded-lg border border-border/50">
+                        <div>
+                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Quantity</label>
+                          <input
+                            type="text"
+                            placeholder="1kg"
+                            value={v.quantity}
+                            onChange={(e) => {
+                              const newVariants = [...newCake.variants];
+                              newVariants[idx].quantity = e.target.value;
+                              setNewCake({ ...newCake, variants: newVariants });
+                            }}
+                            className="w-full px-2 py-1 text-xs border border-border rounded bg-background"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Price (₹)</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={v.price}
+                            onChange={(e) => {
+                              const newVariants = [...newCake.variants];
+                              newVariants[idx].price = Number(e.target.value);
+                              setNewCake({ ...newCake, variants: newVariants });
+                            }}
+                            className="w-full px-2 py-1 text-xs border border-border rounded bg-background"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] font-bold text-green-600 block mb-1">Offer (₹)</label>
+                            <input
+                              type="number"
+                              placeholder="Opt"
+                              value={v.offerPrice || ""}
+                              onChange={(e) => {
+                                const newVariants = [...newCake.variants];
+                                newVariants[idx].offerPrice = e.target.value ? Number(e.target.value) : undefined;
+                                setNewCake({ ...newCake, variants: newVariants });
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-green-200 rounded bg-background text-green-600"
+                            />
+                          </div>
+                          {newCake.variants.length > 1 && (
+                            <button 
+                              onClick={() => {
+                                const newVariants = newCake.variants.filter((_, i) => i !== idx);
+                                setNewCake({ ...newCake, variants: newVariants });
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   <input
                     type="file"
                     accept="image/*"
@@ -1554,26 +1618,75 @@ const AdminDashboard = () => {
                             onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
                             className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
                           />
-                          <div className="grid grid-cols-2 gap-3">
-                             <div>
-                                <label className="text-[10px] font-bold text-muted-foreground block mb-1">Price</label>
-                                <input
-                                  type="number"
-                                  value={editValues.price || ""}
-                                  onChange={(e) => setEditValues({ ...editValues, price: Number(e.target.value) })}
-                                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
-                                />
-                             </div>
-                             <div>
-                                <label className="text-[10px] font-bold text-green-600 block mb-1">Offer Price</label>
-                                <input
-                                  type="number"
-                                  placeholder="Optional"
-                                  value={editValues.offerPrice || ""}
-                                  onChange={(e) => setEditValues({ ...editValues, offerPrice: Number(e.target.value) })}
-                                  className="w-full px-3 py-2 border-2 border-green-500/30 rounded-lg text-sm bg-background text-green-600 font-bold"
-                                />
-                             </div>
+                          <div className="space-y-2 border-t border-border pt-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-muted-foreground uppercase">Price Variants</label>
+                              <button 
+                                onClick={() => setEditValues({ ...editValues, variants: [...(editValues.variants || []), { quantity: "", price: 0 }] })}
+                                className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-full font-bold hover:bg-primary/20 transition-colors"
+                              >
+                                + Add Variant
+                              </button>
+                            </div>
+                            {(editValues.variants || [{ quantity: editValues.quantity, price: editValues.price, offerPrice: editValues.offerPrice }]).map((v: any, idx: number) => (
+                              <div key={idx} className="grid grid-cols-3 gap-2 items-end bg-muted/30 p-2 rounded-lg border border-border/50">
+                                <div>
+                                  <label className="text-[9px] font-bold text-muted-foreground block mb-1">Quantity</label>
+                                  <input
+                                    type="text"
+                                    placeholder="1kg"
+                                    value={v.quantity}
+                                    onChange={(e) => {
+                                      const newVariants = [...(editValues.variants || [{ quantity: editValues.quantity, price: editValues.price, offerPrice: editValues.offerPrice }])];
+                                      newVariants[idx].quantity = e.target.value;
+                                      setEditValues({ ...editValues, variants: newVariants });
+                                    }}
+                                    className="w-full px-2 py-1 text-xs border border-border rounded bg-background"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-muted-foreground block mb-1">Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const newVariants = [...(editValues.variants || [{ quantity: editValues.quantity, price: editValues.price, offerPrice: editValues.offerPrice }])];
+                                      newVariants[idx].price = Number(e.target.value);
+                                      setEditValues({ ...editValues, variants: newVariants });
+                                    }}
+                                    className="w-full px-2 py-1 text-xs border border-border rounded bg-background"
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <div className="flex-1">
+                                    <label className="text-[9px] font-bold text-green-600 block mb-1">Offer (₹)</label>
+                                    <input
+                                      type="number"
+                                      placeholder="Opt"
+                                      value={v.offerPrice || ""}
+                                      onChange={(e) => {
+                                        const newVariants = [...(editValues.variants || [{ quantity: editValues.quantity, price: editValues.price, offerPrice: editValues.offerPrice }])];
+                                        newVariants[idx].offerPrice = e.target.value ? Number(e.target.value) : undefined;
+                                        setEditValues({ ...editValues, variants: newVariants });
+                                      }}
+                                      className="w-full px-2 py-1 text-xs border border-green-200 rounded bg-background text-green-600"
+                                    />
+                                  </div>
+                                  {(editValues.variants?.length > 1) && (
+                                    <button 
+                                      onClick={() => {
+                                        const newVariants = editValues.variants.filter((_: any, i: number) => i !== idx);
+                                        setEditValues({ ...editValues, variants: newVariants });
+                                      }}
+                                      className="text-red-500 hover:text-red-700 p-1"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                           <input
                             type="file"
@@ -1594,17 +1707,19 @@ const AdminDashboard = () => {
                           <div className="flex items-center gap-4">
                             {cake.image && <img src={cake.image} alt={cake.name} className="w-12 h-12 rounded-lg object-cover border border-border" />}
                             <div>
-                              <h4 className="font-bold text-foreground text-sm">{cake.name} ({cake.quantity || '1kg'})</h4>
+                              <h4 className="font-bold text-foreground text-sm">{cake.name}</h4>
                               <p className="text-xs text-muted-foreground line-clamp-1">{cake.description}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {cake.offerPrice ? (
-                                  <>
-                                     <span className="font-bold text-green-600">₹{cake.offerPrice}</span>
-                                     <span className="text-[10px] line-through text-muted-foreground/60">₹{cake.price}</span>
-                                  </>
-                                ) : (
-                                  <span className="font-bold text-primary">₹{cake.price}</span>
-                                )}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {(cake.variants || [{ quantity: cake.quantity || '1kg', price: cake.price, offerPrice: cake.offerPrice }]).map((v: any, i: number) => (
+                                  <div key={i} className="bg-muted px-2 py-1 rounded border border-border text-[10px]">
+                                    <span className="font-bold text-foreground">{v.quantity}: </span>
+                                    {v.offerPrice ? (
+                                      <span className="text-green-600 font-bold">₹{v.offerPrice} <span className="text-muted-foreground/50 line-through font-normal">₹{v.price}</span></span>
+                                    ) : (
+                                      <span className="text-primary font-bold">₹{v.price}</span>
+                                    )}
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </div>
