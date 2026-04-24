@@ -331,6 +331,51 @@ export const deleteBooking = async (req, res) => {
   }
 };
 
+export const deleteMultipleBookings = async (req, res) => {
+  const { ids, code } = req.body;
+  
+  if (code !== 'sai@932') {
+    return res.status(403).json({ error: 'Invalid security code' });
+  }
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No IDs provided' });
+  }
+
+  try {
+    let deletedCount = 0;
+    for (const branchId in branchDbs) {
+      const models = getBranchModels(branchId);
+      if (models) {
+        const result = await models.Booking.deleteMany({ id: { $in: ids } });
+        if (result.deletedCount > 0) {
+          await models.TimeSlot.deleteMany({ bookingId: { $in: ids } });
+          deletedCount += result.deletedCount;
+        }
+      }
+    }
+
+    // Also check file-based
+    for (const branchId in branchDbs) {
+      const branchDb = branchDbs[branchId];
+      const initialCount = branchDb.bookings.length;
+      branchDb.bookings = branchDb.bookings.filter(b => !ids.includes(b.id));
+      branchDb.timeSlots = branchDb.timeSlots.filter(s => !ids.includes(s.bookingId));
+      
+      if (branchDb.bookings.length !== initialCount) {
+        deletedCount += (initialCount - branchDb.bookings.length);
+        await saveBookings(branchDbs);
+        await saveTimeSlots(branchDbs);
+      }
+    }
+
+    res.json({ success: true, deletedCount });
+  } catch (error) {
+    console.error('Error deleting multiple bookings:', error);
+    res.status(500).json({ error: 'Failed to delete bookings' });
+  }
+};
+
 export const getAvailability = async (req, res) => {
   const { branchId, date, service } = req.params;
   const duration = Number(req.query.duration || 1);

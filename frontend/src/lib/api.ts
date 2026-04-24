@@ -320,6 +320,22 @@ export const api = {
     return res.json();
   },
 
+  async deleteMultipleBookings(token: string, ids: string[], code: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/bookings/delete-multiple`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ids, code }),
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Failed to delete bookings");
+    }
+    return res.json();
+  },
+
   async initiateRazorpayPayment(bookingId: string, amount: number, phone: string, paymentType: string = 'full', bookingDetails: any = {}): Promise<any> {
     const res = await fetch(`${API_BASE}/payments/razorpay/initiate`, {
       method: "POST",

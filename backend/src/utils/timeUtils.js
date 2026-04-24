@@ -98,11 +98,8 @@ export const getAvailableStartSlots = (bookings = [], requestedDuration = 1) => 
 
     if (!conflict) {
       available.push(to12HourTime(currentStart));
-      currentStart += (durMinutes + buffer);
-    } else {
-      // Shift start time to immediately after the conflicting booking's buffer
-      currentStart = conflict.end + buffer;
     }
+    currentStart += 30;
   }
 
   return available;

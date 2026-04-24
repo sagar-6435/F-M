@@ -648,7 +648,7 @@ const BookingPage = () => {
                   <div>
                     <label className="mb-2 block text-sm font-medium text-foreground font-body">Duration</label>
                     <div className="flex gap-3">
-                      {[1, 2, 3].map((d) => (
+                      {[1, 2, 3, 4].map((d) => (
                         <button
                           key={d}
                           onClick={() => update({ duration: d, timeSlot: "" })}

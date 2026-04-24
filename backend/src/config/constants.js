@@ -19,12 +19,14 @@ export const defaultPricing = {
   'private-theatre-party-hall': {
     1: { price: 1500, offerPrice: 1300 },
     2: { price: 2500, offerPrice: 2000 },
-    3: { price: 5000, offerPrice: 3999 }
+    3: { price: 5000, offerPrice: 3999 },
+    4: { price: 6500, offerPrice: 5499 }
   },
   'premium-pack': {
     1: { price: 4500, offerPrice: 3999 },
     2: { price: 5500, offerPrice: 4999 },
-    3: { price: 7500, offerPrice: 5999 }
+    3: { price: 7500, offerPrice: 5999 },
+    4: { price: 9000, offerPrice: 7499 }
   }
 };
 

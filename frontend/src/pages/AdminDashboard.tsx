@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { API_BASE, api } from "@/lib/api";
 import { getEffectivePrice } from "@/lib/utils";
-import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2, X } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
-  const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0 });
+  const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0, fourHours: 0 });
   const [newCake, setNewCake] = useState({ name: "", description: "", price: 0, image: "", quantity: "1kg" });
   const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "" });
   const [heroImages, setHeroImages] = useState<string[]>([]);
@@ -114,6 +114,10 @@ const AdminDashboard = () => {
   const [socialEditData, setSocialEditData] = useState({ instagram: "", facebook: "", whatsapp: "" });
   const [savingBranch, setSavingBranch] = useState(false);
   const [branchList, setBranchList] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deletingMultiple, setDeletingMultiple] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteCode, setDeleteCode] = useState("");
 
   // Sync manual booking branch with selected branch
   useEffect(() => {
@@ -319,6 +323,45 @@ const AdminDashboard = () => {
       alert("Failed to download bookings file");
     } finally {
       setDownloadingExcel(false);
+    }
+  };
+
+  const handleToggleSelection = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(b => b.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (!token || selectedIds.length === 0) return;
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteSelected = async () => {
+    if (!deleteCode) {
+      alert("Please enter the security code");
+      return;
+    }
+
+    try {
+      setDeletingMultiple(true);
+      await api.deleteMultipleBookings(token, selectedIds, deleteCode);
+      setSelectedIds([]);
+      setDeleteCode("");
+      setShowDeleteModal(false);
+      await fetchData();
+      alert("Selected bookings deleted successfully!");
+    } catch (error: any) {
+      console.error("Error deleting multiple bookings:", error);
+      alert(error.message || "Failed to delete selected bookings");
+    } finally {
+      setDeletingMultiple(false);
     }
   };
 
@@ -542,15 +585,17 @@ const AdminDashboard = () => {
         { duration: 1, price: newService.oneHour },
         { duration: 2, price: newService.twoHours },
         { duration: 3, price: newService.threeHours },
+        { duration: 4, price: newService.fourHours },
       ];
       for (const update of updates) {
+        if (update.price <= 0) continue; // Skip if price not set
         await fetch(`${API_BASE}/pricing?branch=${encodeURIComponent(selectedBranch)}`, {
           method: "PUT",
           headers,
           body: JSON.stringify({ service, duration: update.duration, price: update.price, branch: selectedBranch }),
         });
       }
-      setNewService({ name: "", oneHour: 0, twoHours: 0, threeHours: 0 });
+      setNewService({ name: "", oneHour: 0, twoHours: 0, threeHours: 0, fourHours: 0 });
       await fetchPricing();
     } catch (error) {
       console.error("Error creating service:", error);
@@ -817,6 +862,16 @@ const AdminDashboard = () => {
                 <Download className="h-3 w-3" />
                 {downloadingExcel ? "Downloading..." : "Download Excel"}
               </button>
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={deletingMultiple}
+                  className="flex items-center gap-1.5 rounded-full border border-red-600 bg-red-50 px-4 py-2 text-xs font-medium text-red-600 transition-all hover:bg-red-100 disabled:opacity-50 font-body"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {deletingMultiple ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+                </button>
+              )}
             </div>
 
             {/* Stats */}
@@ -906,6 +961,14 @@ const AdminDashboard = () => {
                 <table className="w-full text-sm font-body">
                   <thead className="border-b border-border bg-muted">
                     <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          onChange={handleSelectAll}
+                          checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                          className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                        />
+                      </th>
                       {["ID", "Name", "Service", "Date", "Time", "Status", "Payment", "Paid", "Balance", "Total", "Booked At", ""].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                       ))}
@@ -913,7 +976,15 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {filtered.map((b) => (
-                      <tr key={b.id} className="border-b border-border hover:bg-muted transition-colors">
+                      <tr key={b.id} className={`border-b border-border hover:bg-muted transition-colors ${selectedIds.includes(b.id) ? "bg-primary/5" : ""}`}>
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(b.id)}
+                            onChange={() => handleToggleSelection(b.id)}
+                            className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                          />
+                        </td>
                         <td className="px-4 py-3 text-foreground font-medium">{b.id}</td>
                         <td className="px-4 py-3 text-foreground">{b.name}</td>
                         <td className="px-4 py-3 text-foreground capitalize">{b.service.replace(/-/g, ' ')}</td>
@@ -1207,6 +1278,7 @@ const AdminDashboard = () => {
                     <option value="1">1 Hour</option>
                     <option value="2">2 Hours</option>
                     <option value="3">3 Hours</option>
+                    <option value="4">4 Hours</option>
                   </select>
                 </div>
               </div>
@@ -1339,6 +1411,13 @@ const AdminDashboard = () => {
                       placeholder="3 Hour Price"
                       value={newService.threeHours}
                       onChange={(e) => setNewService({ ...newService, threeHours: Number(e.target.value) })}
+                      className="px-3 py-2 border border-border rounded text-foreground bg-background"
+                    />
+                    <input
+                      type="number"
+                      placeholder="4 Hour Price"
+                      value={newService.fourHours}
+                      onChange={(e) => setNewService({ ...newService, fourHours: Number(e.target.value) })}
                       className="px-3 py-2 border border-border rounded text-foreground bg-background"
                     />
                   </div>
@@ -1759,6 +1838,69 @@ const AdminDashboard = () => {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete History Security Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md overflow-hidden rounded-3xl bg-background shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="relative p-8">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteCode("");
+                  }}
+                  className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground transition-all hover:bg-muted"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+
+                <div className="mb-6 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <Trash2 className="h-8 w-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground font-display">Confirm Deletion</h2>
+                  <p className="mt-2 text-muted-foreground font-body">
+                    You are about to delete <span className="font-bold text-red-600">{selectedIds.length}</span> selected bookings. This action cannot be undone.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground font-body">
+                      Enter Security Code
+                    </label>
+                    <input
+                      type="password"
+                      value={deleteCode}
+                      onChange={(e) => setDeleteCode(e.target.value)}
+                      placeholder="Enter code to confirm"
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-body"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowDeleteModal(false);
+                        setDeleteCode("");
+                      }}
+                      className="flex-1 rounded-xl border border-border px-4 py-3 font-semibold text-foreground transition-all hover:bg-muted font-body"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteSelected}
+                      disabled={deletingMultiple}
+                      className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-all hover:bg-red-700 disabled:opacity-50 shadow-lg shadow-red-600/20 font-body"
+                    >
+                      {deletingMultiple ? "Deleting..." : "Delete Permanently"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
