@@ -1,7 +1,7 @@
 import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-const heroImg = "/hero-theatre.webp";
+const heroImg = "/hero-theatre.jpg";
 import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
 import { api, type Branch } from "@/lib/api";
@@ -23,7 +23,7 @@ const Index = () => {
         ]);
         setBranches(bData);
         setHeroImages(hData.length > 0 ? hData : [heroImg]); // Fallback to static if empty
-        
+
         // Fetch socials for all branches
         const socialPromises = bData.map(async (b) => {
           const s = await api.getSocialLinks(b.id);
@@ -56,30 +56,28 @@ const Index = () => {
         <div className="hero-placeholder" />
         <div className="absolute inset-0">
           {heroImages.map((img, idx) => (
-            <div 
+            <div
               key={idx}
               className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentHero ? "opacity-100" : "opacity-0"}`}
             >
-              <img 
-                src={img} 
-                alt={`Premium experience ${idx}`} 
-                className="h-full w-full object-cover" 
-                width={1920} 
+              <img
+                src={img}
+                alt={`Premium experience ${idx}`}
+                className="h-full w-full object-cover"
+                width={1920}
                 height={1080}
-                fetchpriority={idx === 0 ? "high" : "low"}
-                loading={idx === 0 ? "eager" : "lazy"}
-                decoding="async"
+                fetchPriority={idx === 0 ? "high" : "low"}
               />
             </div>
           ))}
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
-          
+
           {heroImages.length > 1 && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-2">
               {heroImages.map((_, i) => (
-                <button 
-                  key={i} 
+                <button
+                  key={i}
                   onClick={() => setCurrentHero(i)}
                   aria-label={`Go to slide ${i + 1}`}
                   className={`h-1.5 transition-all rounded-full ${i === currentHero ? "w-8 bg-primary" : "w-2 bg-white/30"}`}
@@ -213,26 +211,26 @@ const Index = () => {
             <div className="grid md:grid-cols-2 gap-12 text-sm text-muted-foreground leading-relaxed font-body">
               <div className="space-y-4">
                 <p>
-                  Looking for the <strong>best birthday celebration places</strong> or a <strong>surprise birthday party hall</strong>? 
-                  Friends & Memories offers the most elegant <strong>private theatre booking near me</strong> services in Eluru and Bhimavaram. 
-                  Whether it's a <strong>mini theatre booking</strong> for a movie night or a <strong>romantic proposal place</strong>, 
+                  Looking for the <strong>best birthday celebration places</strong> or a <strong>surprise birthday party hall</strong>?
+                  Friends & Memories offers the most elegant <strong>private theatre booking near me</strong> services in Eluru and Bhimavaram.
+                  Whether it's a <strong>mini theatre booking</strong> for a movie night or a <strong>romantic proposal place</strong>,
                   our venues are designed to make your moments special.
                 </p>
                 <p>
-                  We are the top-rated <strong>party hall in Bhimavaram</strong> and <strong>private theatre in Eluru</strong>. 
-                  Our <strong>birthday party hall booking</strong> process is simple and online, making it the most 
+                  We are the top-rated <strong>party hall in Bhimavaram</strong> and <strong>private theatre in Eluru</strong>.
+                  Our <strong>birthday party hall booking</strong> process is simple and online, making it the most
                   convenient <strong>celebration venue booking</strong> platform in AP.
                 </p>
               </div>
               <div className="space-y-4">
                 <p>
-                  Our <strong>mini theatre for birthday celebration</strong> comes with high-end 4K projectors and 
-                  professional sound systems. For those seeking a <strong>private theatre for couples</strong> or a 
+                  Our <strong>mini theatre for birthday celebration</strong> comes with high-end 4K projectors and
+                  professional sound systems. For those seeking a <strong>private theatre for couples</strong> or a
                   <strong>couple celebration room</strong>, we provide complete privacy with custom decorations.
                 </p>
                 <p>
-                  From <strong>engagement celebration halls</strong> to <strong>small party places for friends</strong>, 
-                  we cater to all group sizes. If you are on a budget, we offer <strong>low price party hall near me</strong> 
+                  From <strong>engagement celebration halls</strong> to <strong>small party places for friends</strong>,
+                  we cater to all group sizes. If you are on a budget, we offer <strong>low price party hall near me</strong>
                   options and <strong>affordable private theatre</strong> packages without compromising on quality.
                 </p>
               </div>
@@ -248,7 +246,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-center space-y-6">
             <p className="font-display text-3xl font-bold text-gradient-gold italic">Friends & Memories</p>
-            
+
             <div className="grid gap-10 md:grid-cols-2 mt-8 w-full">
               {branches.map((branch) => {
                 const socials = branchSocials[branch.id] || { instagram: "", facebook: "", whatsapp: "" };
@@ -266,10 +264,10 @@ const Index = () => {
                           <Facebook className="h-5 w-5" />
                         </a>
                       )}
-                      <a 
-                        href={`https://wa.me/91${(socials.whatsapp || branch.phone).replace(/\+/g, "").replace(/\s/g, "")}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={`https://wa.me/91${(socials.whatsapp || branch.phone).replace(/\+/g, "").replace(/\s/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         aria-label="WhatsApp"
                         className="p-3 rounded-full border border-border text-muted-foreground transition-all hover:border-[#25D366] hover:text-[#25D366] hover:glow-gold"
                       >
@@ -282,18 +280,18 @@ const Index = () => {
             </div>
 
             <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground font-body">
-               <Link to="/" className="hover:text-primary">Home</Link>
-               <Link to="/about" className="hover:text-primary">About Us</Link>
-               <Link to="/gallery" className="hover:text-primary">Gallery</Link>
-               <Link to="/booking" className="hover:text-primary">Booking</Link>
-               <Link to="/contact" className="hover:text-primary">Contact</Link>
+              <Link to="/" className="hover:text-primary">Home</Link>
+              <Link to="/about" className="hover:text-primary">About Us</Link>
+              <Link to="/gallery" className="hover:text-primary">Gallery</Link>
+              <Link to="/booking" className="hover:text-primary">Booking</Link>
+              <Link to="/contact" className="hover:text-primary">Contact</Link>
             </div>
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-widest text-muted-foreground/60 font-body">
-               <Link to="/terms" className="hover:text-primary">Terms & Conditions</Link>
-               <Link to="/privacy" className="hover:text-primary">Privacy Policy</Link>
-               <Link to="/refund-cancellation" className="hover:text-primary">Refund & Cancellation</Link>
-               <Link to="/shipping-delivery" className="hover:text-primary">Shipping & Delivery</Link>
+              <Link to="/terms" className="hover:text-primary">Terms & Conditions</Link>
+              <Link to="/privacy" className="hover:text-primary">Privacy Policy</Link>
+              <Link to="/refund-cancellation" className="hover:text-primary">Refund & Cancellation</Link>
+              <Link to="/shipping-delivery" className="hover:text-primary">Shipping & Delivery</Link>
             </div>
 
             <p className="text-xs text-muted-foreground font-body border-t border-border/50 pt-6 w-full text-center">

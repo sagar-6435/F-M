@@ -96,28 +96,27 @@ const GalleryPage = () => {
         ) : galleryImages.length === 0 ? (
           <div className="text-center text-muted-foreground">No images uploaded yet for this branch.</div>
         ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {galleryImages.map((image, index) => (
-            <div
-              key={image.id}
-              onClick={() => setSelectedImage(index)}
-              className="group relative overflow-hidden rounded-lg cursor-pointer bg-muted aspect-square"
-            >
-              <img
-                src={image.src}
-                alt={image.alt}
-                loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end p-4">
-                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <h3 className="font-semibold">{image.title}</h3>
-                  <p className="text-sm text-gray-200">{image.date}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {galleryImages.map((image, index) => (
+              <div
+                key={image.id}
+                onClick={() => setSelectedImage(index)}
+                className="group relative overflow-hidden rounded-lg cursor-pointer bg-muted aspect-square"
+              >
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end p-4">
+                  <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <h3 className="font-semibold">{image.title}</h3>
+                    <p className="text-sm text-gray-200">{image.date}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
         )}
 
         {/* Lightbox Modal */}
