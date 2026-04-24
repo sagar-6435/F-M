@@ -323,7 +323,7 @@ const AdminPricing = () => {
       <div className="container mx-auto max-w-4xl px-4">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="font-display text-4xl italic text-primary">Pricing Management</h1>
+            <h1 className="font-display text-3xl md:text-4xl italic text-primary">Pricing Management</h1>
             <p className="text-sm text-muted-foreground font-body mt-1">
               {(branchList.length > 0 ? branchList : BRANCHES).find((b) => b.id === selectedBranch)?.name}
             </p>
@@ -357,12 +357,12 @@ const AdminPricing = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-border">
+        <div className="flex gap-2 sm:gap-4 mb-8 border-b border-border overflow-x-auto scrollbar-hide">
           {(["services", "cakes", "decorations"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 font-medium transition-colors ${activeTab === tab
+              className={`pb-3 px-2 sm:px-4 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab
                   ? "border-b-2 border-primary text-primary"
                   : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -387,7 +387,7 @@ const AdminPricing = () => {
                         <span className="font-medium">{duration} Hour{duration !== 1 ? "s" : ""}</span>
                         {isEditing ? (
                           <div className="flex flex-col flex-1 gap-2">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div>
                                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Original</label>
                                 <div className="flex items-center gap-1">

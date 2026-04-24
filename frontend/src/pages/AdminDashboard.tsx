@@ -778,57 +778,26 @@ const AdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="mb-8 flex gap-2 border-b border-border">
-          <button
-            onClick={() => setActiveTab("bookings")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "bookings"
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Calendar className="inline h-4 w-4 mr-2" />
-            Bookings
-          </button>
-          <button
-            onClick={() => setActiveTab("manual")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "manual"
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Plus className="inline h-4 w-4 mr-2" />
-            Manual Booking (Cash)
-          </button>
-          <button
-            onClick={() => setActiveTab("pricing")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "pricing"
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Settings className="inline h-4 w-4 mr-2" />
-            Pricing
-          </button>
-          <button
-            onClick={() => setActiveTab("gallery")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "gallery"
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Eye className="inline h-4 w-4 mr-2" />
-            Gallery
-          </button>
-          <button
-            onClick={() => setActiveTab("settings")}
-            className={`px-4 py-3 text-sm font-medium transition-all font-body ${activeTab === "settings"
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Settings className="inline h-4 w-4 mr-2" />
-            Settings
-          </button>
+        <div className="mb-8 flex gap-1 sm:gap-2 border-b border-border overflow-x-auto scrollbar-hide">
+          {[
+            { id: "bookings", label: "Bookings", icon: Calendar },
+            { id: "manual", label: "Manual Booking", icon: Plus },
+            { id: "pricing", label: "Pricing", icon: Settings },
+            { id: "gallery", label: "Gallery", icon: Eye },
+            { id: "settings", label: "Settings", icon: Settings },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium transition-all font-body whitespace-nowrap flex items-center gap-2 ${activeTab === tab.id
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {error && (
@@ -876,7 +845,7 @@ const AdminDashboard = () => {
 
             {/* Stats */}
             {stats && (
-              <div className="mb-8 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+              <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {[
                   { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "text-primary" },
                   { label: "Paid Slots", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
@@ -1226,7 +1195,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Time Slot & Duration */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="manual-timeSlot" className="mb-2 block text-sm font-medium text-foreground font-body">Time Slot</label>
                   <select
@@ -1284,7 +1253,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Customer Details */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="manual-name" className="mb-2 block text-sm font-medium text-foreground font-body">Name</label>
                   <input
@@ -1391,7 +1360,7 @@ const AdminDashboard = () => {
                     onChange={(e) => setNewService({ ...newService, name: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded text-foreground bg-background"
                   />
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <input
                       type="number"
                       placeholder="1 Hour Price"
@@ -1437,7 +1406,7 @@ const AdminDashboard = () => {
                             <span className="font-medium text-xs">{duration} Hour{duration !== 1 ? "s" : ""}</span>
                             {isEditing ? (
                               <div className="flex flex-col flex-1 gap-2 ml-4">
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   <div>
                                     <label className="text-[10px] font-bold text-muted-foreground block">Original</label>
                                     <input

@@ -31,7 +31,9 @@
         "id": "cake-2",
         "name": "Red Velvet Dream",
         "price": 899,
-        "description": "Cream cheese frosted perfection"
+        "description": "Cream cheese frosted perfection",
+        "image": "https://res.cloudinary.com/dzgz1epov/image/upload/v1777063681/f-m-elr/cakes/vnk0gk7nygyzr8olnfm7.jpg",
+        "branch": "branch-1"
       },
       {
         "id": "cake-3",
