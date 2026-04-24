@@ -97,9 +97,7 @@ const Index = () => {
             </p>
           </div>
           <h1 className="mb-6 max-w-4xl 3xl:max-w-6xl font-display text-4xl font-bold leading-tight text-foreground md:text-7xl 3xl:text-9xl animate-slide-up">
-            Create{" "}
-            <span className="text-gradient-gold">Unforgettable</span>{" "}
-            Memories
+            Best <span className="text-gradient-gold">Private Theatre</span> & Party Hall
           </h1>
           <p className="mb-8 md:mb-10 max-w-xl 3xl:max-w-4xl text-base md:text-lg 3xl:text-3xl leading-relaxed text-muted-foreground font-body animate-slide-up delay-100">
             Book the <strong>best private theatre in Eluru</strong> or a <strong>premium private theatre in Bhimavaram</strong> for birthdays, anniversaries, proposals, or just a night out with friends. Affordable packages with custom decorations and cake.

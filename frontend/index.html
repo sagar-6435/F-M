@@ -64,17 +64,32 @@
     <meta name="twitter:image" content="/og-image.jpg" />
     <link rel="canonical" href="https://www.friendsandmemories.in" />
 
-    <!-- Local Business Schema -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "LocalBusiness",
+      "@type": "Organization",
       "name": "Friends & Memories",
-      "image": "https://www.friendsandmemories.in/logo.png",
       "url": "https://www.friendsandmemories.in",
-      "telephone": "+919912710932",
-      "address": [
-        {
+      "logo": "https://www.friendsandmemories.in/logo.png",
+      "sameAs": [
+        "https://instagram.com/friends_and_memories_elr",
+        "https://facebook.com/friendsandmemories"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "MovieTheater",
+        "name": "Friends & Memories - Eluru",
+        "image": "https://www.friendsandmemories.in/hero-theatre.jpg",
+        "@id": "https://www.friendsandmemories.in/#branch-1",
+        "url": "https://www.friendsandmemories.in",
+        "telephone": "+919912710932",
+        "priceRange": "₹1500-₹7500",
+        "address": {
           "@type": "PostalAddress",
           "streetAddress": "Mulpuri Nageswar Rao St",
           "addressLocality": "Eluru",
@@ -82,18 +97,64 @@
           "postalCode": "534006",
           "addressCountry": "IN"
         },
-        {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 16.7107,
+          "longitude": 81.1035
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "10:00",
+          "closes": "23:59"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "EventVenue",
+        "name": "Friends & Memories - Bhimavaram",
+        "image": "https://www.friendsandmemories.in/hero-theatre.jpg",
+        "@id": "https://www.friendsandmemories.in/#branch-2",
+        "url": "https://www.friendsandmemories.in",
+        "telephone": "+919912710933",
+        "priceRange": "₹1500-₹9000",
+        "address": {
           "@type": "PostalAddress",
           "streetAddress": "4-Masid St, Narasimhapuram, Kovvada",
           "addressLocality": "Bhimavaram",
           "addressRegion": "Andhra Pradesh",
           "postalCode": "534202",
           "addressCountry": "IN"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 16.5432,
+          "longitude": 81.5234
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "10:00",
+          "closes": "23:59"
         }
-      ],
-      "priceRange": "₹₹",
-      "description": "Best private theatre in Eluru and premium private theatre and party hall in Bhimavaram for birthdays and anniversaries."
-    }
+      }
+    ]
     </script>
   </head>
 
