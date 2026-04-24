@@ -53,7 +53,7 @@ const App = () => {
         <div className="min-h-screen">
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Navbar />
             <Routes>
               <Route path="/" element={<Index />} />
