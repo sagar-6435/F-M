@@ -66,7 +66,7 @@ const Index = () => {
                 className="h-full w-full object-cover" 
                 width={1920} 
                 height={1080}
-                fetchPriority={idx === 0 ? "high" : "low"}
+                fetchpriority={idx === 0 ? "high" : "low"}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
               />
