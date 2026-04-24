@@ -13,7 +13,7 @@ const AboutUs = () => {
 
         <div className="rounded-2xl border border-border bg-card p-8 md:p-12 space-y-8 animate-fade-in">
           <div className="relative h-64 overflow-hidden rounded-xl">
-            <img src={heroImg} alt="Friends & Memories Experience" className="w-full h-full object-cover" />
+            <img src={heroImg} alt="Friends & Memories Experience" className="w-full h-full object-cover" loading="lazy" />
             <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
           </div>
 

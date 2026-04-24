@@ -1,7 +1,7 @@
 import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-const heroImg = "/hero-theatre.jpg";
+const heroImg = "/hero-theatre.webp";
 import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
 import { api, type Branch } from "@/lib/api";
@@ -67,6 +67,8 @@ const Index = () => {
                 width={1920} 
                 height={1080}
                 fetchPriority={idx === 0 ? "high" : "low"}
+                loading={idx === 0 ? "eager" : "lazy"}
+                decoding="async"
               />
             </div>
           ))}
