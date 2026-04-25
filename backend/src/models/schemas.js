@@ -57,6 +57,7 @@ export const bookingSchema = new mongoose.Schema({
   paymentType: String, // 'full' or 'advance'
   amountPaid: { type: Number, default: 0 },
   balanceAmount: { type: Number, default: 0 },
+  notes: String,
   createdAt: Date,
   updatedAt: Date,
 });

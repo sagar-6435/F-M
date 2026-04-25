@@ -21,6 +21,7 @@ interface Booking {
   paymentType?: "full" | "advance";
   amountPaid?: number;
   balanceAmount?: number;
+  notes?: string;
   membersCount?: number;
   extraPersonsCharge?: number;
   createdAt?: string;
@@ -76,6 +77,8 @@ const AdminDashboard = () => {
 
   const [filter, setFilter] = useState<"all" | "pending" | "paid">("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -130,6 +133,12 @@ const AdminDashboard = () => {
   useEffect(() => {
     setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
   }, [selectedBranch]);
+
+  useEffect(() => {
+    if (selectedBooking) {
+      setAdminNotes(selectedBooking.notes || "");
+    }
+  }, [selectedBooking]);
 
   // Check for existing token and branch on mount
   useEffect(() => {
@@ -768,6 +777,23 @@ const AdminDashboard = () => {
     );
   }
 
+  const handleSaveNote = async () => {
+    if (!selectedBooking || !token) return;
+    try {
+      setIsSavingNote(true);
+      await api.updateBooking(token, selectedBooking.id, { notes: adminNotes });
+      // Update local state
+      setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, notes: adminNotes } : b));
+      setSelectedBooking(prev => prev ? { ...prev, notes: adminNotes } : null);
+      alert("Note saved successfully!");
+    } catch (err) {
+      console.error("Failed to save note:", err);
+      alert("Failed to save note");
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
   const filtered = bookings.filter((b) =>
     b.branch === selectedBranch && (filter === "all" || b.paymentStatus === filter)
   );
@@ -1118,6 +1144,26 @@ const AdminDashboard = () => {
                           </p>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Admin Notes */}
+                    <div className="rounded-xl border border-border bg-muted p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-foreground">Booking Notes</h3>
+                        <button
+                          onClick={handleSaveNote}
+                          disabled={isSavingNote}
+                          className="rounded-lg bg-primary px-3 py-1 text-xs font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
+                        >
+                          {isSavingNote ? "Saving..." : "Save Note"}
+                        </button>
+                      </div>
+                      <textarea
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        placeholder="Add internal notes about this booking (e.g., customer requests, special arrangements)..."
+                        className="w-full min-h-[100px] rounded-lg border border-border bg-background p-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                      />
                     </div>
 
                     {/* Action Buttons */}
