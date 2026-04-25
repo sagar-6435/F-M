@@ -395,11 +395,20 @@ export const getAvailability = async (req, res) => {
   try {
     let bookings = [];
     if (models) {
-      // Only get PAID bookings to mark slots as blocked
-      bookings = await models.Booking.find({ branch: branchId, date, service, paymentStatus: 'paid' });
+      // Get PAID or PARTIALLY-PAID bookings to mark slots as blocked
+      bookings = await models.Booking.find({ 
+        branch: branchId, 
+        date, 
+        service, 
+        paymentStatus: { $in: ['paid', 'partially-paid'] } 
+      });
     } else if (branchDb) {
-      // Only get PAID bookings to mark slots as blocked
-      bookings = branchDb.bookings.filter(b => b.date === date && b.service === service && b.paymentStatus === 'paid');
+      // Get PAID or PARTIALLY-PAID bookings to mark slots as blocked
+      bookings = branchDb.bookings.filter(b => 
+        b.date === date && 
+        b.service === service && 
+        ['paid', 'partially-paid'].includes(b.paymentStatus)
+      );
     }
     
     console.log(`📋 Availability check for ${branchId} on ${date} (${service}): Found ${bookings.length} paid bookings`);
