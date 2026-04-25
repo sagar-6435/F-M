@@ -17,7 +17,7 @@ interface Booking {
   phone: string;
   occasion: string;
   totalPrice: number;
-  paymentStatus: "pending" | "paid" | "cancelled";
+  paymentStatus: "pending" | "paid" | "partially-paid" | "cancelled";
   paymentType?: "full" | "advance";
   amountPaid?: number;
   balanceAmount?: number;
@@ -46,6 +46,8 @@ interface ManualBookingForm {
   phone: string;
   occasion: string;
   totalPrice: number;
+  paymentType: "full" | "advance";
+  amountPaid: number;
 }
 
 const formatServiceName = (serviceId: string) =>
@@ -89,6 +91,8 @@ const AdminDashboard = () => {
     phone: "",
     occasion: "Birthday",
     totalPrice: 0,
+    paymentType: "full",
+    amountPaid: 0,
   });
   const [submitting, setSubmitting] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -371,10 +375,17 @@ const AdminDashboard = () => {
       setSubmitting(true);
       setError(null);
 
+      const balanceAmount = manualBooking.paymentType === 'full' 
+        ? 0 
+        : Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid);
+
+      const paymentStatus = manualBooking.paymentType === 'full' ? 'paid' : 'partially-paid';
+
       const bookingData = {
         ...manualBooking,
         phone: `+91 ${manualBooking.phone}`,
-        paymentStatus: "paid", // Cash payment is marked as paid immediately
+        paymentStatus: paymentStatus,
+        balanceAmount: balanceAmount,
       };
 
       await api.createBooking(bookingData);
@@ -390,6 +401,8 @@ const AdminDashboard = () => {
         phone: "",
         occasion: "Birthday",
         totalPrice: 0,
+        paymentType: "full",
+        amountPaid: 0,
       });
 
       // Refresh bookings
@@ -1308,12 +1321,71 @@ const AdminDashboard = () => {
                   name="totalPrice"
                   type="number"
                   value={manualBooking.totalPrice}
-                  onChange={(e) => setManualBooking({ ...manualBooking, totalPrice: parseFloat(e.target.value) })}
+                  onChange={(e) => {
+                    const price = parseFloat(e.target.value) || 0;
+                    setManualBooking({ 
+                      ...manualBooking, 
+                      totalPrice: price,
+                      amountPaid: manualBooking.paymentType === 'full' ? price : manualBooking.amountPaid
+                    });
+                  }}
                   required
                   min="0"
                   className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
                   placeholder="Enter total price"
                 />
+              </div>
+
+              {/* Payment Plan */}
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-foreground font-body">Payment Plan</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setManualBooking({ 
+                      ...manualBooking, 
+                      paymentType: 'advance',
+                      amountPaid: manualBooking.totalPrice < 2500 ? 1000 : 1500
+                    })}
+                    className={`rounded-xl border p-4 text-left transition-all ${manualBooking.paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
+                  >
+                    <p className="font-bold text-sm">Advance</p>
+                    <p className="text-[10px] text-muted-foreground">Partial payment</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualBooking({ 
+                      ...manualBooking, 
+                      paymentType: 'full',
+                      amountPaid: manualBooking.totalPrice
+                    })}
+                    className={`rounded-xl border p-4 text-left transition-all ${manualBooking.paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
+                  >
+                    <p className="font-bold text-sm">Full Payment</p>
+                    <p className="text-[10px] text-muted-foreground">100% upfront</p>
+                  </button>
+                </div>
+
+                <div>
+                  <label htmlFor="manual-amountPaid" className="mb-2 block text-sm font-medium text-foreground font-body">Amount Paid (₹)</label>
+                  <input
+                    id="manual-amountPaid"
+                    name="amountPaid"
+                    type="number"
+                    value={manualBooking.amountPaid}
+                    onChange={(e) => setManualBooking({ ...manualBooking, amountPaid: parseFloat(e.target.value) || 0 })}
+                    required
+                    min="0"
+                    max={manualBooking.totalPrice}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                    placeholder="Enter amount paid"
+                  />
+                  {manualBooking.paymentType === 'advance' && (
+                    <p className="mt-2 text-xs text-muted-foreground font-body">
+                      Balance to be paid: <span className="font-bold text-red-600">₹{Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid).toLocaleString()}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Submit Button */}

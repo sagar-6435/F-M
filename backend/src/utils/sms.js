@@ -10,8 +10,6 @@ const ADMIN_PHONE_2      = process.env.ADMIN_PHONE_2;
 
 /**
  * Send an SMS to the relevant branch admin when a booking is paid.
- * Message is kept under 160 chars for Twilio trial account compatibility.
- * Upgrade to paid Twilio account for longer multi-line messages.
  * @param {Object} booking - The confirmed booking document
  */
 export const sendAdminSmsNotification = async (booking) => {
@@ -20,6 +18,7 @@ export const sendAdminSmsNotification = async (booking) => {
     return;
   }
 
+  // Prefer ADMIN_PHONE_1/2 from .env, or can be extended to fetch from DB
   const adminPhone = booking.branch === 'branch-2' ? ADMIN_PHONE_2 : ADMIN_PHONE_1;
 
   if (!adminPhone) {
@@ -27,15 +26,25 @@ export const sendAdminSmsNotification = async (booking) => {
     return;
   }
 
-  const branch  = booking.branch === 'branch-2' ? 'Bhimavaram' : 'Eluru';
-  const cake    = booking.cakeRequired && booking.selectedCake ? booking.selectedCake.name : 'None';
-  const extras  = booking.extraDecorations?.length > 0 ? booking.extraDecorations.map(d => d.name).join(',') : 'None';
-  const occasion = booking.occasion === 'Other' && booking.customOccasion ? booking.customOccasion : (booking.occasion || '');
-  const paid    = booking.amountPaid || 0;
-  const bal     = booking.balanceAmount || 0;
+  const branchName = booking.branch === 'branch-2' ? 'Bhimavaram' : 'Eluru';
+  const occasion = booking.occasion === 'Other' && booking.customOccasion ? booking.customOccasion : (booking.occasion || 'N/A');
+  const paymentInfo = booking.paymentType === 'advance' 
+    ? `ADVANCE (Paid: ₹${booking.amountPaid}, Bal: ₹${booking.balanceAmount})`
+    : `FULL PAYMENT (Paid: ₹${booking.amountPaid})`;
 
-  // Compact single-segment SMS (< 160 chars)
-  const message = `F&M ${branch} BOOKING! ${booking.name} ${booking.phone} | ${booking.date} ${booking.timeSlot} ${booking.duration}hr ${booking.membersCount}pax | ${occasion} Cake:${cake} | Paid:Rs${paid} Bal:Rs${bal}`;
+  // More descriptive message
+  const message = `
+🌟 NEW BOOKING CONFIRMED!
+Branch: ${branchName}
+ID: ${booking.id}
+User: ${booking.name} (${booking.phone})
+Service: ${booking.service}
+Date: ${booking.date}
+Time: ${booking.timeSlot} (${booking.duration}hr)
+Total: ₹${booking.totalPrice}
+Payment: ${paymentInfo}
+Occasion: ${occasion}
+  `.trim();
 
   try {
     const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -48,6 +57,5 @@ export const sendAdminSmsNotification = async (booking) => {
     return result;
   } catch (error) {
     console.error(`✗ Failed to send admin SMS to ${adminPhone}:`, error.message);
-    // Don't throw — SMS failure must never block booking confirmation
   }
 };
