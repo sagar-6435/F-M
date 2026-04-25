@@ -49,6 +49,7 @@ interface ManualBookingForm {
   totalPrice: number;
   paymentType: "full" | "advance";
   amountPaid: number;
+  notes?: string;
 }
 
 const formatServiceName = (serviceId: string) => {
@@ -99,6 +100,7 @@ const AdminDashboard = () => {
     totalPrice: 0,
     paymentType: "full",
     amountPaid: 0,
+    notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -398,6 +400,7 @@ const AdminDashboard = () => {
         phone: `+91 ${manualBooking.phone}`,
         paymentStatus: paymentStatus,
         balanceAmount: balanceAmount,
+        notes: manualBooking.notes,
       };
 
       await api.createBooking(bookingData);
@@ -415,6 +418,7 @@ const AdminDashboard = () => {
         totalPrice: 0,
         paymentType: "full",
         amountPaid: 0,
+        notes: "",
       });
 
       // Refresh bookings
@@ -1051,7 +1055,10 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Status</p>
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${selectedBooking.paymentStatus === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                                selectedBooking.paymentStatus === "paid" ? "bg-green-100 text-green-800" : 
+                                selectedBooking.paymentStatus === "partially-paid" ? "bg-blue-100 text-blue-800" :
+                                "bg-yellow-100 text-yellow-800"
                             }`}>
                             {selectedBooking.paymentStatus}
                           </span>
@@ -1443,6 +1450,17 @@ const AdminDashboard = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Notes Field */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground font-body">Internal Notes (Optional)</label>
+                <textarea
+                  value={manualBooking.notes}
+                  onChange={(e) => setManualBooking({ ...manualBooking, notes: e.target.value })}
+                  placeholder="Any special arrangements or internal notes for this booking..."
+                  className="w-full min-h-[100px] rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                />
               </div>
 
               {/* Submit Button */}
