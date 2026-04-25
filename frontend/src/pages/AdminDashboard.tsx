@@ -1456,21 +1456,49 @@ const AdminDashboard = () => {
                 </div>
                 
                 {manualBooking.cakeRequired && (
-                  <select
-                    value={manualBooking.selectedCake?.id || ""}
-                    onChange={(e) => {
-                      const cake = cakes.find(c => c.id === e.target.value);
-                      setManualBooking({ ...manualBooking, selectedCake: cake });
-                    }}
-                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                  >
-                    <option value="">Select a cake...</option>
-                    {cakes.map((cake) => (
-                      <option key={cake.id} value={cake.id}>
-                        {cake.name} - ₹{getPriceValue(cake)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-3">
+                    <select
+                      value={manualBooking.selectedCake?.id || ""}
+                      onChange={(e) => {
+                        const cake = cakes.find(c => c.id === e.target.value);
+                        const variants = cake?.variants || [{ quantity: cake?.quantity || '1kg', price: cake?.price, offerPrice: cake?.offerPrice }];
+                        setManualBooking({ ...manualBooking, selectedCake: { ...cake, ...variants[0] } });
+                      }}
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                    >
+                      <option value="">Select a cake...</option>
+                      {cakes.map((cake) => (
+                        <option key={cake.id} value={cake.id}>
+                          {cake.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {manualBooking.selectedCake && (
+                      <div className="flex flex-wrap gap-2">
+                        {(manualBooking.selectedCake.variants || [
+                          { quantity: manualBooking.selectedCake.quantity || '1kg', price: manualBooking.selectedCake.price, offerPrice: manualBooking.selectedCake.offerPrice }
+                        ]).map((v: any, idx: number) => {
+                          const isSelected = manualBooking.selectedCake.quantity === v.quantity;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setManualBooking({ 
+                                ...manualBooking, 
+                                selectedCake: { ...manualBooking.selectedCake, ...v } 
+                              })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                                isSelected ? "bg-primary text-white border-primary shadow-sm" : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {v.quantity} (₹{getEffectivePrice(v)})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
