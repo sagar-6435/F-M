@@ -50,11 +50,14 @@ interface ManualBookingForm {
   amountPaid: number;
 }
 
-const formatServiceName = (serviceId: string) =>
-  serviceId
+const formatServiceName = (serviceId: string) => {
+  if (serviceId === "private-theatre-party-hall") return "Standard Pack (Private Theatre)";
+  if (serviceId === "premium-pack") return "Premium Pack (All-in-One)";
+  return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+};
 
 /**
  * Extract a numeric price from either a number or price object
@@ -1175,22 +1178,30 @@ const AdminDashboard = () => {
                 </select>
               </div>
 
-              {/* Service */}
-              <div>
-                <label htmlFor="manual-service" className="mb-2 block text-sm font-medium text-foreground font-body">Service</label>
-                <select
-                  id="manual-service"
-                  name="service"
-                  value={manualBooking.service}
-                  onChange={(e) => setManualBooking({ ...manualBooking, service: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                >
-                  {Object.keys(pricing).map((serviceId) => (
-                    <option key={serviceId} value={serviceId}>
-                      {formatServiceName(serviceId)}
-                    </option>
-                  ))}
-                </select>
+              {/* Service / Pack Type */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-foreground font-body">Pack Type</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.keys(pricing).map((serviceId) => {
+                    const isStandard = serviceId === "private-theatre-party-hall";
+                    const isPremium = serviceId === "premium-pack";
+                    const isSelected = manualBooking.service === serviceId;
+                    
+                    return (
+                      <button
+                        key={serviceId}
+                        type="button"
+                        onClick={() => setManualBooking({ ...manualBooking, service: serviceId })}
+                        className={`rounded-xl border p-4 text-left transition-all ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
+                      >
+                        <p className="font-bold text-sm">{formatServiceName(serviceId)}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {isPremium ? "Full setup with Entry, Photos & Cake" : isStandard ? "Standard Theatre & Hall" : "Service Pack"}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Date */}
