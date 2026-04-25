@@ -50,6 +50,10 @@ interface ManualBookingForm {
   paymentType: "full" | "advance";
   amountPaid: number;
   notes?: string;
+  cakeRequired?: boolean;
+  selectedCake?: any;
+  decorationRequired?: boolean;
+  extraDecorations?: any[];
 }
 
 const formatServiceName = (serviceId: string) => {
@@ -101,6 +105,10 @@ const AdminDashboard = () => {
     paymentType: "full",
     amountPaid: 0,
     notes: "",
+    cakeRequired: false,
+    selectedCake: null,
+    decorationRequired: false,
+    extraDecorations: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -135,6 +143,52 @@ const AdminDashboard = () => {
   useEffect(() => {
     setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
   }, [selectedBranch]);
+
+  // Calculate Manual Booking Price
+  useEffect(() => {
+    let price = 0;
+    
+    // 1. Base Service Price
+    const branchPricing = pricing;
+    if (branchPricing[manualBooking.service] && branchPricing[manualBooking.service][manualBooking.duration]) {
+      price = getPriceValue(branchPricing[manualBooking.service][manualBooking.duration]);
+    }
+
+    // 2. Cake Price
+    if (manualBooking.cakeRequired && manualBooking.selectedCake) {
+      price += getPriceValue(manualBooking.selectedCake);
+    }
+
+    // 3. Basic Decoration Price
+    if (manualBooking.decorationRequired) {
+      price += decorationPrice;
+    }
+    
+    // 4. Extra Decorations Price
+    if (manualBooking.extraDecorations && manualBooking.extraDecorations.length > 0) {
+      manualBooking.extraDecorations.forEach(d => {
+        price += getPriceValue(d);
+      });
+    }
+
+    if (manualBooking.totalPrice !== price) {
+      setManualBooking(prev => ({ 
+        ...prev, 
+        totalPrice: price,
+        amountPaid: prev.paymentType === 'full' ? price : prev.amountPaid 
+      }));
+    }
+  }, [
+    manualBooking.service, 
+    manualBooking.duration, 
+    manualBooking.cakeRequired, 
+    manualBooking.selectedCake, 
+    manualBooking.decorationRequired, 
+    manualBooking.extraDecorations, 
+    manualBooking.paymentType,
+    pricing, 
+    decorationPrice
+  ]);
 
   useEffect(() => {
     if (selectedBooking) {
@@ -401,6 +455,10 @@ const AdminDashboard = () => {
         paymentStatus: paymentStatus,
         balanceAmount: balanceAmount,
         notes: manualBooking.notes,
+        cakeRequired: manualBooking.cakeRequired,
+        selectedCake: manualBooking.selectedCake,
+        decorationRequired: manualBooking.decorationRequired,
+        extraDecorations: manualBooking.extraDecorations,
       };
 
       await api.createBooking(bookingData);
@@ -419,6 +477,10 @@ const AdminDashboard = () => {
         paymentType: "full",
         amountPaid: 0,
         notes: "",
+        cakeRequired: false,
+        selectedCake: null,
+        decorationRequired: false,
+        extraDecorations: [],
       });
 
       // Refresh bookings
@@ -1374,6 +1436,84 @@ const AdminDashboard = () => {
                       <option key={occ} value={occ}>{occ}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Cake Selection */}
+              <div className="space-y-4 rounded-xl border border-border p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-medium text-foreground">Cake Required?</label>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setManualBooking({ ...manualBooking, cakeRequired: !manualBooking.cakeRequired })}
+                    className={`h-6 w-11 rounded-full transition-colors relative ${manualBooking.cakeRequired ? 'bg-primary' : 'bg-muted'}`}
+                  >
+                    <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${manualBooking.cakeRequired ? 'left-6' : 'left-1'}`} />
+                  </button>
+                </div>
+                
+                {manualBooking.cakeRequired && (
+                  <select
+                    value={manualBooking.selectedCake?.id || ""}
+                    onChange={(e) => {
+                      const cake = cakes.find(c => c.id === e.target.value);
+                      setManualBooking({ ...manualBooking, selectedCake: cake });
+                    }}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  >
+                    <option value="">Select a cake...</option>
+                    {cakes.map((cake) => (
+                      <option key={cake.id} value={cake.id}>
+                        {cake.name} - ₹{getPriceValue(cake)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Decoration Selection */}
+              <div className="space-y-4 rounded-xl border border-border p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-medium text-foreground">Basic Decoration (₹{decorationPrice})?</label>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setManualBooking({ ...manualBooking, decorationRequired: !manualBooking.decorationRequired })}
+                    className={`h-6 w-11 rounded-full transition-colors relative ${manualBooking.decorationRequired ? 'bg-primary' : 'bg-muted'}`}
+                  >
+                    <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${manualBooking.decorationRequired ? 'left-6' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Extra Decorations</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {decorations.map((dec) => {
+                      const isSelected = manualBooking.extraDecorations?.some(d => d.id === dec.id);
+                      return (
+                        <button
+                          key={dec.id}
+                          type="button"
+                          onClick={() => {
+                            const current = manualBooking.extraDecorations || [];
+                            const updated = isSelected 
+                              ? current.filter(d => d.id !== dec.id)
+                              : [...current, dec];
+                            setManualBooking({ ...manualBooking, extraDecorations: updated });
+                          }}
+                          className={`flex items-center justify-between rounded-lg border p-3 text-left transition-all ${isSelected ? "border-primary bg-primary/10" : "border-border bg-muted/20 hover:border-primary/30"}`}
+                        >
+                          <span className="text-[11px] font-medium leading-tight">{dec.name}</span>
+                          <span className="text-[10px] text-primary font-bold">₹{getPriceValue(dec)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
