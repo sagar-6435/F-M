@@ -864,7 +864,7 @@ const AdminDashboard = () => {
               <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {[
                   { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "text-primary" },
-                  { label: "Paid Slots", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
+                  { label: "Confirmed Slots", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
                   { label: "Pending Slots", value: stats.pendingBookings, icon: Clock, color: "text-yellow-600" },
                   { label: "Total Value", value: `₹${stats.totalRevenue.toLocaleString()}`, icon: CheckCircle, color: "text-foreground" },
                   { label: "Amount Received", value: `₹${stats.totalAmountPaid.toLocaleString()}`, icon: CheckCircle, color: "text-green-600" },
