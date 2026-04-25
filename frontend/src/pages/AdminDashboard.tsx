@@ -70,7 +70,11 @@ const formatServiceName = (serviceId: string) => {
  */
 const getPriceValue = (price: any): number => {
   if (typeof price === 'number') return price;
-  if (typeof price === 'object' && price !== null && 'price' in price) return price.price || 0;
+  if (typeof price === 'object' && price !== null) {
+    // Check for offerPrice first (discounted price)
+    if (price.offerPrice !== undefined && price.offerPrice !== null) return price.offerPrice;
+    if (price.price !== undefined && price.price !== null) return price.price;
+  }
   return 0;
 };
 
@@ -94,7 +98,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "settings">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
-    service: "party-hall",
+    service: "private-theatre-party-hall",
     date: "",
     timeSlot: "",
     duration: 1,
@@ -144,14 +148,29 @@ const AdminDashboard = () => {
     setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
   }, [selectedBranch]);
 
+  // Ensure manual booking service is valid when pricing loads
+  useEffect(() => {
+    const serviceKeys = Object.keys(pricing);
+    if (serviceKeys.length > 0) {
+      if (!manualBooking.service || !pricing[manualBooking.service]) {
+        // Default to first available service if current one is invalid
+        setManualBooking(prev => ({ ...prev, service: serviceKeys[0] }));
+      }
+    }
+  }, [pricing]);
+
   // Calculate Manual Booking Price
   useEffect(() => {
     let price = 0;
     
     // 1. Base Service Price
     const branchPricing = pricing;
-    if (branchPricing[manualBooking.service] && branchPricing[manualBooking.service][manualBooking.duration]) {
-      price = getPriceValue(branchPricing[manualBooking.service][manualBooking.duration]);
+    const selectedServicePricing = branchPricing[manualBooking.service];
+    if (selectedServicePricing) {
+      const priceForDuration = selectedServicePricing[manualBooking.duration] || selectedServicePricing[String(manualBooking.duration)];
+      if (priceForDuration !== undefined) {
+        price = getPriceValue(priceForDuration);
+      }
     }
 
     // 2. Cake Price
@@ -466,9 +485,9 @@ const AdminDashboard = () => {
       // Reset form
       setManualBooking({
         branch: selectedBranch,
-        service: "party-hall",
+        service: "private-theatre-party-hall",
         date: "",
-        timeSlot: "10:00 AM",
+        timeSlot: "",
         duration: 1,
         name: "",
         phone: "",
