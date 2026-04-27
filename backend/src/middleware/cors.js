@@ -1,29 +1,38 @@
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'https://friendsandmemories.vercel.app',
+  'https://friendsandmemories.in',
+  'https://www.friendsandmemories.in',
+  'https://f-m-xk1e.onrender.com',
+  'https://f-m-8146.onrender.com'
+];
+
 export const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5000',
-      'http://localhost:5173',
-      'http://localhost:8080',
-      'https://friendsandmemories.vercel.app',
-      'https://friendsandmemories.in',
-      'https://www.friendsandmemories.in', 
-      'https://f-m-8146.onrender.com'
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // Still allow for now, but log it
-      console.warn(`CORS request from origin: ${origin}`);
-      callback(null, true);
+  origin: (origin, callback) => {
+    // Log the origin to help debugging
+    if (origin) {
+      console.log(`CORS request from origin: ${origin}`);
     }
+    
+    // Always allow for now to fix the blocking issue
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Accept', 
+    'X-Requested-With', 
+    'X-HTTP-Method-Override', 
+    'Origin'
+  ],
+
   exposedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200,
   maxAge: 86400
 };
+
