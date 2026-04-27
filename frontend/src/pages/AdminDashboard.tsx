@@ -1097,8 +1097,8 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{b.paymentType || 'N/A'}</td>
-                        <td className="px-4 py-3 font-semibold text-green-600">₹{getPriceValue(b.amountPaid || 0).toLocaleString()}</td>
-                        <td className="px-4 py-3 font-semibold text-red-600">₹{getPriceValue(b.balanceAmount || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-green-600">₹{(["paid", "partially-paid"].includes(b.paymentStatus)) ? getPriceValue(b.amountPaid || 0).toLocaleString() : "0"}</td>
+                        <td className="px-4 py-3 font-semibold text-red-600">₹{(["paid", "partially-paid"].includes(b.paymentStatus)) ? getPriceValue(b.balanceAmount || 0).toLocaleString() : "0"}</td>
                         <td className="px-4 py-3 font-semibold text-foreground">₹{getPriceValue(b.totalPrice).toLocaleString()}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}
@@ -1222,11 +1222,11 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Amount Paid</p>
-                          <p className="text-lg font-bold text-green-600">₹{getPriceValue(selectedBooking.amountPaid || 0).toLocaleString()}</p>
+                          <p className="text-lg font-bold text-green-600">₹{(["paid", "partially-paid"].includes(selectedBooking.paymentStatus)) ? getPriceValue(selectedBooking.amountPaid || 0).toLocaleString() : "0"}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Balance Amount</p>
-                          <p className="text-lg font-bold text-red-600">₹{getPriceValue(selectedBooking.balanceAmount || 0).toLocaleString()}</p>
+                          <p className="text-lg font-bold text-red-600">₹{(["paid", "partially-paid"].includes(selectedBooking.paymentStatus)) ? getPriceValue(selectedBooking.balanceAmount || 0).toLocaleString() : "0"}</p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-xs text-muted-foreground">Status</p>

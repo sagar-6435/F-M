@@ -71,9 +71,9 @@ export const getDashboardStats = async (req, res) => {
     const pendingBookings = allBookings.filter(b => b.paymentStatus === 'pending').length;
     
     // Revenue is total value of confirmed bookings
-    const totalRevenue = allBookings.filter(b => ['paid', 'partially-paid'].includes(b.paymentStatus)).reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    const totalAmountPaid = allBookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
-    const totalBalanceAmount = allBookings.filter(b => ['paid', 'partially-paid', 'pending'].includes(b.paymentStatus)).reduce((sum, b) => sum + (b.balanceAmount || 0), 0);
+    const totalRevenue = allBookings.filter(b => ['paid', 'partially-paid'].includes(b.paymentStatus)).reduce((sum, b) => sum + (b.amountPaid || 0) + (b.balanceAmount || 0), 0);
+    const totalAmountPaid = allBookings.filter(b => ['paid', 'partially-paid'].includes(b.paymentStatus)).reduce((sum, b) => sum + (b.amountPaid || 0), 0);
+    const totalBalanceAmount = allBookings.filter(b => ['paid', 'partially-paid'].includes(b.paymentStatus)).reduce((sum, b) => sum + (b.balanceAmount || 0), 0);
     
     res.json({ 
       totalBookings, 

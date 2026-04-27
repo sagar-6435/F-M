@@ -212,11 +212,11 @@ router.get('/bookings/download', verifyAdmin, async (req, res) => {
       }
     }
     
-    const paidBookings = allBookings.filter(booking => booking.paymentStatus === 'paid');
-    if (paidBookings.length === 0) return res.status(404).json({ error: 'No paid bookings found' });
+    const confirmedBookings = allBookings.filter(booking => ['paid', 'partially-paid'].includes(booking.paymentStatus));
+    if (confirmedBookings.length === 0) return res.status(404).json({ error: 'No confirmed bookings found' });
     
     const XLSX = (await import('xlsx')).default;
-    const bookingRows = paidBookings.map(booking => ({
+    const bookingRows = confirmedBookings.map(booking => ({
       'Booking ID': booking.id,
       'Branch': booking.branch,
       'Service': booking.service,
@@ -242,7 +242,7 @@ router.get('/bookings/download', verifyAdmin, async (req, res) => {
     ];
     worksheet['!cols'] = columnWidths;
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Paid Bookings');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Confirmed Bookings');
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
     const fileName = `bookings_${branch}_${new Date().toISOString().split('T')[0]}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
