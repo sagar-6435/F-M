@@ -323,7 +323,7 @@ const BookingPage = () => {
         paymentStatus: "pending",
         paymentType,
         amountPaid: 0,
-        balanceAmount: paymentType === 'full' ? 0 : balanceAmount,
+        balanceAmount: totalPrice, // Full balance until payment is confirmed
         phone: `+91 ${booking.phone}`
       };
 

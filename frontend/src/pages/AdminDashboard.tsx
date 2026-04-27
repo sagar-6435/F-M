@@ -880,7 +880,11 @@ const AdminDashboard = () => {
   };
 
   const filtered = bookings.filter((b) =>
-    b.branch === selectedBranch && (filter === "all" || b.paymentStatus === filter)
+    b.branch === selectedBranch && (
+      filter === "all" || 
+      (filter === "paid" && (b.paymentStatus === "paid" || b.paymentStatus === "partially-paid")) ||
+      b.paymentStatus === filter
+    )
   );
 
   return (
@@ -947,7 +951,7 @@ const AdminDashboard = () => {
                   {f === "pending" && <Clock className="h-3 w-3" />}
                   {f === "paid" && <CheckCircle className="h-3 w-3" />}
                   {f === "all" && <Filter className="h-3 w-3" />}
-                  {f}
+                  {f === "paid" ? "Confirmed" : f}
                 </button>
               ))}
               <button
@@ -975,8 +979,8 @@ const AdminDashboard = () => {
               <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {[
                   { label: "Total Bookings", value: stats.totalBookings, icon: Calendar, color: "text-primary" },
-                  { label: "Confirmed Slots", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
-                  { label: "Pending Slots", value: stats.pendingBookings, icon: Clock, color: "text-yellow-600" },
+                  { label: "Confirmed Bookings", value: stats.paidBookings, icon: CheckCircle, color: "text-green-600" },
+                  { label: "Pending Bookings", value: stats.pendingBookings, icon: Clock, color: "text-yellow-600" },
                   { label: "Total Value", value: `₹${stats.totalRevenue.toLocaleString()}`, icon: CheckCircle, color: "text-foreground" },
                   { label: "Amount Received", value: `₹${stats.totalAmountPaid.toLocaleString()}`, icon: CheckCircle, color: "text-green-600" },
                   { label: "Total Balance", value: `₹${stats.totalBalanceAmount.toLocaleString()}`, icon: CheckCircle, color: "text-red-600" },
