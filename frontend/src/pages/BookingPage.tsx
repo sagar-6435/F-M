@@ -290,7 +290,7 @@ const BookingPage = () => {
     return total;
   }, [booking, pricing, decorationPrice]);
 
-  const advanceAmount = useMemo(() => totalPrice < 3000 ? 1000 : 1500, [totalPrice]);
+  const advanceAmount = useMemo(() => totalPrice < 3000 ? 1011 : 1511, [totalPrice]);
   const balanceAmount = useMemo(() => totalPrice - advanceAmount, [totalPrice, advanceAmount]);
 
 

@@ -1600,7 +1600,7 @@ const AdminDashboard = () => {
                     onClick={() => setManualBooking({ 
                       ...manualBooking, 
                       paymentType: 'advance',
-                      amountPaid: manualBooking.totalPrice < 3000 ? 1000 : 1500
+                      amountPaid: manualBooking.totalPrice < 3000 ? 1011 : 1511
                     })}
                     className={`rounded-xl border p-4 text-left transition-all ${manualBooking.paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
                   >
