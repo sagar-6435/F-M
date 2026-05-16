@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   MapPin, Clock, PartyPopper, Cake, Sparkles, Check,
@@ -97,13 +97,27 @@ const BookingPage = () => {
     }
   }, []);
 
-  // Save booking state and step to localStorage whenever they change
+  // Save booking state to localStorage — debounced to avoid writing on every keystroke
+  const saveBookingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    localStorage.setItem('bookingState', JSON.stringify(booking));
+    if (saveBookingTimer.current) clearTimeout(saveBookingTimer.current);
+    saveBookingTimer.current = setTimeout(() => {
+      localStorage.setItem('bookingState', JSON.stringify(booking));
+    }, 500);
+    return () => {
+      if (saveBookingTimer.current) clearTimeout(saveBookingTimer.current);
+    };
   }, [booking]);
 
+  const saveStepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    localStorage.setItem('bookingStep', String(step));
+    if (saveStepTimer.current) clearTimeout(saveStepTimer.current);
+    saveStepTimer.current = setTimeout(() => {
+      localStorage.setItem('bookingStep', String(step));
+    }, 300);
+    return () => {
+      if (saveStepTimer.current) clearTimeout(saveStepTimer.current);
+    };
   }, [step]);
 
   // Function to reload pricing data (for real-time updates)
@@ -121,11 +135,11 @@ const BookingPage = () => {
     }
   };
 
-  // Set up periodic refresh of pricing data (every 30 seconds) for real-time updates
+  // Set up periodic refresh of pricing data (every 5 minutes) for real-time updates
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       reloadPricingData();
-    }, 30000); // Refresh every 30 seconds
+    }, 5 * 60 * 1000); // Refresh every 5 minutes (was 30s)
 
     return () => clearInterval(refreshInterval);
   }, [booking.branch]);
