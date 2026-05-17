@@ -19,6 +19,7 @@ export interface CakeOption {
   description: string;
   image?: string;
   quantity?: string;
+  variants?: Array<{ quantity: string; price: number; offerPrice?: number }>;
 }
 
 export interface ExtraDecoration {

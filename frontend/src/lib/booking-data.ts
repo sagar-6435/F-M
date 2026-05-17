@@ -12,10 +12,12 @@ export interface CakeOption {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   offerPrice?: number;
   description: string;
   image?: string;
   quantity?: string;
+  variants?: Array<{ quantity: string; price: number; offerPrice?: number }>;
 }
 
 export interface ExtraDecoration {
@@ -29,7 +31,7 @@ export interface ExtraDecoration {
 
 export interface BookingData {
   branch: string;
-  service: "private-theatre-party-hall" | "";
+  service: "private-theatre-party-hall" | "premium-pack" | "";
   date: string;
   duration: number;
   timeSlot: string;

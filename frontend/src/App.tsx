@@ -25,7 +25,17 @@ const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const ShippingPolicy = lazy(() => import("./pages/ShippingPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+import { API_BASE } from "@/lib/api";
+
 const queryClient = new QueryClient();
+
+// Ping the backend every 10 minutes to prevent Render free tier spin-down
+const PING_INTERVAL = 10 * 60 * 1000;
+const pingServer = () => {
+  fetch(`${API_BASE}/health`, { method: "GET" })
+    .then(() => console.log("🟢 Server keep-alive ping sent"))
+    .catch(() => console.warn("⚠️ Keep-alive ping failed — server may be sleeping"));
+};
 
 const App = () => {
   useEffect(() => {
@@ -39,7 +49,14 @@ const App = () => {
       fetchBranches();
     }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    // Keep Render server awake — ping immediately then every 10 minutes
+    pingServer();
+    const pingInterval = setInterval(pingServer, PING_INTERVAL);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(pingInterval);
+    };
   }, []);
 
   return (

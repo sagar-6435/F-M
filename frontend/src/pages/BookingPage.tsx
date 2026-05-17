@@ -68,6 +68,11 @@ const BookingPage = () => {
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // Per-step lazy loading states
+  const [occasionsLoaded, setOccasionsLoaded] = useState(false);
+  const [cakesLoaded, setCakesLoaded] = useState(false);
+  const [decorationsLoaded, setDecorationsLoaded] = useState(false);
+  const [stepLoading, setStepLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -127,9 +132,10 @@ const BookingPage = () => {
       const data = await api.getBookingInit(branch);
       console.log("Pricing data refreshed:", data.pricing);
       setPricing(data.pricing);
-      setCakes(data.cakes);
-      setDecorations(data.decorations);
       setDecorationPrice(data.decorationPrice);
+      // Also refresh cakes/decorations if already loaded
+      if (cakesLoaded) setCakes(data.cakes);
+      if (decorationsLoaded) setDecorations(data.decorations);
     } catch (error) {
       console.error("Failed to refresh pricing data:", error);
     }
@@ -144,6 +150,7 @@ const BookingPage = () => {
     return () => clearInterval(refreshInterval);
   }, [booking.branch]);
 
+  // On mount: only load branches + pricing (fast initial load for Step 0)
   useEffect(() => {
     const initBooking = async () => {
       try {
@@ -152,10 +159,7 @@ const BookingPage = () => {
         console.log("Booking init data received - pricing:", data.pricing);
 
         setBranches(data.branches);
-        setOccasions(data.occasions);
         setPricing(data.pricing);
-        setCakes(data.cakes);
-        setDecorations(data.decorations);
         setDecorationPrice(data.decorationPrice);
         setLastFetchedBranch(initialBranch);
 
@@ -179,9 +183,11 @@ const BookingPage = () => {
         try {
           const data = await api.getBookingInit(booking.branch);
           setPricing(data.pricing);
-          setCakes(data.cakes);
-          setDecorations(data.decorations);
           setDecorationPrice(data.decorationPrice);
+          // Refresh already-loaded step data for the new branch
+          if (occasionsLoaded) setOccasions(data.occasions);
+          if (cakesLoaded) setCakes(data.cakes);
+          if (decorationsLoaded) setDecorations(data.decorations);
           setLastFetchedBranch(booking.branch);
 
           const services = Object.keys(data.pricing);
@@ -221,6 +227,66 @@ const BookingPage = () => {
       loadSlots();
     }
   }, [booking.branch, booking.date, booking.service, booking.duration]);
+
+  // Lazy-load occasions when entering Step 2
+  useEffect(() => {
+    if (step === 2 && !occasionsLoaded) {
+      const loadOccasions = async () => {
+        setStepLoading(true);
+        try {
+          const branch = booking.branch || "branch-1";
+          const data = await api.getBookingInit(branch);
+          setOccasions(data.occasions);
+          setOccasionsLoaded(true);
+        } catch (error) {
+          console.error("Failed to load occasions:", error);
+        } finally {
+          setStepLoading(false);
+        }
+      };
+      loadOccasions();
+    }
+  }, [step, occasionsLoaded]);
+
+  // Lazy-load cakes when entering Step 3
+  useEffect(() => {
+    if (step === 3 && !cakesLoaded) {
+      const loadCakes = async () => {
+        setStepLoading(true);
+        try {
+          const branch = booking.branch || "branch-1";
+          const data = await api.getBookingInit(branch);
+          setCakes(data.cakes);
+          setCakesLoaded(true);
+        } catch (error) {
+          console.error("Failed to load cakes:", error);
+        } finally {
+          setStepLoading(false);
+        }
+      };
+      loadCakes();
+    }
+  }, [step, cakesLoaded]);
+
+  // Lazy-load decorations when entering Step 4
+  useEffect(() => {
+    if (step === 4 && !decorationsLoaded) {
+      const loadDecorations = async () => {
+        setStepLoading(true);
+        try {
+          const branch = booking.branch || "branch-1";
+          const data = await api.getBookingInit(branch);
+          setDecorations(data.decorations);
+          setDecorationsLoaded(true);
+        } catch (error) {
+          console.error("Failed to load decorations:", error);
+        } finally {
+          setStepLoading(false);
+        }
+      };
+      loadDecorations();
+    }
+  }, [step, decorationsLoaded]);
 
   const update = (partial: Partial<BookingData>) => setBooking((prev) => ({ ...prev, ...partial }));
 
@@ -749,6 +815,12 @@ const BookingPage = () => {
               {/* Step 2: Occasion */}
               {step === 2 && (
                 <div className="space-y-6">
+                  {stepLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading occasions...</p>
+                    </div>
+                  ) : (
+                    <>
                   <div className="rounded-xl bg-primary/5 p-4 border border-primary/20">
                     <p className="text-xs text-primary font-body font-semibold flex items-center gap-2">
                       <Sparkles className="h-3 w-3" /> Select one of the option
@@ -783,12 +855,20 @@ const BookingPage = () => {
                       </div>
                     )}
                   </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Step 3: Cake */}
               {step === 3 && !isPremiumPack && (
                 <div className="space-y-6">
+                  {stepLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading cakes...</p>
+                    </div>
+                  ) : (
+                    <>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-foreground font-body">Would you like a cake?</label>
                     <div className="flex gap-3">
@@ -809,7 +889,7 @@ const BookingPage = () => {
                       {cakes.map((cake) => {
                         const variants = cake.variants || [{ quantity: cake.quantity || '1kg', price: cake.price, offerPrice: cake.offerPrice }];
                         const selectedVariant = booking.selectedCake?.id === cake.id 
-                          ? variants.find(v => v.quantity === booking.selectedCake.quantity) || variants[0]
+                          ? variants.find(v => v.quantity === booking.selectedCake?.quantity) || variants[0]
                           : variants[0];
                         
                         return (
@@ -872,12 +952,20 @@ const BookingPage = () => {
                       })}
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Step 4: Extra Decorations */}
               {step === 4 && !isPremiumPack && (
                 <div className="space-y-4">
+                  {stepLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading decorations...</p>
+                    </div>
+                  ) : (
+                    <>
                   <p className="text-xs text-muted-foreground font-body">Select any extras to add to your experience</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {decorations.map((item) => {
@@ -925,6 +1013,8 @@ const BookingPage = () => {
                       );
                     })}
                   </div>
+                    </>
+                  )}
                 </div>
               )}
 

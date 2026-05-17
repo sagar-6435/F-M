@@ -61,3 +61,6 @@ backend/src/data/*.bak
 .cache/
 .turbo/
 .vercel
+
+# Postman (contains API keys)
+.postman.json
