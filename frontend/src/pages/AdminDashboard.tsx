@@ -398,22 +398,34 @@ const AdminDashboard = () => {
       setCakes(cakesData);
       setDecorations(decorationsData);
       setDecorationPrice(decorationPriceData);
-      setTestimonials(await api.getTestimonials(selectedBranch));
-      setHeroImages(await api.getHeroImages(selectedBranch));
-      setBranchVideos(await api.getBranchVideos(selectedBranch));
-      setGalleryVideos(await api.getGalleryVideos(selectedBranch));
-      setSocialEditData(await api.getSocialLinks(selectedBranch));
 
-      const bList = await api.getBranches();
-      setBranchList(bList);
-      const currentBranch = bList.find(b => b.id === selectedBranch);
-      if (currentBranch) {
-        setBranchEditData({
-          name: currentBranch.name,
-          address: currentBranch.address,
-          phone: currentBranch.phone,
-          mapLink: currentBranch.mapLink || ""
-        });
+      // Fetch gallery data independently so one failure doesn't block others
+      const [testimonialsData, heroImagesData, branchVideosData, galleryVideosData, socialData, bList] = await Promise.allSettled([
+        api.getTestimonials(selectedBranch),
+        api.getHeroImages(selectedBranch),
+        api.getBranchVideos(selectedBranch),
+        api.getGalleryVideos(selectedBranch),
+        api.getSocialLinks(selectedBranch),
+        api.getBranches(),
+      ]);
+
+      if (testimonialsData.status === "fulfilled") setTestimonials(testimonialsData.value);
+      if (heroImagesData.status === "fulfilled") setHeroImages(heroImagesData.value);
+      if (branchVideosData.status === "fulfilled") setBranchVideos(branchVideosData.value);
+      if (galleryVideosData.status === "fulfilled") setGalleryVideos(galleryVideosData.value);
+      if (socialData.status === "fulfilled") setSocialEditData(socialData.value);
+
+      if (bList.status === "fulfilled") {
+        setBranchList(bList.value);
+        const currentBranch = bList.value.find((b: any) => b.id === selectedBranch);
+        if (currentBranch) {
+          setBranchEditData({
+            name: currentBranch.name,
+            address: currentBranch.address,
+            phone: currentBranch.phone,
+            mapLink: currentBranch.mapLink || ""
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching pricing:", error);
