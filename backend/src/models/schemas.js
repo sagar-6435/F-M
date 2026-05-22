@@ -85,6 +85,8 @@ export const branchCatalogSchema = new mongoose.Schema(
     decorations: { type: [mongoose.Schema.Types.Mixed], default: () => JSON.parse(JSON.stringify(defaultDecorations)) },
     testimonials: { type: [mongoose.Schema.Types.Mixed], default: [] },
     heroImages: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    branchVideos: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    galleryVideos: { type: [mongoose.Schema.Types.Mixed], default: [] },
     socialLinks: { type: mongoose.Schema.Types.Mixed, default: { 
       instagram: "https://instagram.com/friends_and_memories_elr",
       facebook: "https://facebook.com",

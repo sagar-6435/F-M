@@ -6,7 +6,8 @@ import { getAllBookingsFromFiles } from '../utils/migration.js';
 import { mongoConnections, getBranchModels } from '../config/mongo.js';
 import { branchDbs } from '../config/constants.js';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { uploadToCloudinary, uploadVideoToCloudinary } from '../utils/cloudinary.js';
+import cloudinary from '../utils/cloudinary.js';
 import { getRootFolderForBranch } from '../utils/branchConfig.js';
 
 const router = express.Router();
@@ -127,6 +128,107 @@ router.delete('/gallery/testimonials/:id', verifyAdmin, async (req, res) => {
   res.json({ message: 'Deleted' });
 });
 
+// Update testimonial title or replace image
+router.put('/gallery/testimonials/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { title, image } = req.body;
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const item = catalog.testimonials.find((t) => t.id === req.params.id);
+    if (!item) return res.status(404).json({ error: 'Not found' });
+
+    if (title !== undefined) item.title = title;
+    if (image) {
+      let imageUrl = image;
+      if (image.startsWith('data:image')) {
+        const rootFolder = getRootFolderForBranch(branch);
+        imageUrl = await uploadToCloudinary(image, 'testimonials', rootFolder);
+      }
+      item.image = imageUrl;
+    }
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(item);
+  } catch (err) {
+    console.error('Update testimonial failed:', err);
+    res.status(500).json({ error: 'Failed to update testimonial' });
+  }
+});
+
+// Gallery Videos
+router.get('/gallery/videos', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    res.json(catalog.galleryVideos || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch gallery videos' });
+  }
+});
+
+router.post('/gallery/videos/sign', verifyAdmin, async (req, res) => {
+  try {
+    const branch = req.query.branch || req.body.branch || 'branch-1';
+    const rootFolder = getRootFolderForBranch(branch);
+    const folder = `Home/${rootFolder}/gallery-videos`;
+    const timestamp = Math.round(Date.now() / 1000);
+    const paramsToSign = { folder, timestamp };
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET);
+    res.json({ signature, timestamp, folder, cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate upload signature' });
+  }
+});
+
+router.post('/gallery/videos', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { url, title } = req.body;
+  if (!url) return res.status(400).json({ error: 'Video URL required' });
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    if (!catalog.galleryVideos) catalog.galleryVideos = [];
+    const entry = { id: `gvideo-${uuidv4()}`, url, title: title || '' };
+    catalog.galleryVideos.push(entry);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.galleryVideos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save gallery video' });
+  }
+});
+
+router.put('/gallery/videos/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { title } = req.body;
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const item = (catalog.galleryVideos || []).find((v) => v.id === req.params.id);
+    if (!item) return res.status(404).json({ error: 'Not found' });
+    if (title !== undefined) item.title = title;
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update gallery video' });
+  }
+});
+
+router.delete('/gallery/videos/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || 'branch-1';
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const index = (catalog.galleryVideos || []).findIndex((v) => v.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Not found' });
+    catalog.galleryVideos.splice(index, 1);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.galleryVideos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete gallery video' });
+  }
+});
+
 // Hero Images (Admin)
 router.get('/hero-images', async (req, res) => {
   try {
@@ -181,6 +283,84 @@ router.delete('/hero-images/:index', verifyAdmin, async (req, res) => {
     res.json(catalog.heroImages);
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete hero image' });
+  }
+});
+
+// Branch Videos — Signed Upload (direct browser → Cloudinary, no server file transfer)
+router.get('/branch-videos', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'branch-1';
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    res.json(catalog.branchVideos || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch branch videos' });
+  }
+});
+
+router.post('/branch-videos/sign', verifyAdmin, async (req, res) => {
+  try {
+    const branch = req.query.branch || req.body.branch || 'branch-1';
+    const rootFolder = getRootFolderForBranch(branch);
+    const folder = `Home/${rootFolder}/videos`;
+    const timestamp = Math.round(Date.now() / 1000);
+
+    const paramsToSign = { folder, timestamp };
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    res.json({
+      signature,
+      timestamp,
+      folder,
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+    });
+  } catch (err) {
+    console.error('Sign upload error:', err);
+    res.status(500).json({ error: 'Failed to generate upload signature' });
+  }
+});
+
+// Branch Videos — Save URL after direct Cloudinary upload
+router.post('/branch-videos', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const { url, title } = req.body;
+  if (!url) return res.status(400).json({ error: 'Video URL required' });
+
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+
+    if (!catalog.branchVideos) catalog.branchVideos = [];
+    const videoEntry = {
+      id: `video-${uuidv4()}`,
+      url,
+      title: title || '',
+    };
+    catalog.branchVideos.push(videoEntry);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.branchVideos);
+  } catch (err) {
+    console.error('Branch video save failed:', err);
+    res.status(500).json({ error: 'Failed to save branch video' });
+  }
+});
+
+router.delete('/branch-videos/:id', verifyAdmin, async (req, res) => {
+  const branch = req.query.branch || 'branch-1';
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const index = (catalog.branchVideos || []).findIndex((v) => v.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Video not found' });
+    catalog.branchVideos.splice(index, 1);
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.branchVideos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete branch video' });
   }
 });
 

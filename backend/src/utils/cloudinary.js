@@ -30,5 +30,27 @@ export const uploadToCloudinary = async (fileStr, folder = 'general', rootFolder
   }
 };
 
+/**
+ * Uploads a video to Cloudinary in a branch-specific folder
+ * @param {string} fileStr - base64 data URL string (data:video/...)
+ * @param {string} folder - target subfolder (e.g., 'videos')
+ * @param {string} rootFolder - branch-specific root folder (e.g., 'f-m-elr', 'f-m-bvrm')
+ * @returns {Promise<string>} secure_url of the uploaded video
+ */
+export const uploadVideoToCloudinary = async (fileStr, folder = 'videos', rootFolder = 'friends-memories') => {
+  try {
+    const uploadResponse = await cloudinary.uploader.upload(fileStr, {
+      resource_type: 'video',
+      folder: `Home/${rootFolder}/${folder}`,
+      use_filename: true,
+      unique_filename: true,
+    });
+    return uploadResponse.secure_url;
+  } catch (error) {
+    console.error('Cloudinary video upload error:', error);
+    throw new Error('Failed to upload video to cloud');
+  }
+};
+
 
 export default cloudinary;

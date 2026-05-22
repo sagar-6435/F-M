@@ -159,6 +159,62 @@ export const api = {
     if (!res.ok) throw new Error("Failed to delete testimonial image");
   },
 
+  async updateTestimonialImage(token: string, branch: string, id: string, data: { title?: string; image?: string }): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/gallery/testimonials/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Failed to update testimonial");
+    return res.json();
+  },
+
+  async getGalleryVideos(branch: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/gallery/videos?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch gallery videos");
+    return res.json();
+  },
+
+  async getGalleryVideoUploadSignature(token: string, branch: string): Promise<{
+    signature: string; timestamp: number; folder: string; cloud_name: string; api_key: string;
+  }> {
+    const res = await fetch(`${API_BASE}/admin/gallery/videos/sign?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to get upload signature");
+    return res.json();
+  },
+
+  async saveGalleryVideo(token: string, branch: string, url: string, title?: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/gallery/videos?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ url, title }),
+    });
+    if (!res.ok) throw new Error("Failed to save gallery video");
+    return res.json();
+  },
+
+  async updateGalleryVideo(token: string, branch: string, id: string, title: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/gallery/videos/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error("Failed to update gallery video");
+    return res.json();
+  },
+
+  async deleteGalleryVideo(token: string, branch: string, id: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/gallery/videos/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to delete gallery video");
+    return res.json();
+  },
+
   async getHeroImages(branch: string): Promise<string[]> {
     const res = await fetch(`${API_BASE}/admin/hero-images?branch=${encodeURIComponent(branch)}`);
     if (!res.ok) throw new Error("Failed to fetch hero images");
@@ -412,6 +468,88 @@ export const api = {
       body: JSON.stringify({ name, rating, comment }),
     });
     if (!res.ok) throw new Error("Failed to add review");
+    return res.json();
+  },
+
+  async getBranchVideos(branch: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch branch videos");
+    return res.json();
+  },
+
+  async getVideoUploadSignature(token: string, branch: string): Promise<{
+    signature: string;
+    timestamp: number;
+    folder: string;
+    cloud_name: string;
+    api_key: string;
+  }> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos/sign?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error("Failed to get upload signature");
+    return res.json();
+  },
+
+  async uploadVideoToCloudinary(
+    file: File,
+    sig: { signature: string; timestamp: number; folder: string; cloud_name: string; api_key: string },
+    onProgress?: (pct: number) => void
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", sig.api_key);
+      formData.append("timestamp", String(sig.timestamp));
+      formData.append("signature", sig.signature);
+      formData.append("folder", sig.folder);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${sig.cloud_name}/video/upload`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.secure_url);
+        } else {
+          reject(new Error(`Cloudinary upload failed: ${xhr.statusText}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Network error during video upload"));
+      xhr.send(formData);
+    });
+  },
+
+  async saveBranchVideo(token: string, branch: string, url: string, title?: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos?branch=${encodeURIComponent(branch)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ url, title }),
+    });
+    if (!res.ok) throw new Error("Failed to save branch video");
+    return res.json();
+  },
+
+  async deleteBranchVideo(token: string, branch: string, id: string): Promise<{ id: string; url: string; title: string }[]> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos/${id}?branch=${encodeURIComponent(branch)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to delete branch video");
     return res.json();
   },
 };

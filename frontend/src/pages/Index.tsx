@@ -1,6 +1,6 @@
-import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight, Video } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 const heroImg = "/hero-theatre.jpg";
 import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
@@ -13,6 +13,9 @@ const Index = () => {
   const [branchSocials, setBranchSocials] = useState<Record<string, any>>({});
   const [currentHero, setCurrentHero] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [branchVideos, setBranchVideos] = useState<Record<string, { id: string; url: string; title: string }[]>>({});
+  const [activeVideoBranch, setActiveVideoBranch] = useState<string>("branch-1");
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -24,7 +27,7 @@ const Index = () => {
         setBranches(bData);
         setHeroImages(hData.length > 0 ? hData : [heroImg]); // Fallback to static if empty
 
-        // Fetch socials for all branches
+        // Fetch socials and videos for all branches
         const socialPromises = bData.map(async (b) => {
           const s = await api.getSocialLinks(b.id);
           return { id: b.id, ...s };
@@ -32,6 +35,15 @@ const Index = () => {
         const allSocials = await Promise.all(socialPromises);
         const socialMap = allSocials.reduce((acc, s) => ({ ...acc, [s.id]: s }), {});
         setBranchSocials(socialMap);
+
+        // Fetch videos per branch
+        const videoPromises = bData.map(async (b) => {
+          const vids = await api.getBranchVideos(b.id).catch(() => []);
+          return { id: b.id, vids };
+        });
+        const allVideos = await Promise.all(videoPromises);
+        const videoMap = allVideos.reduce((acc, { id, vids }) => ({ ...acc, [id]: vids }), {});
+        setBranchVideos(videoMap);
       } catch (error) {
         console.error("Failed to load home data:", error);
         setHeroImages([heroImg]);
@@ -125,6 +137,103 @@ const Index = () => {
           )}
         </div>
       </section>
+
+      {/* Branch Videos — Switch between branches */}
+      {branches.length > 0 && branches.some(b => (branchVideos[b.id] || []).length > 0) && (
+        <section className="py-20 border-b border-border bg-muted/20">
+          <div className="container mx-auto px-4">
+            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Our Venues</p>
+            <h2 className="mb-3 text-center font-display text-3xl font-bold text-foreground md:text-4xl">
+              See Us <span className="text-gradient-gold">In Action</span>
+            </h2>
+            <p className="mb-10 text-center text-sm text-muted-foreground font-body">
+              Switch between our branches to take a look inside
+            </p>
+
+            {/* Branch Switch */}
+            <div className="flex items-center justify-center gap-4 mb-10">
+              {/* Branch 1 label */}
+              <span className={`text-sm font-semibold font-body transition-colors ${activeVideoBranch === "branch-1" ? "text-primary" : "text-muted-foreground"}`}>
+                {branches.find(b => b.id === "branch-1")?.name?.split("-")[1]?.trim() || "Eluru"}
+              </span>
+
+              {/* Switch */}
+              <button
+                role="switch"
+                aria-checked={activeVideoBranch === "branch-2"}
+                aria-label="Switch branch video"
+                onClick={() => {
+                  setActiveVideoBranch(prev => prev === "branch-1" ? "branch-2" : "branch-1");
+                  if (videoRef.current) videoRef.current.pause();
+                }}
+                className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border-2 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background ${
+                  activeVideoBranch === "branch-2"
+                    ? "border-primary bg-primary"
+                    : "border-primary/40 bg-primary/20"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                    activeVideoBranch === "branch-2" ? "translate-x-7" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+
+              {/* Branch 2 label */}
+              <span className={`text-sm font-semibold font-body transition-colors ${activeVideoBranch === "branch-2" ? "text-primary" : "text-muted-foreground"}`}>
+                {branches.find(b => b.id === "branch-2")?.name?.split("-")[1]?.trim() || "Bhimavaram"}
+              </span>
+            </div>
+
+            {/* Video Card */}
+            {(() => {
+              const activeBranch = branches.find(b => b.id === activeVideoBranch);
+              const videos = branchVideos[activeVideoBranch] || [];
+              if (!activeBranch || videos.length === 0) return (
+                <p className="text-center text-sm text-muted-foreground font-body">No video available for this branch yet.</p>
+              );
+              const video = videos[0];
+              return (
+                <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card overflow-hidden shadow-xl transition-all hover:border-primary/50 hover:glow-gold">
+                  <div className="relative aspect-video bg-black">
+                    <video
+                      ref={videoRef}
+                      key={video.url}
+                      src={video.url}
+                      controls
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 backdrop-blur-sm pointer-events-none">
+                      <Video className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white">
+                        {activeBranch.name}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-primary font-body mb-0.5 truncate">
+                        {video.title || activeBranch.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5 truncate">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        {activeBranch.address}
+                      </p>
+                    </div>
+                    <Link
+                      to={`/booking?branch=${activeBranch.id}`}
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-all hover:scale-105 glow-gold font-body"
+                    >
+                      Book Now <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </section>
+      )}
 
       {/* Services */}
       <section id="services" className="py-24">

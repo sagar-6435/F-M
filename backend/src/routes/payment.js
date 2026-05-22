@@ -95,8 +95,23 @@ router.post('/razorpay/callback', async (req, res) => {
     if (expectedSignature === razorpay_signature) {
       console.log(`✅ Payment verified for order: ${razorpay_order_id}`);
       
-      // Extract bookingId from orderId (format: order_bookingId_timestamp)
-      const bookingId = razorpay_order_id.split('_')[1];
+      // Fetch the order from Razorpay to get the receipt (which holds our bookingId)
+      let bookingId = null;
+      try {
+        const orderRes = await fetch(`${RAZORPAY_BASE_URL}/orders/${razorpay_order_id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': getRazorpayAuth(),
+            'Accept': 'application/json'
+          }
+        });
+        const orderData = await orderRes.json();
+        // receipt is set to bookingId during order creation
+        bookingId = orderData.receipt || null;
+        console.log(`📋 Resolved bookingId from Razorpay receipt: ${bookingId}`);
+      } catch (fetchErr) {
+        console.error('⚠️ Could not fetch Razorpay order details:', fetchErr.message);
+      }
       
       if (bookingId) {
         console.log(`📝 Updating booking ${bookingId} to PAID status`);
@@ -137,8 +152,8 @@ router.post('/razorpay/status', async (req, res) => {
     const data = await response.json();
     
     if (data.id) {
-      // Extract bookingId from orderId (format: order_bookingId_timestamp)
-      const bookingId = orderId.split('_')[1];
+      // Use receipt field which was set to bookingId during order creation
+      const bookingId = data.receipt || null;
       
       // If payment status is paid, update booking
       if (data.status === 'paid' && bookingId) {
@@ -181,7 +196,10 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
           amt = booking.totalPrice;
         }
         
-        booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+        const prevStatus = booking.paymentStatus;
+        const newStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+
+        booking.paymentStatus = newStatus;
         booking.amountPaid = amt;
         booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
         booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
@@ -190,10 +208,16 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
         
         console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
         
-        // Send admin SMS notification (non-blocking)
-        sendAdminSmsNotification(booking).catch(err =>
-          console.error('✗ Admin SMS notification failed:', err)
-        );
+        // Send SMS whenever status becomes paid or partially-paid,
+        // but skip if status hasn't changed (duplicate call guard)
+        const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
+        if (shouldSendSms) {
+          sendAdminSmsNotification(booking).catch(err =>
+            console.error('✗ Admin SMS notification failed:', err)
+          );
+        } else {
+          console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate SMS`);
+        }
         
         return booking;
       }
@@ -209,7 +233,10 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
         amt = booking.totalPrice;
       }
       
-      booking.paymentStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+      const prevStatus = booking.paymentStatus;
+      const newStatus = (amt >= booking.totalPrice) ? 'paid' : 'partially-paid';
+
+      booking.paymentStatus = newStatus;
       booking.amountPaid = amt;
       booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
       booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
@@ -218,10 +245,16 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
       
       console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
       
-      // Send admin SMS notification (non-blocking)
-      sendAdminSmsNotification(booking).catch(err =>
-        console.error('✗ Admin SMS notification failed:', err)
-      );
+      // Send SMS whenever status becomes paid or partially-paid,
+      // but skip if status hasn't changed (duplicate call guard)
+      const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
+      if (shouldSendSms) {
+        sendAdminSmsNotification(booking).catch(err =>
+          console.error('✗ Admin SMS notification failed:', err)
+        );
+      } else {
+        console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate SMS`);
+      }
       
       return booking;
     }

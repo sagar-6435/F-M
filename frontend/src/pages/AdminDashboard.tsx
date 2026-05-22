@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { API_BASE, api } from "@/lib/api";
 import { getEffectivePrice } from "@/lib/utils";
-import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Clock, CheckCircle, Phone, MapPin, Calendar, LogIn, Filter, Settings, Loader, Plus, Download, Edit, Trash2, X, Play } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -78,6 +78,36 @@ const getPriceValue = (price: any): number => {
   return 0;
 };
 
+// Small helper: fetches and previews videos for a given branch
+const BranchVideoPreview = ({ branch }: { branch: string }) => {
+  const [videos, setVideos] = useState<{ id: string; url: string; title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.getBranchVideos(branch)
+      .then(setVideos)
+      .catch(() => setVideos([]))
+      .finally(() => setLoading(false));
+  }, [branch]);
+
+  if (loading) return <p className="text-xs text-muted-foreground font-body">Loading preview...</p>;
+  if (videos.length === 0) return <p className="text-xs text-muted-foreground font-body">No videos for this branch yet.</p>;
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {videos.map((vid) => (
+        <div key={vid.id} className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+          <video src={vid.url} controls className="w-full aspect-video bg-black" />
+          <div className="p-3">
+            <p className="text-sm font-medium text-foreground">{vid.title || "Branch Video"}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
@@ -95,7 +125,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "tomorrow" | "specific" | "all">("all");
   const [customDate, setCustomDate] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "settings">("bookings");
+  const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "videos" | "settings">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
     service: "private-theatre-party-hall",
@@ -132,6 +162,19 @@ const AdminDashboard = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [newTestimonialTitle, setNewTestimonialTitle] = useState("");
   const [uploadingTestimonial, setUploadingTestimonial] = useState(false);
+  const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
+  const [editingTestimonialTitle, setEditingTestimonialTitle] = useState("");
+  const [galleryVideos, setGalleryVideos] = useState<{ id: string; url: string; title: string }[]>([]);
+  const [uploadingGalleryVideo, setUploadingGalleryVideo] = useState(false);
+  const [galleryVideoProgress, setGalleryVideoProgress] = useState(0);
+  const [newGalleryVideoTitle, setNewGalleryVideoTitle] = useState("");
+  const [editingGalleryVideoId, setEditingGalleryVideoId] = useState<string | null>(null);
+  const [editingGalleryVideoTitle, setEditingGalleryVideoTitle] = useState("");
+  const [branchVideos, setBranchVideos] = useState<{ id: string; url: string; title: string }[]>([]);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [previewBranch, setPreviewBranch] = useState<"branch-1" | "branch-2">("branch-1");
   const [manualAvailableSlots, setManualAvailableSlots] = useState<string[]>([]);
   const [manualBookedSlots, setManualBookedSlots] = useState<string[]>([]);
   const [branchEditData, setBranchEditData] = useState({ name: "", address: "", phone: "", mapLink: "" });
@@ -357,6 +400,8 @@ const AdminDashboard = () => {
       setDecorationPrice(decorationPriceData);
       setTestimonials(await api.getTestimonials(selectedBranch));
       setHeroImages(await api.getHeroImages(selectedBranch));
+      setBranchVideos(await api.getBranchVideos(selectedBranch));
+      setGalleryVideos(await api.getGalleryVideos(selectedBranch));
       setSocialEditData(await api.getSocialLinks(selectedBranch));
 
       const bList = await api.getBranches();
@@ -783,6 +828,115 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleUploadVideo = async (file?: File | null) => {
+    if (!token || !file) return;
+    try {
+      setUploadingVideo(true);
+      setVideoUploadProgress(0);
+
+      // Step 1: Get signed upload params from backend
+      const sig = await api.getVideoUploadSignature(token, selectedBranch);
+
+      // Step 2: Upload directly from browser to Cloudinary (supports up to 500MB)
+      const videoUrl = await api.uploadVideoToCloudinary(file, sig, (pct) => {
+        setVideoUploadProgress(pct);
+      });
+
+      // Step 3: Save the returned Cloudinary URL to the database
+      const updated = await api.saveBranchVideo(token, selectedBranch, videoUrl, newVideoTitle || undefined);
+      setNewVideoTitle("");
+      setBranchVideos(updated);
+    } catch (error) {
+      console.error("Error uploading video:", error);
+      setError("Failed to upload video. Please try again.");
+    } finally {
+      setUploadingVideo(false);
+      setVideoUploadProgress(0);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (!token) return;
+    try {
+      const updated = await api.deleteBranchVideo(token, selectedBranch, id);
+      setBranchVideos(updated);
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      setError("Failed to delete video");
+    }
+  };
+
+  const handleUpdateTestimonial = async (id: string, title: string) => {
+    if (!token) return;
+    try {
+      await api.updateTestimonialImage(token, selectedBranch, id, { title });
+      setTestimonials(prev => prev.map(t => t.id === id ? { ...t, title } : t));
+      setEditingTestimonialId(null);
+    } catch (error) {
+      console.error("Error updating testimonial:", error);
+      setError("Failed to update testimonial");
+    }
+  };
+
+  const handleReplaceTestimonialImage = async (id: string, file: File) => {
+    if (!token) return;
+    try {
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(file);
+      });
+      await api.updateTestimonialImage(token, selectedBranch, id, { image });
+      setTestimonials(await api.getTestimonials(selectedBranch));
+    } catch (error) {
+      console.error("Error replacing image:", error);
+      setError("Failed to replace image");
+    }
+  };
+
+  const handleUploadGalleryVideo = async (file?: File | null) => {
+    if (!token || !file) return;
+    try {
+      setUploadingGalleryVideo(true);
+      setGalleryVideoProgress(0);
+      const sig = await api.getGalleryVideoUploadSignature(token, selectedBranch);
+      const videoUrl = await api.uploadVideoToCloudinary(file, sig, (pct) => setGalleryVideoProgress(pct));
+      const updated = await api.saveGalleryVideo(token, selectedBranch, videoUrl, newGalleryVideoTitle || undefined);
+      setNewGalleryVideoTitle("");
+      setGalleryVideos(updated);
+    } catch (error) {
+      console.error("Error uploading gallery video:", error);
+      setError("Failed to upload gallery video");
+    } finally {
+      setUploadingGalleryVideo(false);
+      setGalleryVideoProgress(0);
+    }
+  };
+
+  const handleUpdateGalleryVideo = async (id: string, title: string) => {
+    if (!token) return;
+    try {
+      await api.updateGalleryVideo(token, selectedBranch, id, title);
+      setGalleryVideos(prev => prev.map(v => v.id === id ? { ...v, title } : v));
+      setEditingGalleryVideoId(null);
+    } catch (error) {
+      console.error("Error updating gallery video:", error);
+      setError("Failed to update gallery video");
+    }
+  };
+
+  const handleDeleteGalleryVideo = async (id: string) => {
+    if (!token) return;
+    try {
+      const updated = await api.deleteGalleryVideo(token, selectedBranch, id);
+      setGalleryVideos(updated);
+    } catch (error) {
+      console.error("Error deleting gallery video:", error);
+      setError("Failed to delete gallery video");
+    }
+  };
+
   const handleHeroUpload = async (file?: File | null) => {
     if (!token || !file) return;
     try {
@@ -915,6 +1069,7 @@ const AdminDashboard = () => {
             { id: "manual", label: "Manual Booking", icon: Plus },
             { id: "pricing", label: "Pricing", icon: Settings },
             { id: "gallery", label: "Gallery", icon: Eye },
+            { id: "videos", label: "Videos", icon: Play },
             { id: "settings", label: "Settings", icon: Settings },
           ].map((tab) => (
             <button
@@ -2200,67 +2355,275 @@ const AdminDashboard = () => {
         {/* Gallery Tab */}
         {activeTab === "gallery" && (
           <div className="space-y-8">
+
+            {/* Hero Carousel */}
             <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
-              <h2 className="font-display text-2xl font-bold text-foreground">Hero Carousel Management</h2>
-              <p className="text-sm text-muted-foreground font-body">
-                Upload image banners for the home page carousel for this branch.
-              </p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleHeroUpload(e.target.files?.[0])}
-                className="w-full text-xs text-muted-foreground"
-              />
+              <h2 className="font-display text-2xl font-bold text-foreground">Hero Carousel</h2>
+              <p className="text-sm text-muted-foreground font-body">Upload image banners for the home page carousel.</p>
+              <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e.target.files?.[0])} className="w-full text-xs text-muted-foreground" />
               {uploadingHero && <p className="text-xs text-primary">Uploading hero image...</p>}
               <div className="grid gap-3 md:grid-cols-3">
                 {heroImages.map((img, idx) => (
                   <div key={idx} className="relative aspect-video rounded-xl border border-border overflow-hidden group bg-black">
                     <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-contain" />
-                    <button
-                      onClick={() => handleDeleteHero(idx)}
-                      className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ✕
-                    </button>
+                    <button onClick={() => handleDeleteHero(idx)} className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                     <div className="absolute bottom-1 left-2 bg-black/50 text-[10px] text-white px-1 rounded">#{idx + 1}</div>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Gallery Images (Testimonials) */}
+            <div className="max-w-4xl rounded-2xl border border-border bg-card p-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-foreground">Gallery Images</h2>
+                  <p className="text-sm text-muted-foreground font-body mt-1">These images appear on the public Gallery page.</p>
+                </div>
+                <span className="text-xs font-semibold text-muted-foreground bg-muted px-3 py-1 rounded-full">{testimonials.length} images</span>
+              </div>
+
+              {/* Upload new */}
+              <div className="rounded-xl border border-dashed border-border p-4 space-y-3 bg-muted/20">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add New Image</p>
+                <input
+                  type="text"
+                  placeholder="Title (e.g. Birthday Celebration)"
+                  value={newTestimonialTitle}
+                  onChange={(e) => setNewTestimonialTitle(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                />
+                <input type="file" accept="image/*" onChange={(e) => handleUploadTestimonial(e.target.files?.[0])} className="w-full text-xs text-muted-foreground" />
+                {uploadingTestimonial && <p className="text-xs text-primary animate-pulse">Uploading image...</p>}
+              </div>
+
+              {/* Existing images grid */}
+              {testimonials.length === 0 ? (
+                <p className="text-sm text-muted-foreground font-body text-center py-4">No gallery images yet.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {testimonials.map((item) => (
+                    <div key={item.id} className="rounded-xl border border-border bg-muted/20 overflow-hidden group">
+                      <div className="relative aspect-square bg-black">
+                        <img src={item.image} alt={item.title || "Gallery"} className="w-full h-full object-cover" />
+                        {/* Replace image overlay */}
+                        <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all cursor-pointer opacity-0 group-hover:opacity-100">
+                          <div className="text-center text-white">
+                            <Edit className="h-5 w-5 mx-auto mb-1" />
+                            <span className="text-xs font-semibold">Replace Image</span>
+                          </div>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleReplaceTestimonialImage(item.id, e.target.files[0])} />
+                        </label>
+                      </div>
+                      <div className="p-3 space-y-2">
+                        {editingTestimonialId === item.id ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={editingTestimonialTitle}
+                              onChange={(e) => setEditingTestimonialTitle(e.target.value)}
+                              className="flex-1 rounded-lg border border-primary bg-background px-2 py-1 text-xs text-foreground focus:outline-none"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleUpdateTestimonial(item.id, editingTestimonialTitle);
+                                if (e.key === "Escape") setEditingTestimonialId(null);
+                              }}
+                            />
+                            <button onClick={() => handleUpdateTestimonial(item.id, editingTestimonialTitle)} className="px-2 py-1 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save</button>
+                            <button onClick={() => setEditingTestimonialId(null)} className="px-2 py-1 border border-border rounded-lg text-xs">✕</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium text-foreground truncate flex-1">{item.title || "Customer Memory"}</p>
+                            <button
+                              onClick={() => { setEditingTestimonialId(item.id); setEditingTestimonialTitle(item.title || ""); }}
+                              className="p-1 text-muted-foreground hover:text-primary transition-colors shrink-0"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        <button onClick={() => handleDeleteTestimonial(item.id)} className="w-full px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Gallery Videos */}
+            <div className="max-w-4xl rounded-2xl border border-border bg-card p-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-foreground">Gallery Videos</h2>
+                  <p className="text-sm text-muted-foreground font-body mt-1">Videos shown on the public Gallery page alongside images.</p>
+                </div>
+                <span className="text-xs font-semibold text-muted-foreground bg-muted px-3 py-1 rounded-full">{galleryVideos.length} videos</span>
+              </div>
+
+              {/* Upload new */}
+              <div className="rounded-xl border border-dashed border-border p-4 space-y-3 bg-muted/20">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add New Video (up to 500MB)</p>
+                <input
+                  type="text"
+                  placeholder="Title (e.g. Anniversary Celebration)"
+                  value={newGalleryVideoTitle}
+                  onChange={(e) => setNewGalleryVideoTitle(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                />
+                <input type="file" accept="video/*" onChange={(e) => handleUploadGalleryVideo(e.target.files?.[0])} className="w-full text-xs text-muted-foreground" />
+                {uploadingGalleryVideo && (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-primary font-body">
+                      <span className="animate-pulse">Uploading to Cloudinary...</span>
+                      <span className="font-semibold">{galleryVideoProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-gradient-gold rounded-full transition-all duration-300" style={{ width: `${galleryVideoProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Existing videos grid */}
+              {galleryVideos.length === 0 ? (
+                <p className="text-sm text-muted-foreground font-body text-center py-4">No gallery videos yet.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {galleryVideos.map((vid) => (
+                    <div key={vid.id} className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+                      <video src={vid.url} controls className="w-full aspect-video bg-black" />
+                      <div className="p-3 space-y-2">
+                        {editingGalleryVideoId === vid.id ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={editingGalleryVideoTitle}
+                              onChange={(e) => setEditingGalleryVideoTitle(e.target.value)}
+                              className="flex-1 rounded-lg border border-primary bg-background px-2 py-1 text-xs text-foreground focus:outline-none"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleUpdateGalleryVideo(vid.id, editingGalleryVideoTitle);
+                                if (e.key === "Escape") setEditingGalleryVideoId(null);
+                              }}
+                            />
+                            <button onClick={() => handleUpdateGalleryVideo(vid.id, editingGalleryVideoTitle)} className="px-2 py-1 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save</button>
+                            <button onClick={() => setEditingGalleryVideoId(null)} className="px-2 py-1 border border-border rounded-lg text-xs">✕</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium text-foreground truncate flex-1">{vid.title || "Gallery Video"}</p>
+                            <button
+                              onClick={() => { setEditingGalleryVideoId(vid.id); setEditingGalleryVideoTitle(vid.title || ""); }}
+                              className="p-1 text-muted-foreground hover:text-primary transition-colors shrink-0"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        <button onClick={() => handleDeleteGalleryVideo(vid.id)} className="w-full px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* Videos Tab */}
+        {activeTab === "videos" && (
+          <div className="space-y-8">
+            {/* Upload Section */}
             <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
-              <h2 className="font-display text-2xl font-bold text-foreground">Testimonials Management</h2>
+              <h2 className="font-display text-2xl font-bold text-foreground">Branch Videos</h2>
               <p className="text-sm text-muted-foreground font-body">
-                Upload testimonial images for this branch. These images are shown on the public gallery page.
+                Upload videos for this branch. They will be displayed as cards on the home page below the hero section.
               </p>
               <input
                 type="text"
-                placeholder="Optional title (e.g. Birthday Celebration)"
-                value={newTestimonialTitle}
-                onChange={(e) => setNewTestimonialTitle(e.target.value)}
+                placeholder="Optional title (e.g. Eluru Branch Tour)"
+                value={newVideoTitle}
+                onChange={(e) => setNewVideoTitle(e.target.value)}
                 className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
               />
               <input
                 type="file"
-                accept="image/*"
-                onChange={(e) => handleUploadTestimonial(e.target.files?.[0])}
+                accept="video/*"
+                onChange={(e) => handleUploadVideo(e.target.files?.[0])}
                 className="w-full text-xs text-muted-foreground"
               />
-              {uploadingTestimonial && <p className="text-xs text-primary">Uploading testimonial image...</p>}
-              <div className="grid gap-3 md:grid-cols-2">
-                {testimonials.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-border p-3 space-y-2">
-                    <img src={item.image} alt={item.title || "Testimonial"} className="h-48 w-full rounded-lg object-contain bg-black/50 border border-border" />
-                    <p className="text-sm font-medium text-foreground">{item.title || "Customer Memory"}</p>
+              {uploadingVideo && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-primary font-body">
+                    <span className="animate-pulse">Uploading to Cloudinary...</span>
+                    <span className="font-semibold">{videoUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-gold rounded-full transition-all duration-300"
+                      style={{ width: `${videoUploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {branchVideos.length === 0 && !uploadingVideo && (
+                <p className="text-xs text-muted-foreground font-body">No videos uploaded yet for this branch.</p>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
+                {branchVideos.map((vid) => (
+                  <div key={vid.id} className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                    <video
+                      src={vid.url}
+                      controls
+                      className="w-full rounded-lg aspect-video bg-black"
+                    />
+                    <p className="text-sm font-medium text-foreground truncate">{vid.title || "Branch Video"}</p>
                     <button
-                      onClick={() => handleDeleteTestimonial(item.id)}
-                      className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm"
+                      onClick={() => handleDeleteVideo(vid.id)}
+                      className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 transition-colors"
                     >
                       Delete
                     </button>
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Preview Section — switch between branches */}
+            <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
+              <h2 className="font-display text-xl font-bold text-foreground">Preview — Home Page Video Cards</h2>
+              <p className="text-sm text-muted-foreground font-body">
+                Switch between branches to preview how their videos will appear on the home page.
+              </p>
+              <div className="flex items-center gap-4">
+                <span className={`text-sm font-medium font-body ${previewBranch === "branch-1" ? "text-primary" : "text-muted-foreground"}`}>
+                  Branch 1
+                </span>
+                <button
+                  role="switch"
+                  aria-checked={previewBranch === "branch-2"}
+                  onClick={() => setPreviewBranch(prev => prev === "branch-1" ? "branch-2" : "branch-1")}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                    previewBranch === "branch-2" ? "bg-primary" : "bg-muted-foreground/30"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      previewBranch === "branch-2" ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium font-body ${previewBranch === "branch-2" ? "text-primary" : "text-muted-foreground"}`}>
+                  Branch 2
+                </span>
+              </div>
+              <BranchVideoPreview branch={previewBranch} />
             </div>
           </div>
         )}
