@@ -165,11 +165,6 @@ const AdminDashboard = () => {
   const [editingTestimonialId, setEditingTestimonialId] = useState<string | null>(null);
   const [editingTestimonialTitle, setEditingTestimonialTitle] = useState("");
   const [galleryVideos, setGalleryVideos] = useState<{ id: string; url: string; title: string }[]>([]);
-  const [uploadingGalleryVideo, setUploadingGalleryVideo] = useState(false);
-  const [galleryVideoProgress, setGalleryVideoProgress] = useState(0);
-  const [newGalleryVideoTitle, setNewGalleryVideoTitle] = useState("");
-  const [editingGalleryVideoId, setEditingGalleryVideoId] = useState<string | null>(null);
-  const [editingGalleryVideoTitle, setEditingGalleryVideoTitle] = useState("");
   const [branchVideos, setBranchVideos] = useState<{ id: string; url: string; title: string }[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
@@ -400,11 +395,10 @@ const AdminDashboard = () => {
       setDecorationPrice(decorationPriceData);
 
       // Fetch gallery data independently so one failure doesn't block others
-      const [testimonialsData, heroImagesData, branchVideosData, galleryVideosData, socialData, bList] = await Promise.allSettled([
+      const [testimonialsData, heroImagesData, branchVideosData, socialData, bList] = await Promise.allSettled([
         api.getTestimonials(selectedBranch),
         api.getHeroImages(selectedBranch),
         api.getBranchVideos(selectedBranch),
-        api.getGalleryVideos(selectedBranch),
         api.getSocialLinks(selectedBranch),
         api.getBranches(),
       ]);
@@ -412,7 +406,6 @@ const AdminDashboard = () => {
       if (testimonialsData.status === "fulfilled") setTestimonials(testimonialsData.value);
       if (heroImagesData.status === "fulfilled") setHeroImages(heroImagesData.value);
       if (branchVideosData.status === "fulfilled") setBranchVideos(branchVideosData.value);
-      if (galleryVideosData.status === "fulfilled") setGalleryVideos(galleryVideosData.value);
       if (socialData.status === "fulfilled") setSocialEditData(socialData.value);
 
       if (bList.status === "fulfilled") {
@@ -907,48 +900,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleUploadGalleryVideo = async (file?: File | null) => {
-    if (!token || !file) return;
-    try {
-      setUploadingGalleryVideo(true);
-      setGalleryVideoProgress(0);
-      const sig = await api.getGalleryVideoUploadSignature(token, selectedBranch);
-      const videoUrl = await api.uploadVideoToCloudinary(file, sig, (pct) => setGalleryVideoProgress(pct));
-      const updated = await api.saveGalleryVideo(token, selectedBranch, videoUrl, newGalleryVideoTitle || undefined);
-      setNewGalleryVideoTitle("");
-      setGalleryVideos(updated);
-    } catch (error) {
-      console.error("Error uploading gallery video:", error);
-      setError("Failed to upload gallery video");
-    } finally {
-      setUploadingGalleryVideo(false);
-      setGalleryVideoProgress(0);
-    }
-  };
-
-  const handleUpdateGalleryVideo = async (id: string, title: string) => {
-    if (!token) return;
-    try {
-      await api.updateGalleryVideo(token, selectedBranch, id, title);
-      setGalleryVideos(prev => prev.map(v => v.id === id ? { ...v, title } : v));
-      setEditingGalleryVideoId(null);
-    } catch (error) {
-      console.error("Error updating gallery video:", error);
-      setError("Failed to update gallery video");
-    }
-  };
-
-  const handleDeleteGalleryVideo = async (id: string) => {
-    if (!token) return;
-    try {
-      const updated = await api.deleteGalleryVideo(token, selectedBranch, id);
-      setGalleryVideos(updated);
-    } catch (error) {
-      console.error("Error deleting gallery video:", error);
-      setError("Failed to delete gallery video");
-    }
-  };
-
   const handleHeroUpload = async (file?: File | null) => {
     if (!token || !file) return;
     try {
@@ -1064,22 +1015,6 @@ const AdminDashboard = () => {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            {/* Branch switcher */}
-            <div className="flex items-center gap-1 rounded-full border border-border bg-muted p-1">
-              {(["branch-1", "branch-2"] as const).map((b) => (
-                <button
-                  key={b}
-                  onClick={() => { setSelectedBranch(b); localStorage.setItem("adminBranch", b); }}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all font-body ${
-                    selectedBranch === b
-                      ? "bg-primary text-primary-foreground shadow"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {b === "branch-1" ? "Eluru" : "Bhimavaram"}
-                </button>
-              ))}
-            </div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium transition-all font-body hover:border-primary"
@@ -1097,7 +1032,7 @@ const AdminDashboard = () => {
             { id: "manual", label: "Manual Booking", icon: Plus },
             { id: "pricing", label: "Pricing", icon: Settings },
             { id: "gallery", label: "Gallery", icon: Eye },
-            { id: "videos", label: "Videos", icon: Play },
+            { id: "videos", label: "Home Videos", icon: Play },
             { id: "settings", label: "Settings", icon: Settings },
           ].map((tab) => (
             <button
@@ -2481,86 +2416,6 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {/* Gallery Videos */}
-            <div className="max-w-4xl rounded-2xl border border-border bg-card p-8 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-2xl font-bold text-foreground">Gallery Videos</h2>
-                  <p className="text-sm text-muted-foreground font-body mt-1">Videos shown on the public Gallery page alongside images.</p>
-                </div>
-                <span className="text-xs font-semibold text-muted-foreground bg-muted px-3 py-1 rounded-full">{galleryVideos.length} videos</span>
-              </div>
-
-              {/* Upload new */}
-              <div className="rounded-xl border border-dashed border-border p-4 space-y-3 bg-muted/20">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add New Video (up to 500MB)</p>
-                <input
-                  type="text"
-                  placeholder="Title (e.g. Anniversary Celebration)"
-                  value={newGalleryVideoTitle}
-                  onChange={(e) => setNewGalleryVideoTitle(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
-                />
-                <input type="file" accept="video/*" onChange={(e) => handleUploadGalleryVideo(e.target.files?.[0])} className="w-full text-xs text-muted-foreground" />
-                {uploadingGalleryVideo && (
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-primary font-body">
-                      <span className="animate-pulse">Uploading to Cloudinary...</span>
-                      <span className="font-semibold">{galleryVideoProgress}%</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-gradient-gold rounded-full transition-all duration-300" style={{ width: `${galleryVideoProgress}%` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Existing videos grid */}
-              {galleryVideos.length === 0 ? (
-                <p className="text-sm text-muted-foreground font-body text-center py-4">No gallery videos yet.</p>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {galleryVideos.map((vid) => (
-                    <div key={vid.id} className="rounded-xl border border-border bg-muted/20 overflow-hidden">
-                      <video src={vid.url} controls className="w-full aspect-video bg-black" />
-                      <div className="p-3 space-y-2">
-                        {editingGalleryVideoId === vid.id ? (
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={editingGalleryVideoTitle}
-                              onChange={(e) => setEditingGalleryVideoTitle(e.target.value)}
-                              className="flex-1 rounded-lg border border-primary bg-background px-2 py-1 text-xs text-foreground focus:outline-none"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleUpdateGalleryVideo(vid.id, editingGalleryVideoTitle);
-                                if (e.key === "Escape") setEditingGalleryVideoId(null);
-                              }}
-                            />
-                            <button onClick={() => handleUpdateGalleryVideo(vid.id, editingGalleryVideoTitle)} className="px-2 py-1 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save</button>
-                            <button onClick={() => setEditingGalleryVideoId(null)} className="px-2 py-1 border border-border rounded-lg text-xs">✕</button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-medium text-foreground truncate flex-1">{vid.title || "Gallery Video"}</p>
-                            <button
-                              onClick={() => { setEditingGalleryVideoId(vid.id); setEditingGalleryVideoTitle(vid.title || ""); }}
-                              className="p-1 text-muted-foreground hover:text-primary transition-colors shrink-0"
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
-                        <button onClick={() => handleDeleteGalleryVideo(vid.id)} className="w-full px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors">
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
           </div>
         )}
 
@@ -2569,9 +2424,9 @@ const AdminDashboard = () => {
           <div className="space-y-8">
             {/* Upload Section */}
             <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-4">
-              <h2 className="font-display text-2xl font-bold text-foreground">Branch Videos</h2>
+              <h2 className="font-display text-2xl font-bold text-foreground">Branch Videos — Home Page</h2>
               <p className="text-sm text-muted-foreground font-body">
-                Upload videos for this branch. They will be displayed as cards on the home page below the hero section.
+                Upload videos here to display them on the <strong className="text-foreground">home page</strong> between the hero banner and services section. Use the <strong className="text-foreground">Gallery tab</strong> for videos shown on the Gallery page.
               </p>
               <input
                 type="text"

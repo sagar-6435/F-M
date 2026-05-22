@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, X, Image, Video } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, type Branch } from "@/lib/api";
 import { useSearchParams } from "react-router-dom";
@@ -10,12 +10,10 @@ const GalleryPage = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>(searchParams.get("branch") || "branch-1");
   const [loading, setLoading] = useState(true);
-  const [mediaTab, setMediaTab] = useState<"images" | "videos">("images");
 
   const [galleryImages, setGalleryImages] = useState<
     { id: string; src: string; alt: string; title: string; date: string }[]
   >([]);
-  const [galleryVideos, setGalleryVideos] = useState<{ id: string; url: string; title: string }[]>([]);
 
   useEffect(() => {
     const loadBranches = async () => {
@@ -33,10 +31,7 @@ const GalleryPage = () => {
     const loadGallery = async () => {
       try {
         setLoading(true);
-        const [testimonials, videos] = await Promise.all([
-          api.getTestimonials(selectedBranch),
-          api.getGalleryVideos(selectedBranch).catch(() => []),
-        ]);
+        const testimonials = await api.getTestimonials(selectedBranch);
         const mapped = testimonials.map((item) => ({
           id: item.id,
           src: item.image || "",
@@ -45,7 +40,6 @@ const GalleryPage = () => {
           date: item.date || "Recent",
         }));
         setGalleryImages(mapped);
-        setGalleryVideos(videos);
       } catch (error) {
         console.error("Failed to load gallery:", error);
       } finally {
@@ -91,92 +85,36 @@ const GalleryPage = () => {
             </select>
           </div>
 
-          {/* Images / Videos toggle */}
-          <div className="mt-6 inline-flex rounded-full border border-border bg-muted p-1 gap-1">
-            <button
-              onClick={() => setMediaTab("images")}
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
-                mediaTab === "images"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Image className="h-4 w-4" /> Images
-              {galleryImages.length > 0 && (
-                <span className={`text-xs rounded-full px-1.5 py-0.5 ${mediaTab === "images" ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                  {galleryImages.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setMediaTab("videos")}
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
-                mediaTab === "videos"
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Video className="h-4 w-4" /> Videos
-              {galleryVideos.length > 0 && (
-                <span className={`text-xs rounded-full px-1.5 py-0.5 ${mediaTab === "videos" ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                  {galleryVideos.length}
-                </span>
-              )}
-            </button>
-          </div>
+          {/* Images / Videos toggle removed — gallery shows images only */}
         </div>
 
         {/* Content */}
         {loading ? (
           <div className="text-center text-muted-foreground py-16">Loading gallery...</div>
-        ) : mediaTab === "images" ? (
-          galleryImages.length === 0 ? (
-            <div className="text-center text-muted-foreground py-16">No images uploaded yet for this branch.</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {galleryImages.map((image, index) => (
-                <div
-                  key={image.id}
-                  onClick={() => setSelectedImage(index)}
-                  className="group relative overflow-hidden rounded-2xl cursor-pointer bg-muted aspect-square border border-border hover:border-primary/50 transition-all"
-                >
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end p-4">
-                    <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <h3 className="font-semibold">{image.title}</h3>
-                      <p className="text-sm text-gray-200">{image.date}</p>
-                    </div>
+        ) : galleryImages.length === 0 ? (
+          <div className="text-center text-muted-foreground py-16">No images uploaded yet for this branch.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {galleryImages.map((image, index) => (
+              <div
+                key={image.id}
+                onClick={() => setSelectedImage(index)}
+                className="group relative overflow-hidden rounded-2xl cursor-pointer bg-muted aspect-square border border-border hover:border-primary/50 transition-all"
+              >
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end p-4">
+                  <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <h3 className="font-semibold">{image.title}</h3>
+                    <p className="text-sm text-gray-200">{image.date}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )
-        ) : (
-          galleryVideos.length === 0 ? (
-            <div className="text-center text-muted-foreground py-16">No videos uploaded yet for this branch.</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {galleryVideos.map((vid) => (
-                <div key={vid.id} className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-all">
-                  <video
-                    src={vid.url}
-                    controls
-                    playsInline
-                    className="w-full aspect-video bg-black"
-                  />
-                  {vid.title && (
-                    <div className="px-5 py-3">
-                      <p className="text-sm font-semibold text-foreground font-body">{vid.title}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Lightbox Modal (images only) */}

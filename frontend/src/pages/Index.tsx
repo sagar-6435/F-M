@@ -139,7 +139,7 @@ const Index = () => {
       </section>
 
       {/* Branch Videos — Switch between branches */}
-      {branches.length > 0 && branches.some(b => (branchVideos[b.id] || []).length > 0) && (
+      {branches.length > 0 && (
         <section className="py-20 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
             <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Our Venues</p>
@@ -151,47 +151,87 @@ const Index = () => {
             </p>
 
             {/* Branch Switch */}
-            <div className="flex items-center justify-center gap-4 mb-10">
-              {/* Branch 1 label */}
-              <span className={`text-sm font-semibold font-body transition-colors ${activeVideoBranch === "branch-1" ? "text-primary" : "text-muted-foreground"}`}>
-                {branches.find(b => b.id === "branch-1")?.name?.split("-")[1]?.trim() || "Eluru"}
-              </span>
-
-              {/* Switch */}
-              <button
-                role="switch"
-                aria-checked={activeVideoBranch === "branch-2"}
-                aria-label="Switch branch video"
-                onClick={() => {
-                  setActiveVideoBranch(prev => prev === "branch-1" ? "branch-2" : "branch-1");
-                  if (videoRef.current) videoRef.current.pause();
-                }}
-                className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border-2 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background ${
-                  activeVideoBranch === "branch-2"
-                    ? "border-primary bg-primary"
-                    : "border-primary/40 bg-primary/20"
-                }`}
-              >
+            <div className="flex items-center justify-center mb-10">
+              <div className="relative flex items-center rounded-full bg-muted/60 border border-border p-1 gap-1 shadow-inner">
+                {/* Sliding background pill */}
                 <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                    activeVideoBranch === "branch-2" ? "translate-x-7" : "translate-x-0.5"
+                  aria-hidden="true"
+                  className={`absolute top-1 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-full bg-gradient-gold shadow-md transition-transform duration-300 ease-in-out ${
+                    activeVideoBranch === "branch-2" ? "translate-x-[calc(100%+4px)]" : "translate-x-0"
                   }`}
                 />
-              </button>
-
-              {/* Branch 2 label */}
-              <span className={`text-sm font-semibold font-body transition-colors ${activeVideoBranch === "branch-2" ? "text-primary" : "text-muted-foreground"}`}>
-                {branches.find(b => b.id === "branch-2")?.name?.split("-")[1]?.trim() || "Bhimavaram"}
-              </span>
+                {/* Branch 1 button */}
+                <button
+                  role="radio"
+                  aria-checked={activeVideoBranch === "branch-1"}
+                  onClick={() => {
+                    setActiveVideoBranch("branch-1");
+                    if (videoRef.current) videoRef.current.pause();
+                  }}
+                  className={`relative z-10 flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold font-body transition-colors duration-300 focus:outline-none ${
+                    activeVideoBranch === "branch-1"
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {branches.find(b => b.id === "branch-1")?.name?.split("-")[1]?.trim() || "Eluru"}
+                </button>
+                {/* Branch 2 button */}
+                <button
+                  role="radio"
+                  aria-checked={activeVideoBranch === "branch-2"}
+                  onClick={() => {
+                    setActiveVideoBranch("branch-2");
+                    if (videoRef.current) videoRef.current.pause();
+                  }}
+                  className={`relative z-10 flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold font-body transition-colors duration-300 focus:outline-none ${
+                    activeVideoBranch === "branch-2"
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {branches.find(b => b.id === "branch-2")?.name?.split("-")[1]?.trim() || "Bhimavaram"}
+                </button>
+              </div>
             </div>
 
             {/* Video Card */}
             {(() => {
               const activeBranch = branches.find(b => b.id === activeVideoBranch);
               const videos = branchVideos[activeVideoBranch] || [];
-              if (!activeBranch || videos.length === 0) return (
-                <p className="text-center text-sm text-muted-foreground font-body">No video available for this branch yet.</p>
-              );
+
+              if (!activeBranch) return null;
+
+              if (videos.length === 0) {
+                return (
+                  <div className="mx-auto max-w-3xl rounded-2xl border border-dashed border-border bg-card overflow-hidden shadow-xl">
+                    <div className="relative aspect-video bg-muted/40 flex flex-col items-center justify-center gap-3">
+                      <Video className="h-12 w-12 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground font-body">Video coming soon for {activeBranch.name}</p>
+                    </div>
+                    <div className="p-5 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-primary font-body mb-0.5 truncate">
+                          {activeBranch.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5 truncate">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          {activeBranch.address}
+                        </p>
+                      </div>
+                      <Link
+                        to={`/booking?branch=${activeBranch.id}`}
+                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-all hover:scale-105 glow-gold font-body"
+                      >
+                        Book Now <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              }
+
               const video = videos[0];
               return (
                 <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card overflow-hidden shadow-xl transition-all hover:border-primary/50 hover:glow-gold">
