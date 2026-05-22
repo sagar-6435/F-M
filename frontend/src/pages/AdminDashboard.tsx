@@ -1063,7 +1063,23 @@ const AdminDashboard = () => {
               {branchList.find((b) => b.id === selectedBranch)?.name}
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* Branch switcher */}
+            <div className="flex items-center gap-1 rounded-full border border-border bg-muted p-1">
+              {(["branch-1", "branch-2"] as const).map((b) => (
+                <button
+                  key={b}
+                  onClick={() => { setSelectedBranch(b); localStorage.setItem("adminBranch", b); }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all font-body ${
+                    selectedBranch === b
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {b === "branch-1" ? "Eluru" : "Bhimavaram"}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium transition-all font-body hover:border-primary"
