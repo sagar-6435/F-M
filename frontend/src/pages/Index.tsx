@@ -149,7 +149,7 @@ const Index = () => {
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-[0.25em] text-primary font-body">Venue Videos</p>
-                <h2 className="font-display text-2xl font-bold text-foreground">Watch our venue tour?</h2>
+                <h2 className="font-display text-2xl font-bold text-foreground">Want To Book Reels?</h2>
               </div>
               <button
                 type="button"
@@ -170,7 +170,7 @@ const Index = () => {
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] font-body"
               >
                 <Play className="h-4 w-4" />
-                Watch Video
+                Watch Now
               </button>
               <button
                 type="button"
