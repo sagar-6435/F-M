@@ -474,7 +474,24 @@ export const api = {
   async getBranchVideos(branch: string): Promise<{ id: string; url: string; title: string }[]> {
     const res = await fetch(`${API_BASE}/admin/branch-videos?branch=${encodeURIComponent(branch)}`);
     if (!res.ok) throw new Error("Failed to fetch branch videos");
-    return res.json();
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data
+      .map((item, index) => {
+        if (typeof item === "string") {
+          return { id: `video-${index}`, url: item, title: "" };
+        }
+
+        if (!item || typeof item !== "object") return null;
+
+        return {
+          id: item.id || `video-${index}`,
+          url: item.url || item.secure_url || item.videoUrl || "",
+          title: item.title || item.name || "",
+        };
+      })
+      .filter((video): video is { id: string; url: string; title: string } => Boolean(video?.url));
   },
 
   async getVideoUploadSignature(token: string, branch: string): Promise<{

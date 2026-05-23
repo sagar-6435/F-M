@@ -12,6 +12,50 @@ import { getRootFolderForBranch } from '../utils/branchConfig.js';
 
 const router = express.Router();
 
+const normalizeBranchVideos = (videos = []) => {
+  return (Array.isArray(videos) ? videos : [])
+    .map((video, index) => {
+      if (typeof video === 'string') {
+        return {
+          id: `video-${index}`,
+          url: video,
+          title: '',
+        };
+      }
+
+      if (!video || typeof video !== 'object') return null;
+
+      return {
+        id: video.id || `video-${index}`,
+        url: video.url || video.secure_url || video.videoUrl || '',
+        title: video.title || video.name || '',
+      };
+    })
+    .filter((video) => video && video.url);
+};
+
+const fetchCloudinaryBranchVideos = async (branch) => {
+  const rootFolder = getRootFolderForBranch(branch);
+  const prefix = `Home/${rootFolder}/videos`;
+
+  const response = await cloudinary.api.resources({
+    type: 'upload',
+    resource_type: 'video',
+    prefix,
+    max_results: 30,
+    context: true,
+  });
+
+  const resources = response?.resources || [];
+  return resources
+    .map((resource, index) => ({
+      id: `cloudinary-${resource.public_id || index}`,
+      url: resource.secure_url || '',
+      title: resource?.context?.custom?.caption || resource.filename || 'Branch Video',
+    }))
+    .filter((video) => video.url);
+};
+
 router.post('/login', adminController.login);
 router.post('/logout', (req, res) => res.json({ message: 'Logout successful' }));
 
@@ -292,7 +336,25 @@ router.get('/branch-videos', async (req, res) => {
     const branch = req.query.branch || 'branch-1';
     const catalog = await catalogController.getCatalogForBranch(branch);
     if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
-    res.json(catalog.branchVideos || []);
+
+    const normalizedSavedVideos = normalizeBranchVideos(catalog.branchVideos || []);
+    if (normalizedSavedVideos.length > 0) {
+      return res.json(normalizedSavedVideos);
+    }
+
+    try {
+      const cloudinaryVideos = await fetchCloudinaryBranchVideos(branch);
+
+      if (cloudinaryVideos.length > 0) {
+        catalog.branchVideos = cloudinaryVideos;
+        await catalogController.saveCatalogForBranch(branch, catalog);
+      }
+
+      return res.json(cloudinaryVideos);
+    } catch (cloudinaryError) {
+      console.warn(`Failed to fetch Cloudinary branch videos for ${branch}:`, cloudinaryError.message);
+      return res.json([]);
+    }
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch branch videos' });
   }
