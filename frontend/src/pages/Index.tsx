@@ -15,6 +15,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [branchVideos, setBranchVideos] = useState<Record<string, { id: string; url: string; title: string }[]>>({});
   const [activeVideoBranch, setActiveVideoBranch] = useState<string>("branch-1");
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -61,6 +62,33 @@ const Index = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, [heroImages]);
+
+  useEffect(() => {
+    const currentVideo = videoRef.current;
+    if (!currentVideo) return;
+
+    currentVideo.muted = isVideoMuted;
+    currentVideo.volume = isVideoMuted ? 0 : 1;
+
+    if (isVideoMuted) {
+      currentVideo.play().catch(() => {});
+    }
+  }, [activeVideoBranch, branchVideos, isVideoMuted]);
+
+  const handleVideoMuteToggle = () => {
+    const currentVideo = videoRef.current;
+    if (!currentVideo) return;
+
+    const nextMuted = !isVideoMuted;
+    currentVideo.muted = nextMuted;
+    currentVideo.volume = nextMuted ? 0 : 1;
+    setIsVideoMuted(nextMuted);
+
+    if (!nextMuted) {
+      currentVideo.play().catch(() => {});
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero */}
@@ -78,7 +106,7 @@ const Index = () => {
                 className="h-full w-full object-cover"
                 width={1920}
                 height={1080}
-                fetchpriority={idx === 0 ? "high" : "low"}
+                fetchPriority={idx === 0 ? "high" : "low"}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
               />
@@ -166,6 +194,7 @@ const Index = () => {
                   aria-checked={activeVideoBranch === "branch-1"}
                   onClick={() => {
                     setActiveVideoBranch("branch-1");
+                    setIsVideoMuted(true);
                     if (videoRef.current) videoRef.current.pause();
                   }}
                   className={`relative z-10 flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold font-body transition-colors duration-300 focus:outline-none ${
@@ -183,6 +212,7 @@ const Index = () => {
                   aria-checked={activeVideoBranch === "branch-2"}
                   onClick={() => {
                     setActiveVideoBranch("branch-2");
+                    setIsVideoMuted(true);
                     if (videoRef.current) videoRef.current.pause();
                   }}
                   className={`relative z-10 flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold font-body transition-colors duration-300 focus:outline-none ${
@@ -211,23 +241,6 @@ const Index = () => {
                       <Video className="h-12 w-12 text-muted-foreground/40" />
                       <p className="text-sm text-muted-foreground font-body">Video coming soon for {activeBranch.name}</p>
                     </div>
-                    <div className="p-5 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-primary font-body mb-0.5 truncate">
-                          {activeBranch.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5 truncate">
-                          <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          {activeBranch.address}
-                        </p>
-                      </div>
-                      <Link
-                        to={`/booking?branch=${activeBranch.id}`}
-                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-all hover:scale-105 glow-gold font-body"
-                      >
-                        Book Now <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
                   </div>
                 );
               }
@@ -240,7 +253,9 @@ const Index = () => {
                       ref={videoRef}
                       key={video.url}
                       src={video.url}
-                      controls
+                      autoPlay
+                      muted={isVideoMuted}
+                      loop
                       playsInline
                       className="w-full h-full object-cover"
                     />
@@ -250,23 +265,13 @@ const Index = () => {
                         {activeBranch.name}
                       </span>
                     </div>
-                  </div>
-                  <div className="p-5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-primary font-body mb-0.5 truncate">
-                        {video.title || activeBranch.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground font-body flex items-center gap-1.5 truncate">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        {activeBranch.address}
-                      </p>
-                    </div>
-                    <Link
-                      to={`/booking?branch=${activeBranch.id}`}
-                      className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-all hover:scale-105 glow-gold font-body"
+                    <button
+                      type="button"
+                      onClick={handleVideoMuteToggle}
+                      className="absolute top-3 right-3 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/85"
                     >
-                      Book Now <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
+                      {isVideoMuted ? "Unmute" : "Mute"}
+                    </button>
                   </div>
                 </div>
               );

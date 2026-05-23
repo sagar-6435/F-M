@@ -126,6 +126,8 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
       if (catalog.decorationPrice !== undefined) updateData.decorationPrice = catalog.decorationPrice;
       if (catalog.testimonials !== undefined) updateData.testimonials = catalog.testimonials;
       if (catalog.heroImages !== undefined) updateData.heroImages = catalog.heroImages;
+      if (catalog.branchVideos !== undefined) updateData.branchVideos = catalog.branchVideos;
+      if (catalog.galleryVideos !== undefined) updateData.galleryVideos = catalog.galleryVideos;
       if (catalog.socialLinks !== undefined) updateData.socialLinks = catalog.socialLinks;
 
       await models.BranchCatalog.findOneAndUpdate(

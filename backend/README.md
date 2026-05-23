@@ -40,6 +40,9 @@ JWT_SECRET=your_secret_key
 ADMIN_PASSWORD=admin123
 MONGODB_URI_BRANCH1=your_mongodb_uri
 MONGODB_URI_BRANCH2=your_mongodb_uri
+CHATMITRA_API_URL=your_chat_mitra_endpoint
+CHATMITRA_API_KEY=your_chat_mitra_api_key
+CHATMITRA_AUTH_TOKEN=optional_bearer_token
 ```
 
 ### Running Locally
@@ -142,6 +145,9 @@ git push heroku main
 - `ADMIN_PASSWORD` - Admin login password
 - `MONGODB_URI_BRANCH1` - MongoDB connection string for branch 1
 - `MONGODB_URI_BRANCH2` - MongoDB connection string for branch 2
+- `CHATMITRA_API_URL` - Chat Mitra WhatsApp send-message endpoint
+- `CHATMITRA_API_KEY` - Optional Chat Mitra API key header value
+- `CHATMITRA_AUTH_TOKEN` - Optional bearer token for Chat Mitra
 
 ## Database
 

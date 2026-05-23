@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { getBranchModels } from '../config/mongo.js';
 import { branchDbs } from '../config/constants.js';
 import { saveBookings } from '../utils/persistence.js';
-import { sendAdminSmsNotification } from '../utils/sms.js';
+import { sendBookingWhatsAppNotifications } from '../utils/whatsapp.js';
 
 const router = express.Router();
 
@@ -208,15 +208,15 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
         
         console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
         
-        // Send SMS whenever status becomes paid or partially-paid,
+        // Send WhatsApp whenever status becomes paid or partially-paid,
         // but skip if status hasn't changed (duplicate call guard)
         const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
         if (shouldSendSms) {
-          sendAdminSmsNotification(booking).catch(err =>
-            console.error('✗ Admin SMS notification failed:', err)
+          sendBookingWhatsAppNotifications(booking).catch(err =>
+            console.error('✗ WhatsApp notification failed:', err)
           );
         } else {
-          console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate SMS`);
+          console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate WhatsApp notification`);
         }
         
         return booking;
@@ -245,15 +245,15 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
       
       console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
       
-      // Send SMS whenever status becomes paid or partially-paid,
+      // Send WhatsApp whenever status becomes paid or partially-paid,
       // but skip if status hasn't changed (duplicate call guard)
       const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
       if (shouldSendSms) {
-        sendAdminSmsNotification(booking).catch(err =>
-          console.error('✗ Admin SMS notification failed:', err)
+        sendBookingWhatsAppNotifications(booking).catch(err =>
+          console.error('✗ WhatsApp notification failed:', err)
         );
       } else {
-        console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate SMS`);
+        console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate WhatsApp notification`);
       }
       
       return booking;

@@ -1,13 +1,21 @@
-import twilio from 'twilio';
 import dotenv from 'dotenv';
+import { sendAdminSmsNotification } from './src/utils/sms.js';
 dotenv.config();
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const booking = {
+  id: 'TESTSMS1',
+  branch: 'branch-1',
+  name: 'Test User',
+  phone: '+919999999999',
+  service: 'Test Service',
+  date: '2026-05-23',
+  timeSlot: '10:00 AM',
+  duration: 2,
+  totalPrice: 1000,
+  paymentType: 'advance',
+  amountPaid: 500,
+  balanceAmount: 500,
+};
 
-const message = await client.messages.create({
-  body: 'F&M: Twilio SMS is working! Admin booking alerts are active.',
-  from: process.env.TWILIO_FROM_NUMBER,
-  to: '+916281762014',
-});
-
-console.log('SMS sent! SID:', message.sid, '| Status:', message.status);
+const result = await sendAdminSmsNotification(booking);
+console.log('ChatMitra SMS result:', result);

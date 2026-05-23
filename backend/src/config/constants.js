@@ -87,6 +87,8 @@ export const createBranchPricingDb = (branchId) => {
     decorationPrice: 1500,
     testimonials: [],
     heroImages: [],
+    branchVideos: [],
+    galleryVideos: [],
     socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
   };
 };
@@ -107,5 +109,7 @@ export const cloneBranchPricingDb = (data = {}) => ({
   decorationPrice: data.decorationPrice ?? 1500,
   testimonials: JSON.parse(JSON.stringify(data.testimonials || [])),
   heroImages: JSON.parse(JSON.stringify(data.heroImages || [])),
+  branchVideos: JSON.parse(JSON.stringify(data.branchVideos || [])),
+  galleryVideos: JSON.parse(JSON.stringify(data.galleryVideos || [])),
   socialLinks: JSON.parse(JSON.stringify(data.socialLinks || { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" })),
 });

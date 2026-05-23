@@ -4,7 +4,7 @@ import { branchDbs, globalDb, defaultPricing, defaultCakes, defaultDecorations }
 import { canFitBookingInOperatingHours, getBlockedSlotsForBooking, parse12HourTime, isOverlappingWithBuffer, getAvailableStartSlots, calculateBookingTimes } from '../utils/timeUtils.js';
 import { saveBookings, saveTimeSlots } from '../utils/persistence.js';
 import { getCatalogForBranch } from './catalogController.js';
-import { sendAdminSmsNotification } from '../utils/sms.js';
+import { sendBookingWhatsAppNotifications } from '../utils/whatsapp.js';
 
 export const createBooking = async (req, res) => {
   const { branch } = req.body;
@@ -125,10 +125,10 @@ export const createBooking = async (req, res) => {
       }
     }
     
-    // Send SMS notification if payment is already confirmed (e.g. manual booking)
+    // Send WhatsApp notifications if payment is already confirmed (e.g. manual booking)
     if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'partially-paid') {
-      sendAdminSmsNotification(booking).catch(err => 
-        console.error('✗ Admin SMS notification failed:', err)
+      sendBookingWhatsAppNotifications(booking).catch(err => 
+        console.error('✗ WhatsApp notification failed:', err)
       );
     }
     
