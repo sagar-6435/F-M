@@ -27,6 +27,7 @@ export interface ExtraDecoration {
   offerPrice?: number;
   description: string;
   image?: string;
+  video?: string;
 }
 
 export interface BookingData {

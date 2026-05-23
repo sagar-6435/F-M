@@ -3,10 +3,54 @@ import * as catalogController from '../controllers/catalogController.js';
 import { verifyAdmin } from '../middleware/auth.js';
 import { globalDb, defaultCakes } from '../config/constants.js';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadToCloudinary } from '../utils/cloudinary.js';
+import cloudinary, { uploadToCloudinary, uploadVideoToCloudinary } from '../utils/cloudinary.js';
 import { getRootFolderForBranch } from '../utils/branchConfig.js';
 
 const router = express.Router();
+
+const BRANCH_IDS = ['branch-1', 'branch-2'];
+
+const fetchCloudinaryReelsForBranch = async (branch) => {
+  const rootFolder = getRootFolderForBranch(branch);
+  const prefixes = [
+    `Home/${rootFolder}/reels`,
+    `Home/${rootFolder}/videos`,
+    `Home/${rootFolder}/gallery-videos`,
+  ];
+
+  const responses = await Promise.all(
+    prefixes.map((prefix) => cloudinary.api.resources({
+      type: 'upload',
+      resource_type: 'video',
+      prefix,
+      max_results: 100,
+      context: true,
+    }))
+  );
+
+  const seen = new Set();
+  const items = [];
+
+  for (const response of responses) {
+    for (const resource of response?.resources || []) {
+      const url = resource.secure_url || '';
+      const publicId = resource.public_id || '';
+      const uniqueKey = publicId || url;
+      if (!uniqueKey || seen.has(uniqueKey)) continue;
+      seen.add(uniqueKey);
+      items.push({
+        id: publicId || `${branch}-${items.length}`,
+        branch,
+        url,
+        title: resource?.context?.custom?.caption || resource.filename || 'Reel',
+        publicId,
+        createdAt: resource.created_at || '',
+      });
+    }
+  }
+
+  return items.filter((reel) => reel.url);
+};
 
 // Pricing
 router.get('/pricing', async (req, res) => {
@@ -20,6 +64,22 @@ router.get('/pricing', async (req, res) => {
   } catch (err) {
     console.error('Get Pricing Error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/reels', async (req, res) => {
+  try {
+    const requestedBranch = req.query.branch;
+    const branches = requestedBranch && requestedBranch !== 'all' ? [requestedBranch] : BRANCH_IDS;
+    const reelsByBranch = await Promise.all(branches.map(fetchCloudinaryReelsForBranch));
+    const reels = reelsByBranch
+      .flat()
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    res.json(reels);
+  } catch (err) {
+    console.error('Get Reels Error:', err);
+    res.status(500).json({ error: 'Failed to fetch reels' });
   }
 });
 
@@ -193,11 +253,15 @@ router.post('/decorations', verifyAdmin, async (req, res) => {
     const resolved = await catalogController.getCatalogOrSendError(req, res, true);
     if (!resolved) return;
     const { branch, catalog } = resolved;
-    const { name, price, description, image, originalPrice, offerPrice } = req.body;
+    const { name, price, description, image, video, originalPrice, offerPrice } = req.body;
 
     let imageUrl = image;
     if (image && image.startsWith('data:image')) {
       imageUrl = await uploadToCloudinary(image, 'decorations', getRootFolderForBranch(branch));
+    }
+    let videoUrl = video;
+    if (video && video.startsWith('data:video')) {
+      videoUrl = await uploadVideoToCloudinary(video, 'decorations', getRootFolderForBranch(branch));
     }
     const decoration = {
       id: `extra-${uuidv4()}`,
@@ -205,6 +269,7 @@ router.post('/decorations', verifyAdmin, async (req, res) => {
       price,
       description,
       image: imageUrl,
+      video: videoUrl,
       ...(originalPrice !== undefined && { originalPrice }),
       ...(offerPrice !== undefined && { offerPrice })
     };
@@ -228,6 +293,9 @@ router.put('/decorations/:id', verifyAdmin, async (req, res) => {
     const updateData = { ...req.body };
     if (updateData.image && updateData.image.startsWith('data:image')) {
       updateData.image = await uploadToCloudinary(updateData.image, 'decorations', getRootFolderForBranch(branch));
+    }
+    if (updateData.video && updateData.video.startsWith('data:video')) {
+      updateData.video = await uploadVideoToCloudinary(updateData.video, 'decorations', getRootFolderForBranch(branch));
     }
     Object.assign(item, updateData);
     await catalogController.saveCatalogForBranch(branch, catalog);

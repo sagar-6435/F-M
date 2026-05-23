@@ -30,6 +30,7 @@ export interface ExtraDecoration {
   offerPrice?: number;
   description: string;
   image?: string;
+  video?: string;
 }
 
 export interface TestimonialImage {
@@ -43,6 +44,15 @@ export interface BranchVideo {
   id: string;
   url: string;
   title: string;
+}
+
+export interface ReelVideo {
+  id: string;
+  branch: string;
+  url: string;
+  title: string;
+  publicId?: string;
+  createdAt?: string;
 }
 
 const normalizeBranchVideos = (data: unknown): BranchVideo[] => {
@@ -102,6 +112,33 @@ export const api = {
     const res = await fetch(`${API_BASE}/decorations?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch decorations");
     return res.json();
+  },
+
+  async getReels(branch: string = "all"): Promise<ReelVideo[]> {
+    const res = await fetch(`${API_BASE}/reels?branch=${encodeURIComponent(branch)}`);
+    if (!res.ok) throw new Error("Failed to fetch reels");
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data
+      .map((item, index) => {
+        if (typeof item === "string") {
+          return { id: `reel-${index}`, branch: branch === "all" ? "branch-1" : branch, url: item, title: "" };
+        }
+
+        if (!item || typeof item !== "object") return null;
+
+        const reel = item as Record<string, any>;
+        return {
+          id: reel.id || `reel-${index}`,
+          branch: reel.branch || (branch === "all" ? "branch-1" : branch),
+          url: reel.url || reel.secure_url || reel.videoUrl || "",
+          title: reel.title || reel.name || "",
+          publicId: reel.publicId || reel.public_id,
+          createdAt: reel.createdAt || reel.created_at,
+        } as ReelVideo;
+      })
+      .filter((item): item is ReelVideo => Boolean(item?.url));
   },
 
   async getPricing(branch?: string): Promise<Record<string, Record<number, any>>> {

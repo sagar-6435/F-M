@@ -1,4 +1,4 @@
-import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight, Video } from "lucide-react";
+import { ArrowRight, Play, Phone, MapPin, Star, Sparkles, Instagram, Facebook, Twitter, MessageCircle, ChevronLeft, ChevronRight, Video, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 const heroImg = "/hero-theatre.jpg";
@@ -6,6 +6,8 @@ import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
 import { api, type Branch, type BranchVideo } from "@/lib/api";
 import ReviewSection from "@/components/ReviewSection";
+
+const VIDEO_PROMPT_KEY = "homeVideoPromptDismissed";
 
 const Index = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -17,7 +19,9 @@ const Index = () => {
   const [brokenVideoIds, setBrokenVideoIds] = useState<Record<string, true>>({});
   const [activeVideoBranch, setActiveVideoBranch] = useState<string>("branch-1");
   const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [showVideoPrompt, setShowVideoPrompt] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,6 +69,18 @@ const Index = () => {
   }, [heroImages]);
 
   useEffect(() => {
+    if (loading || branches.length === 0) return;
+
+    try {
+      if (sessionStorage.getItem(VIDEO_PROMPT_KEY) === "true") return;
+    } catch {
+      // Ignore storage issues and show the prompt for this page load.
+    }
+
+    setShowVideoPrompt(true);
+  }, [branches.length, loading]);
+
+  useEffect(() => {
     const currentVideo = videoRef.current;
     if (!currentVideo) return;
 
@@ -94,8 +110,80 @@ const Index = () => {
     setBrokenVideoIds((prev) => ({ ...prev, [video.id]: true }));
   };
 
+  const closeVideoPrompt = () => {
+    try {
+      sessionStorage.setItem(VIDEO_PROMPT_KEY, "true");
+    } catch {
+      // Ignore storage issues; dismissal still works in memory.
+    }
+    setShowVideoPrompt(false);
+  };
+
+  const handleWatchVideosPrompt = () => {
+    const targetBranch = branches.find((branch) => {
+      const videos = (branchVideos[branch.id] || []).filter((item) => !brokenVideoIds[item.id]);
+      return videos.length > 0;
+    })?.id || activeVideoBranch;
+
+    closeVideoPrompt();
+    setActiveVideoBranch(targetBranch);
+    setIsVideoMuted(false);
+
+    videoSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    window.setTimeout(() => {
+      const currentVideo = videoRef.current;
+      if (!currentVideo) return;
+
+      currentVideo.muted = false;
+      currentVideo.volume = 1;
+      currentVideo.play().catch(() => {});
+    }, 250);
+  };
+
   return (
     <div className="min-h-screen">
+      {showVideoPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.25em] text-primary font-body">Venue Videos</p>
+                <h2 className="font-display text-2xl font-bold text-foreground">Watch our venue tour?</h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeVideoPrompt}
+                aria-label="Close video prompt"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground font-body">
+              Take a quick look inside our celebration spaces with sound.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleWatchVideosPrompt}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] font-body"
+              >
+                <Play className="h-4 w-4" />
+                Watch Video
+              </button>
+              <button
+                type="button"
+                onClick={closeVideoPrompt}
+                className="inline-flex flex-1 items-center justify-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted font-body"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative flex min-h-[90vh] md:min-h-screen items-center overflow-hidden">
         <div className="hero-placeholder" />
@@ -111,7 +199,7 @@ const Index = () => {
                 className="h-full w-full object-cover"
                 width={1920}
                 height={1080}
-                fetchpriority={idx === 0 ? "high" : "low"}
+                fetchPriority={idx === 0 ? "high" : "low"}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
               />
@@ -173,8 +261,16 @@ const Index = () => {
 
       {/* Branch Videos — Switch between branches */}
       {branches.length > 0 && (
-        <section className="py-4 border-b border-border bg-muted/20">
+        <section ref={videoSectionRef} id="venue-videos" className="py-4 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
+            <div className="mb-4 flex justify-end">
+              <Link
+                to="/reels"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                Reels <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
             <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Our Venues</p>
             <h2 className="mb-3 text-center font-display text-3xl font-bold text-foreground md:text-4xl">
               See Us <span className="text-gradient-gold">In Action</span>

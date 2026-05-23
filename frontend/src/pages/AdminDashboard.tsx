@@ -118,6 +118,11 @@ const AdminDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [slotEditDate, setSlotEditDate] = useState("");
+  const [slotEditTime, setSlotEditTime] = useState("");
+  const [slotEditAvailableSlots, setSlotEditAvailableSlots] = useState<string[]>([]);
+  const [slotEditLoading, setSlotEditLoading] = useState(false);
+  const [slotEditSaving, setSlotEditSaving] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -156,7 +161,7 @@ const AdminDashboard = () => {
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [newService, setNewService] = useState({ name: "", oneHour: 0, twoHours: 0, threeHours: 0, fourHours: 0 });
   const [newCake, setNewCake] = useState({ name: "", description: "", image: "", variants: [{ quantity: "1kg", price: 0, offerPrice: undefined }] });
-  const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "" });
+  const [newDecoration, setNewDecoration] = useState({ name: "", description: "", price: 0, image: "", video: "" });
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [uploadingHero, setUploadingHero] = useState(false);
   const [testimonials, setTestimonials] = useState<any[]>([]);
@@ -252,8 +257,45 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (selectedBooking) {
       setAdminNotes(selectedBooking.notes || "");
+      setSlotEditDate(selectedBooking.date || "");
+      setSlotEditTime(selectedBooking.timeSlot || "");
+      setSlotEditAvailableSlots([]);
     }
   }, [selectedBooking]);
+
+  useEffect(() => {
+    if (!selectedBooking || !slotEditDate) return;
+
+    const fetchSlotOptions = async () => {
+      try {
+        setSlotEditLoading(true);
+        const data = await api.getAvailableSlots(
+          selectedBooking.branch,
+          slotEditDate,
+          selectedBooking.service,
+          selectedBooking.duration
+        );
+
+        const options = [...data.availableSlots];
+        const isCurrentDate = slotEditDate === selectedBooking.date;
+        if (isCurrentDate && selectedBooking.timeSlot && !options.includes(selectedBooking.timeSlot)) {
+          options.unshift(selectedBooking.timeSlot);
+        }
+
+        setSlotEditAvailableSlots(options);
+        if (!options.includes(slotEditTime)) {
+          setSlotEditTime(options[0] || "");
+        }
+      } catch (error) {
+        console.error("Error fetching slot options:", error);
+        setSlotEditAvailableSlots([]);
+      } finally {
+        setSlotEditLoading(false);
+      }
+    };
+
+    fetchSlotOptions();
+  }, [selectedBooking, slotEditDate]);
 
   // Check for existing token and branch on mount
   useEffect(() => {
@@ -735,6 +777,12 @@ const AdminDashboard = () => {
       reader.readAsDataURL(file);
     });
 
+  const readDecorationMediaFile = async (file?: File | null) => {
+    const media = await readFileAsDataUrl(file);
+    if (!media) return {};
+    return file?.type.startsWith("video/") ? { video: media } : { image: media };
+  };
+
   const handleCreateService = async () => {
     if (!token || !newService.name.trim()) return;
     const service = newService.name.trim().toLowerCase().replace(/\s+/g, "-");
@@ -795,7 +843,7 @@ const AdminDashboard = () => {
         },
         body: JSON.stringify({ ...newDecoration, branch: selectedBranch }),
       });
-      setNewDecoration({ name: "", description: "", price: 0, image: "" });
+      setNewDecoration({ name: "", description: "", price: 0, image: "", video: "" });
       await fetchPricing();
     } catch (error) {
       console.error("Error creating decoration:", error);
@@ -1019,6 +1067,32 @@ const AdminDashboard = () => {
       alert("Failed to save note");
     } finally {
       setIsSavingNote(false);
+    }
+  };
+
+  const handleSaveSlotChange = async () => {
+    if (!selectedBooking || !token || !slotEditDate || !slotEditTime) return;
+    if (slotEditDate === selectedBooking.date && slotEditTime === selectedBooking.timeSlot) {
+      alert("Choose a different date or time slot first.");
+      return;
+    }
+
+    try {
+      setSlotEditSaving(true);
+      const updated = await api.updateBooking(token, selectedBooking.id, {
+        date: slotEditDate,
+        timeSlot: slotEditTime,
+      });
+
+      setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, ...updated } : b));
+      setSelectedBooking(prev => prev ? { ...prev, ...updated } : null);
+      await fetchData();
+      alert("Slot changed successfully. The old slot is now free and the new slot is blocked.");
+    } catch (err) {
+      console.error("Failed to change slot:", err);
+      alert("Failed to change slot. The selected slot may already be booked.");
+    } finally {
+      setSlotEditSaving(false);
     }
   };
 
@@ -1329,6 +1403,66 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Change Slot */}
+                    {selectedBooking.paymentStatus !== "cancelled" && (
+                      <div className="rounded-xl border border-border bg-muted p-4">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-foreground">Change Time Slot</h3>
+                            <p className="text-xs text-muted-foreground">
+                              Moving this booking frees the old slot and blocks the selected new slot.
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleSaveSlotChange}
+                            disabled={slotEditSaving || slotEditLoading || !slotEditDate || !slotEditTime}
+                            className="rounded-lg bg-primary px-3 py-1 text-xs font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
+                          >
+                            {slotEditSaving ? "Saving..." : "Save Slot"}
+                          </button>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="slot-edit-date" className="mb-2 block text-xs font-medium text-muted-foreground">
+                              Date
+                            </label>
+                            <input
+                              id="slot-edit-date"
+                              type="date"
+                              value={slotEditDate}
+                              onChange={(e) => setSlotEditDate(e.target.value)}
+                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="slot-edit-time" className="mb-2 block text-xs font-medium text-muted-foreground">
+                              Available Time Slot
+                            </label>
+                            <select
+                              id="slot-edit-time"
+                              value={slotEditTime}
+                              onChange={(e) => setSlotEditTime(e.target.value)}
+                              disabled={slotEditLoading || slotEditAvailableSlots.length === 0}
+                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-60"
+                            >
+                              {slotEditLoading ? (
+                                <option>Loading slots...</option>
+                              ) : slotEditAvailableSlots.length === 0 ? (
+                                <option>No slots available</option>
+                              ) : (
+                                slotEditAvailableSlots.map((slot) => (
+                                  <option key={slot} value={slot}>
+                                    {slot}{slot === selectedBooking.timeSlot && slotEditDate === selectedBooking.date ? " (current)" : ""}
+                                  </option>
+                                ))
+                              )}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Customer Info */}
                     <div className="rounded-xl border border-border bg-muted p-4">
@@ -2214,10 +2348,10 @@ const AdminDashboard = () => {
                   />
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     onChange={async (e) => {
-                      const image = await readFileAsDataUrl(e.target.files?.[0]);
-                      setNewDecoration({ ...newDecoration, image });
+                      const media = await readDecorationMediaFile(e.target.files?.[0]);
+                      setNewDecoration({ ...newDecoration, ...media });
                     }}
                     className="w-full text-xs text-muted-foreground"
                   />
@@ -2295,13 +2429,13 @@ const AdminDashboard = () => {
                           </div>
                           <input
                             type="file"
-                            accept="image/*"
-                            onChange={(e) => handleGalleryImageUpload("decoration", decoration.id, e.target.files?.[0])}
+                            accept="image/*,video/*"
+                            onChange={async (e) => {
+                              const media = await readDecorationMediaFile(e.target.files?.[0]);
+                              setEditValues({ ...editValues, ...media });
+                            }}
                             className="w-full text-xs text-muted-foreground"
                           />
-                          {uploadingImageId === `decoration-${decoration.id}` && (
-                            <p className="text-xs text-primary">Uploading image...</p>
-                          )}
                           <div className="flex gap-2 justify-end">
                              <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border border-border rounded-lg text-xs">Cancel</button>
                              <button onClick={handleSaveDecoration} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold">Save Changes</button>
@@ -2310,7 +2444,11 @@ const AdminDashboard = () => {
                       ) : (
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-4">
-                            {decoration.image && <img src={decoration.image} alt={decoration.name} className="w-12 h-12 rounded-lg object-cover border border-border" />}
+                            {decoration.video ? (
+                              <video src={decoration.video} muted playsInline className="w-12 h-12 rounded-lg object-cover border border-border bg-black" />
+                            ) : decoration.image ? (
+                              <img src={decoration.image} alt={decoration.name} className="w-12 h-12 rounded-lg object-cover border border-border" />
+                            ) : null}
                             <div>
                               <h4 className="font-bold text-foreground text-sm">{decoration.name}</h4>
                               <p className="text-xs text-muted-foreground line-clamp-1">{decoration.description}</p>

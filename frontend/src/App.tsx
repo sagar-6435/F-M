@@ -18,6 +18,7 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminPricing = lazy(() => import("./pages/AdminPricing"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const GalleryPage = lazy(() => import("./pages/GalleryPage"));
+const Reels = lazy(() => import("./pages/reels"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
@@ -76,6 +77,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/gallery" element={<GalleryPage />} />
+                <Route path="/reels" element={<Reels />} />
                 <Route path="/booking" element={<BookingPage />} />
                 <Route path="/booking-confirmed" element={<BookingConfirmed />} />
                 <Route path="/admin" element={<AdminDashboard />} />

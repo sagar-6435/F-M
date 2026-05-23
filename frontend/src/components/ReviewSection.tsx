@@ -176,7 +176,7 @@ const ReviewSection = () => {
           </div>
 
           {/* Form Column */}
-          <div className="lg:col-span-2">
+          <div className="mr-2 sm:mr-0 lg:col-span-2">
             <div className="bg-[#141414] border border-white/5 p-6 md:p-8 rounded-3xl shadow-2xl relative">
               <h3 className="text-xl font-bold text-white mb-1 font-display">Leave a Review</h3>
               <p className="text-muted-foreground text-xs mb-6 font-body">Tell us about your visit to F&M</p>

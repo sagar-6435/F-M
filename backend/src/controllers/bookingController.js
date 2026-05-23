@@ -220,8 +220,35 @@ export const updateBooking = async (req, res) => {
       if (models) {
         const existingBooking = await models.Booking.findOne({ id });
         if (existingBooking) {
+          const nextBooking = {
+            ...existingBooking.toObject(),
+            ...updateData,
+          };
+
           // Recalculate times if timeSlot or duration changed
-          if (updateData.timeSlot || updateData.duration) {
+          if (updateData.timeSlot || updateData.duration || updateData.date || updateData.service) {
+            if (!canFitBookingInOperatingHours(nextBooking.timeSlot, nextBooking.duration)) {
+              return res.status(400).json({ error: 'Selected time is outside available hours (10:00 AM - 12:00 AM)' });
+            }
+
+            const startMinutes = parse12HourTime(nextBooking.timeSlot);
+            const sameDayBookings = await models.Booking.find({
+              id: { $ne: id },
+              branch: nextBooking.branch,
+              date: nextBooking.date,
+              paymentStatus: { $in: ['paid', 'partially-paid'] },
+            });
+            const conflictingBooking = sameDayBookings.find((booking) =>
+              isOverlappingWithBuffer(startMinutes, nextBooking.duration, booking.timeSlot, booking.duration)
+            );
+
+            if (conflictingBooking) {
+              return res.status(409).json({
+                error: `Slot not available at ${nextBooking.timeSlot}. It overlaps with booking ${conflictingBooking.id}.`,
+                conflictingId: conflictingBooking.id,
+              });
+            }
+
             const newTimes = calculateBookingTimes(
               updateData.timeSlot || existingBooking.timeSlot,
               updateData.duration || existingBooking.duration
@@ -229,26 +256,25 @@ export const updateBooking = async (req, res) => {
             Object.assign(updateData, newTimes);
           }
 
-          const booking = await models.Booking.findOneAndUpdate({ id }, updateData, { new: true });
+          const booking = await models.Booking.findOneAndUpdate({ id }, { ...updateData, updatedAt: new Date() }, { new: true });
           
-          if (updateData.timeSlot || updateData.duration) {
+          if (updateData.timeSlot || updateData.duration || updateData.date || updateData.service || updateData.paymentStatus) {
             await models.TimeSlot.deleteMany({ bookingId: id });
-            const slotsToBlock = getBlockedSlotsForBooking(
-              updateData.timeSlot || existingBooking.timeSlot,
-              updateData.duration || existingBooking.duration
-            );
-            
-            await models.TimeSlot.insertMany(
-              slotsToBlock.map((slotTime) => ({
-                id: uuidv4(),
-                date: updateData.date || existingBooking.date,
-                timeSlot: slotTime,
-                service: updateData.service || existingBooking.service,
-                isBooked: true,
-                bookingId: id,
-                createdAt: new Date(),
-              }))
-            );
+            if (['paid', 'partially-paid'].includes(booking.paymentStatus)) {
+              const slotsToBlock = getBlockedSlotsForBooking(booking.timeSlot, booking.duration);
+              
+              await models.TimeSlot.insertMany(
+                slotsToBlock.map((slotTime) => ({
+                  id: uuidv4(),
+                  date: booking.date,
+                  timeSlot: slotTime,
+                  service: booking.service,
+                  isBooked: true,
+                  bookingId: id,
+                  createdAt: new Date(),
+                }))
+              );
+            }
           }
           return res.json(booking);
         }
@@ -259,7 +285,29 @@ export const updateBooking = async (req, res) => {
       const branchDb = branchDbs[branchId];
       const booking = branchDb.bookings.find(b => b.id === id);
       if (booking) {
-        if (updateData.timeSlot || updateData.duration) {
+        const nextBooking = { ...booking, ...updateData };
+
+        if (updateData.timeSlot || updateData.duration || updateData.date || updateData.service) {
+          if (!canFitBookingInOperatingHours(nextBooking.timeSlot, nextBooking.duration)) {
+            return res.status(400).json({ error: 'Selected time is outside available hours (10:00 AM - 12:00 AM)' });
+          }
+
+          const startMinutes = parse12HourTime(nextBooking.timeSlot);
+          const conflictingBooking = branchDb.bookings.find((candidate) =>
+            candidate.id !== id &&
+            candidate.branch === nextBooking.branch &&
+            candidate.date === nextBooking.date &&
+            ['paid', 'partially-paid'].includes(candidate.paymentStatus) &&
+            isOverlappingWithBuffer(startMinutes, nextBooking.duration, candidate.timeSlot, candidate.duration)
+          );
+
+          if (conflictingBooking) {
+            return res.status(409).json({
+              error: `Slot not available at ${nextBooking.timeSlot}. It overlaps with booking ${conflictingBooking.id}.`,
+              conflictingId: conflictingBooking.id,
+            });
+          }
+
           const newTimes = calculateBookingTimes(
             updateData.timeSlot || booking.timeSlot,
             updateData.duration || booking.duration
@@ -269,20 +317,22 @@ export const updateBooking = async (req, res) => {
 
         Object.assign(booking, updateData, { updatedAt: new Date() });
         
-        if (updateData.timeSlot || updateData.duration) {
+        if (updateData.timeSlot || updateData.duration || updateData.date || updateData.service || updateData.paymentStatus) {
           branchDb.timeSlots = branchDb.timeSlots.filter(s => s.bookingId !== id);
-          const slotsToBlock = getBlockedSlotsForBooking(booking.timeSlot, booking.duration);
-          slotsToBlock.forEach((slotTime) => {
-            branchDb.timeSlots.push({
-              id: uuidv4(),
-              date: booking.date,
-              timeSlot: slotTime,
-              service: booking.service,
-              isBooked: true,
-              bookingId: id,
-              createdAt: new Date(),
+          if (['paid', 'partially-paid'].includes(booking.paymentStatus)) {
+            const slotsToBlock = getBlockedSlotsForBooking(booking.timeSlot, booking.duration);
+            slotsToBlock.forEach((slotTime) => {
+              branchDb.timeSlots.push({
+                id: uuidv4(),
+                date: booking.date,
+                timeSlot: slotTime,
+                service: booking.service,
+                isBooked: true,
+                bookingId: id,
+                createdAt: new Date(),
+              });
             });
-          });
+          }
         }
         
         try {

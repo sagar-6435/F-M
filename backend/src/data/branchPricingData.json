@@ -82,6 +82,15 @@
         "price": 1000,
         "description": "",
         "image": "https://res.cloudinary.com/dzgz1epov/image/upload/v1777123530/f-m-elr/decorations/hlskadsqbucds7vaoge7.webp"
+      },
+      {
+        "id": "extra-40988820-5f24-4ba1-97c6-b03aa3616bcb",
+        "name": "Reel Shoot",
+        "price": 1000,
+        "description": "",
+        "image": "",
+        "video": "https://res.cloudinary.com/dzgz1epov/video/upload/v1779527464/Home/f-m-elr/decorations/k4mlolihfx5gz0buazyu.mp4",
+        "branch": "branch-1"
       }
     ],
     "pricing": {

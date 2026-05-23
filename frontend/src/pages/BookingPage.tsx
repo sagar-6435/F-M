@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   MapPin, Clock, PartyPopper, Cake, Sparkles, Check,
-  CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar, RefreshCw
+  CreditCard, ArrowLeft, ArrowRight, Film, User, Calendar, RefreshCw, Volume2, VolumeX
 } from "lucide-react";
 import { api, API_BASE, Branch, CakeOption, ExtraDecoration } from "../lib/api";
 import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-data";
@@ -55,6 +56,9 @@ const ALL_STEPS = [
 ];
 
 const STEP_ICONS = [MapPin, Clock, PartyPopper, Cake, Sparkles, Check, CreditCard];
+const OccasionStep = lazy(() => import("./booking/OccasionStep"));
+const CakeStep = lazy(() => import("./booking/CakeStep"));
+const DecorationsStep = lazy(() => import("./booking/DecorationsStep"));
 
 const BookingPage = () => {
   const [step, setStep] = useState(0);
@@ -77,6 +81,7 @@ const BookingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [lastFetchedBranch, setLastFetchedBranch] = useState<string>("");
+  const [decorationMuted, setDecorationMuted] = useState<Record<string, boolean>>({});
 
   // Load booking state from localStorage on mount
   useEffect(() => {
@@ -814,208 +819,48 @@ const BookingPage = () => {
 
               {/* Step 2: Occasion */}
               {step === 2 && (
-                <div className="space-y-6">
-                  {stepLoading ? (
+                <Suspense
+                  fallback={(
                     <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading occasions...</p>
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading occasion step...</p>
                     </div>
-                  ) : (
-                    <>
-                  <div className="rounded-xl bg-primary/5 p-4 border border-primary/20">
-                    <p className="text-xs text-primary font-body font-semibold flex items-center gap-2">
-                      <Sparkles className="h-3 w-3" /> Select one of the option
-                    </p>
-                  </div>
-                  <div>
-                    <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Occasion</label>
-                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                      {occasions.map((o) => (
-                        <button
-                          key={o}
-                          onClick={() => update({ occasion: o })}
-                          className={`rounded-xl border py-3 text-xs font-medium transition-all font-body ${booking.occasion === o ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary"
-                            }`}
-                        >
-                          {o}
-                        </button>
-                      ))}
-                    </div>
-                    {booking.occasion === "Other" && (
-                      <div className="mt-4">
-                        <label htmlFor="booking-customOccasion" className="sr-only">Specific Occasion</label>
-                        <input
-                          id="booking-customOccasion"
-                          name="customOccasion"
-                          type="text"
-                          placeholder="Please specify your occasion"
-                          value={booking.customOccasion || ""}
-                          onChange={(e) => update({ customOccasion: e.target.value })}
-                          className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                        />
-                      </div>
-                    )}
-                  </div>
-                    </>
                   )}
-                </div>
+                >
+                  <OccasionStep booking={booking} occasions={occasions} stepLoading={stepLoading} update={update} />
+                </Suspense>
               )}
 
               {/* Step 3: Cake */}
               {step === 3 && !isPremiumPack && (
-                <div className="space-y-6">
-                  {stepLoading ? (
+                <Suspense
+                  fallback={(
                     <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading cakes...</p>
-                    </div>
-                  ) : (
-                    <>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-foreground font-body">Would you like a cake?</label>
-                    <div className="flex gap-3">
-                      {[true, false].map((val) => (
-                        <button
-                          key={String(val)}
-                          onClick={() => update({ cakeRequired: val, selectedCake: val ? booking.selectedCake : null })}
-                          className={`flex-1 rounded-xl border py-3 text-sm font-medium transition-all font-body ${booking.cakeRequired === val ? "border-primary bg-muted text-primary" : "border-border text-foreground hover:border-primary/50"
-                            }`}
-                        >
-                          {val ? "Yes" : "No, thanks"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {booking.cakeRequired && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {cakes.map((cake) => {
-                        const variants = cake.variants || [{ quantity: cake.quantity || '1kg', price: cake.price, offerPrice: cake.offerPrice }];
-                        const selectedVariant = booking.selectedCake?.id === cake.id 
-                          ? variants.find(v => v.quantity === booking.selectedCake?.quantity) || variants[0]
-                          : variants[0];
-                        
-                        return (
-                          <div
-                            key={cake.id}
-                            className={`rounded-xl border overflow-hidden transition-all text-left flex flex-col ${booking.selectedCake?.id === cake.id ? "border-primary bg-muted shadow-md" : "border-border hover:border-primary"
-                              }`}
-                          >
-                            <div 
-                              className="aspect-square bg-muted overflow-hidden relative cursor-pointer"
-                              onClick={() => update({ selectedCake: { ...cake, ...selectedVariant } })}
-                            >
-                              {cake.image ? (
-                                <img src={cake.image} alt={cake.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">No image</div>
-                              )}
-                              <div className="absolute top-2 right-2 bg-primary/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                                {selectedVariant.quantity}
-                              </div>
-                            </div>
-                            <div className="p-3 flex-1 flex flex-col">
-                              <p className="font-bold text-foreground text-sm font-body">{cake.name}</p>
-                              <p className="text-[10px] text-muted-foreground font-body line-clamp-1 mb-2">{cake.description}</p>
-                              
-                              {/* Variant Selection */}
-                              <div className="flex flex-wrap gap-1 mb-3">
-                                {variants.map((v, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      update({ selectedCake: { ...cake, ...v } });
-                                    }}
-                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      booking.selectedCake?.id === cake.id && booking.selectedCake.quantity === v.quantity
-                                        ? "bg-primary text-white border-primary shadow-sm"
-                                        : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                                    }`}
-                                  >
-                                    {v.quantity}
-                                  </button>
-                                ))}
-                              </div>
-
-                              <div className="flex justify-between items-center mt-auto">
-                                {hasOffer(selectedVariant) ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-green-500 font-body">₹{getEffectivePrice(selectedVariant)}</span>
-                                    <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(selectedVariant)}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm font-bold text-primary font-body">₹{selectedVariant.price}</span>
-                                )}
-                                {booking.selectedCake?.id === cake.id && <Check className="h-4 w-4 text-primary" />}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading cake step...</p>
                     </div>
                   )}
-                    </>
-                  )}
-                </div>
+                >
+                  <CakeStep booking={booking} cakes={cakes} stepLoading={stepLoading} update={update} />
+                </Suspense>
               )}
 
               {/* Step 4: Extra Decorations */}
               {step === 4 && !isPremiumPack && (
-                <div className="space-y-4">
-                  {stepLoading ? (
+                <Suspense
+                  fallback={(
                     <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading decorations...</p>
+                      <p className="text-sm text-muted-foreground font-body animate-pulse">Loading decorations step...</p>
                     </div>
-                  ) : (
-                    <>
-                  <p className="text-xs text-muted-foreground font-body">Select any extras to add to your experience</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {decorations.map((item) => {
-                      const selected = booking.extraDecorations.some((d) => d.id === item.id);
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            const extras = selected
-                              ? booking.extraDecorations.filter((d) => d.id !== item.id)
-                              : [...booking.extraDecorations, item];
-                            update({ extraDecorations: extras });
-                          }}
-                          className={`rounded-xl border overflow-hidden transition-all text-left ${selected ? "border-primary bg-muted shadow-md ring-1 ring-primary/30" : "border-border hover:border-primary"
-                            }`}
-                        >
-                          <div className="aspect-square bg-muted overflow-hidden relative">
-                            {item.image ? (
-                              <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground font-body">No image</div>
-                            )}
-                            {selected && (
-                              <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-0.5">
-                                <Check className="h-4 w-4" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-3">
-                            <p className="font-bold text-foreground text-sm font-body">{item.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-body line-clamp-1 mt-0.5">{item.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              {hasOffer(item) ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-green-500 font-body">₹{getEffectivePrice(item)}</span>
-                                  <span className="text-[10px] line-through text-muted-foreground font-body">₹{getOriginalPrice(item)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-sm font-bold text-primary font-body">₹{item.price}</span>
-                              )}
-                              {selected && <span className="text-[10px] font-semibold text-primary">Added ✓</span>}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                    </>
                   )}
-                </div>
+                >
+                  <DecorationsStep
+                    booking={booking}
+                    decorations={decorations}
+                    stepLoading={stepLoading}
+                    decorationMuted={decorationMuted}
+                    setDecorationMuted={setDecorationMuted}
+                    update={update}
+                  />
+                </Suspense>
               )}
 
               {/* Step 5: Summary */}
