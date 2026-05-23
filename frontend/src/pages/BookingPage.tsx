@@ -10,8 +10,8 @@ import { BookingData, INITIAL_BOOKING, DECORATION_PRICE } from "../lib/booking-d
 import { getEffectivePrice, getOriginalPrice, hasOffer } from "../lib/utils";
 
 const formatServiceName = (serviceId: string) => {
-  if (serviceId === "private-theatre-party-hall") return "Standard Pack Starting From ₹1499";
-  if (serviceId === "premium-pack") return "Premium Pack Starting From ₹2799 ";
+  if (serviceId === "private-theatre-party-hall") return "Standard Pack";
+  if (serviceId === "premium-pack") return "Premium Pack ";
   return serviceId
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -671,11 +671,19 @@ const BookingPage = () => {
                             <Film className="h-5 w-5 text-primary" />
                             <div className="text-left">
                               <span className="font-semibold text-foreground text-sm font-body">{formatServiceName(serviceId)}</span>
-                              <p className="text-[10px] text-muted-foreground font-body">
-                                {serviceId === "premium-pack" 
-                                  ? "Fog entry • Photos • Cake • Theatre • Decoration" 
-                                  : "Best combined experience"}
-                              </p>
+                              {serviceId === "premium-pack" ? (
+                                <>
+                                  <ul className="mb-0 text-[10px] text-muted-foreground font-body list-disc pl-4">
+                                    <li>Fog entry</li>
+                                    <li>Photos</li>
+                                    <li>Cake</li>
+                                    <li>Theatre</li>
+                                    <li>Decoration</li>
+                                  </ul>
+                                </>
+                              ) : (
+                                <p className="text-[10px] text-muted-foreground font-body">Best combined experience</p>
+                              )}
                             </div>
                           </button>
                         ))}
