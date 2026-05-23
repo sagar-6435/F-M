@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 const heroImg = "/hero-theatre.jpg";
 import partyImg from "@/assets/party-hall.jpg";
 import theatreImg from "@/assets/private-theatre.jpg";
-import { api, type Branch } from "@/lib/api";
+import { api, type Branch, type BranchVideo } from "@/lib/api";
 import ReviewSection from "@/components/ReviewSection";
 
 const Index = () => {
@@ -13,7 +13,8 @@ const Index = () => {
   const [branchSocials, setBranchSocials] = useState<Record<string, any>>({});
   const [currentHero, setCurrentHero] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [branchVideos, setBranchVideos] = useState<Record<string, { id: string; url: string; title: string }[]>>({});
+  const [branchVideos, setBranchVideos] = useState<Record<string, BranchVideo[]>>({});
+  const [brokenVideoIds, setBrokenVideoIds] = useState<Record<string, true>>({});
   const [activeVideoBranch, setActiveVideoBranch] = useState<string>("branch-1");
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,6 +90,10 @@ const Index = () => {
     }
   };
 
+  const handleVideoError = (video: BranchVideo) => {
+    setBrokenVideoIds((prev) => ({ ...prev, [video.id]: true }));
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero */}
@@ -106,7 +111,7 @@ const Index = () => {
                 className="h-full w-full object-cover"
                 width={1920}
                 height={1080}
-                fetchPriority={idx === 0 ? "high" : "low"}
+                fetchpriority={idx === 0 ? "high" : "low"}
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
               />
@@ -168,7 +173,7 @@ const Index = () => {
 
       {/* Branch Videos — Switch between branches */}
       {branches.length > 0 && (
-        <section className="py-20 border-b border-border bg-muted/20">
+        <section className="py-4 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
             <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Our Venues</p>
             <h2 className="mb-3 text-center font-display text-3xl font-bold text-foreground md:text-4xl">
@@ -230,14 +235,14 @@ const Index = () => {
             {/* Video Card */}
             {(() => {
               const activeBranch = branches.find(b => b.id === activeVideoBranch);
-              const videos = branchVideos[activeVideoBranch] || [];
+              const videos = (branchVideos[activeVideoBranch] || []).filter((item) => !brokenVideoIds[item.id]);
 
               if (!activeBranch) return null;
 
               if (videos.length === 0) {
                 return (
-                  <div className="mx-auto max-w-3xl rounded-2xl border border-dashed border-border bg-card overflow-hidden shadow-xl">
-                    <div className="relative aspect-video bg-muted/40 flex flex-col items-center justify-center gap-3">
+                  <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border bg-card overflow-hidden shadow-xl">
+                    <div className="relative aspect-[4/5] bg-muted/40 flex flex-col items-center justify-center gap-3">
                       <Video className="h-12 w-12 text-muted-foreground/40" />
                       <p className="text-sm text-muted-foreground font-body">Video coming soon for {activeBranch.name}</p>
                     </div>
@@ -247,8 +252,8 @@ const Index = () => {
 
               const video = videos[0];
               return (
-                <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card overflow-hidden shadow-xl transition-all hover:border-primary/50 hover:glow-gold">
-                  <div className="relative aspect-video bg-black">
+                <div className="mx-auto max-w-md rounded-2xl border border-border bg-card overflow-hidden shadow-xl transition-all hover:border-primary/50 hover:glow-gold">
+                  <div className="relative aspect-[4/5] bg-black">
                     <video
                       ref={videoRef}
                       key={video.url}
@@ -257,6 +262,7 @@ const Index = () => {
                       muted={isVideoMuted}
                       loop
                       playsInline
+                      onError={() => handleVideoError(video)}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 backdrop-blur-sm pointer-events-none">
@@ -281,7 +287,7 @@ const Index = () => {
       )}
 
       {/* Services */}
-      <section id="services" className="py-24">
+      <section id="services" className="py-4">
         <div className="container mx-auto px-4">
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Our Services</p>
           <h2 className="mb-16 text-center font-display text-4xl font-bold text-foreground md:text-5xl">
@@ -325,7 +331,7 @@ const Index = () => {
       </section>
 
       {/* Branches */}
-      <section className="border-t border-border py-24">
+      <section className="border-t border-border py-4">
         <div className="container mx-auto px-4">
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-primary font-body">Locations</p>
           <h2 className="mb-16 text-center font-display text-4xl font-bold text-foreground md:text-5xl">
@@ -360,7 +366,7 @@ const Index = () => {
       </section>
 
       {/* SEO Keywords Section */}
-      <section className="py-24 border-t border-border bg-muted/30">
+      <section className="py-4 border-t border-border bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="mb-10 font-display text-3xl font-bold text-foreground">Premium Celebration Venues in Andhra Pradesh</h2>
@@ -398,7 +404,7 @@ const Index = () => {
       <ReviewSection />
 
       {/* Footer */}
-      <footer className="border-t border-border py-16 bg-card/50">
+      <footer className="border-t border-border py-8 bg-card/50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-center space-y-6">
             <p className="font-display text-3xl font-bold text-gradient-gold italic">Friends & Memories</p>

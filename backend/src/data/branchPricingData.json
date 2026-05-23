@@ -138,9 +138,10 @@
     ],
     "branchVideos": [
       {
-        "id": "cloudinary-Home/f-m-elr/videos/z95z0lrmttdodxn89qew",
-        "url": "https://res.cloudinary.com/dzgz1epov/video/upload/v1779472707/Home/f-m-elr/videos/z95z0lrmttdodxn89qew.mp4",
-        "title": "Branch Video"
+        "id": "video-1cc69eba-607c-4902-8887-53d2c15360d1",
+        "url": "https://res.cloudinary.com/dzgz1epov/video/upload/v1779524394/Home/f-m-elr/videos/ouo6vopmpckhwqy19tfx.mp4",
+        "title": "Branch Video",
+        "publicId": "Home/f-m-elr/videos/ouo6vopmpckhwqy19tfx"
       }
     ],
     "galleryVideos": [],

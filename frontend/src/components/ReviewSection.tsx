@@ -76,7 +76,7 @@ const ReviewSection = () => {
   if (loading && reviews.length === 0) return null;
 
   return (
-    <section className="py-32 bg-[#0a0a0a] relative overflow-hidden border-t border-white/5">
+    <section className="py-8 bg-[#0a0a0a] relative overflow-hidden border-t border-white/5">
       {/* Dynamic Background Elements */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4 animate-pulse" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4 animate-pulse" />

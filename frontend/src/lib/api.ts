@@ -39,6 +39,33 @@ export interface TestimonialImage {
   date?: string;
 }
 
+export interface BranchVideo {
+  id: string;
+  url: string;
+  title: string;
+}
+
+const normalizeBranchVideos = (data: unknown): BranchVideo[] => {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return { id: `video-${index}`, url: item, title: "" };
+      }
+
+      if (!item || typeof item !== "object") return null;
+
+      const video = item as Record<string, any>;
+      return {
+        id: video.id || `video-${index}`,
+        url: video.url || video.secure_url || video.videoUrl || "",
+        title: video.title || video.name || "",
+      };
+    })
+    .filter((video): video is BranchVideo => Boolean(video?.url));
+};
+
 export const api = {
   async getBranches(): Promise<Branch[]> {
     const res = await fetch(`${API_BASE}/branches?t=${Date.now()}`);
@@ -471,27 +498,11 @@ export const api = {
     return res.json();
   },
 
-  async getBranchVideos(branch: string): Promise<{ id: string; url: string; title: string }[]> {
+  async getBranchVideos(branch: string): Promise<BranchVideo[]> {
     const res = await fetch(`${API_BASE}/admin/branch-videos?branch=${encodeURIComponent(branch)}`);
     if (!res.ok) throw new Error("Failed to fetch branch videos");
     const data = await res.json();
-    if (!Array.isArray(data)) return [];
-
-    return data
-      .map((item, index) => {
-        if (typeof item === "string") {
-          return { id: `video-${index}`, url: item, title: "" };
-        }
-
-        if (!item || typeof item !== "object") return null;
-
-        return {
-          id: item.id || `video-${index}`,
-          url: item.url || item.secure_url || item.videoUrl || "",
-          title: item.title || item.name || "",
-        };
-      })
-      .filter((video): video is { id: string; url: string; title: string } => Boolean(video?.url));
+    return normalizeBranchVideos(data);
   },
 
   async getVideoUploadSignature(token: string, branch: string): Promise<{
@@ -548,7 +559,7 @@ export const api = {
     });
   },
 
-  async saveBranchVideo(token: string, branch: string, url: string, title?: string): Promise<{ id: string; url: string; title: string }[]> {
+  async saveBranchVideo(token: string, branch: string, url: string, title?: string): Promise<BranchVideo[]> {
     const res = await fetch(`${API_BASE}/admin/branch-videos?branch=${encodeURIComponent(branch)}`, {
       method: "POST",
       headers: {
@@ -558,15 +569,28 @@ export const api = {
       body: JSON.stringify({ url, title }),
     });
     if (!res.ok) throw new Error("Failed to save branch video");
-    return res.json();
+    return normalizeBranchVideos(await res.json());
   },
 
-  async deleteBranchVideo(token: string, branch: string, id: string): Promise<{ id: string; url: string; title: string }[]> {
-    const res = await fetch(`${API_BASE}/admin/branch-videos/${id}?branch=${encodeURIComponent(branch)}`, {
+  async updateBranchVideo(token: string, branch: string, id: string, title: string): Promise<BranchVideo[]> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos/${encodeURIComponent(id)}?branch=${encodeURIComponent(branch)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error("Failed to update branch video");
+    return normalizeBranchVideos(await res.json());
+  },
+
+  async deleteBranchVideo(token: string, branch: string, id: string): Promise<BranchVideo[]> {
+    const res = await fetch(`${API_BASE}/admin/branch-videos/${encodeURIComponent(id)}?branch=${encodeURIComponent(branch)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error("Failed to delete branch video");
-    return res.json();
+    return normalizeBranchVideos(await res.json());
   },
 };

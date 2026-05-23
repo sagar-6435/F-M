@@ -20,6 +20,7 @@ const normalizeBranchVideos = (videos = []) => {
           id: `video-${index}`,
           url: video,
           title: '',
+          publicId: getCloudinaryVideoPublicId(video),
         };
       }
 
@@ -29,10 +30,30 @@ const normalizeBranchVideos = (videos = []) => {
         id: video.id || `video-${index}`,
         url: video.url || video.secure_url || video.videoUrl || '',
         title: video.title || video.name || '',
+        publicId: video.publicId || getCloudinaryVideoPublicId(video.url || video.secure_url || video.videoUrl || ''),
       };
     })
     .filter((video) => video && video.url);
 };
+
+const getCloudinaryVideoPublicId = (url = '') => {
+  try {
+    const parsed = new URL(url);
+    const uploadIndex = parsed.pathname.indexOf('/video/upload/');
+    if (uploadIndex === -1) return '';
+
+    const pathAfterUpload = parsed.pathname.slice(uploadIndex + '/video/upload/'.length);
+    const parts = pathAfterUpload.split('/').filter(Boolean);
+    const versionIndex = parts.findIndex((part) => /^v\d+$/.test(part));
+    const publicIdParts = parts.slice(versionIndex >= 0 ? versionIndex + 1 : 0);
+    const publicId = publicIdParts.join('/').replace(/\.[^/.]+$/, '');
+    return decodeURIComponent(publicId);
+  } catch {
+    return '';
+  }
+};
+
+const getAdminBranch = (req) => req.admin?.branch || req.query.branch || req.body.branch || 'branch-1';
 
 const fetchCloudinaryBranchVideos = async (branch) => {
   const rootFolder = getRootFolderForBranch(branch);
@@ -52,8 +73,53 @@ const fetchCloudinaryBranchVideos = async (branch) => {
       id: `cloudinary-${resource.public_id || index}`,
       url: resource.secure_url || '',
       title: resource?.context?.custom?.caption || resource.filename || 'Branch Video',
+      publicId: resource.public_id || '',
     }))
     .filter((video) => video.url);
+};
+
+const filterConfirmedExistingVideos = async (videos) => {
+  const checks = await Promise.all(videos.map(async (video) => {
+    if (!video.publicId || !video.url.includes('res.cloudinary.com')) return video;
+
+    try {
+      await cloudinary.api.resource(video.publicId, { resource_type: 'video' });
+      return video;
+    } catch (error) {
+      if (error?.http_code === 404) return null;
+      console.warn(`Could not verify Cloudinary video ${video.publicId}:`, error.message);
+      return video;
+    }
+  }));
+
+  return checks.filter(Boolean);
+};
+
+const reconcileBranchVideosWithCloudinary = (savedVideos, cloudinaryVideos) => {
+  const savedByPublicId = new Map(savedVideos.filter((video) => video.publicId).map((video) => [video.publicId, video]));
+  const savedByUrl = new Map(savedVideos.map((video) => [video.url, video]));
+
+  const reconciledCloudinaryVideos = cloudinaryVideos.map((video) => {
+    const saved = savedByPublicId.get(video.publicId) || savedByUrl.get(video.url);
+    return {
+      id: saved?.id || video.id,
+      url: video.url,
+      title: saved?.title || video.title || '',
+      publicId: video.publicId || saved?.publicId || '',
+    };
+  });
+
+  const reconciledIds = new Set(reconciledCloudinaryVideos.map((video) => video.id));
+  const reconciledPublicIds = new Set(reconciledCloudinaryVideos.map((video) => video.publicId).filter(Boolean));
+  const reconciledUrls = new Set(reconciledCloudinaryVideos.map((video) => video.url));
+
+  const remainingSavedVideos = savedVideos.filter((video) => {
+    if (reconciledIds.has(video.id)) return false;
+    if (video.publicId && reconciledPublicIds.has(video.publicId)) return false;
+    return !reconciledUrls.has(video.url);
+  });
+
+  return [...remainingSavedVideos, ...reconciledCloudinaryVideos];
 };
 
 router.post('/login', adminController.login);
@@ -338,22 +404,25 @@ router.get('/branch-videos', async (req, res) => {
     if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
 
     const normalizedSavedVideos = normalizeBranchVideos(catalog.branchVideos || []);
-    if (normalizedSavedVideos.length > 0) {
-      return res.json(normalizedSavedVideos);
-    }
+    const verifiedSavedVideos = await filterConfirmedExistingVideos(normalizedSavedVideos);
 
     try {
       const cloudinaryVideos = await fetchCloudinaryBranchVideos(branch);
+      const reconciledVideos = reconcileBranchVideosWithCloudinary(verifiedSavedVideos, cloudinaryVideos);
 
-      if (cloudinaryVideos.length > 0) {
-        catalog.branchVideos = cloudinaryVideos;
+      if (JSON.stringify(normalizedSavedVideos) !== JSON.stringify(reconciledVideos)) {
+        catalog.branchVideos = reconciledVideos;
         await catalogController.saveCatalogForBranch(branch, catalog);
       }
 
-      return res.json(cloudinaryVideos);
+      return res.json(reconciledVideos);
     } catch (cloudinaryError) {
       console.warn(`Failed to fetch Cloudinary branch videos for ${branch}:`, cloudinaryError.message);
-      return res.json([]);
+      if (JSON.stringify(normalizedSavedVideos) !== JSON.stringify(verifiedSavedVideos)) {
+        catalog.branchVideos = verifiedSavedVideos;
+        await catalogController.saveCatalogForBranch(branch, catalog);
+      }
+      return res.json(verifiedSavedVideos);
     }
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch branch videos' });
@@ -362,7 +431,7 @@ router.get('/branch-videos', async (req, res) => {
 
 router.post('/branch-videos/sign', verifyAdmin, async (req, res) => {
   try {
-    const branch = req.query.branch || req.body.branch || 'branch-1';
+    const branch = getAdminBranch(req);
     const rootFolder = getRootFolderForBranch(branch);
     const folder = `Home/${rootFolder}/videos`;
     const timestamp = Math.round(Date.now() / 1000);
@@ -388,11 +457,17 @@ router.post('/branch-videos/sign', verifyAdmin, async (req, res) => {
 
 // Branch Videos — Save URL after direct Cloudinary upload
 router.post('/branch-videos', verifyAdmin, async (req, res) => {
-  const branch = req.query.branch || req.body.branch || 'branch-1';
+  const branch = getAdminBranch(req);
   const { url, title } = req.body;
   if (!url) return res.status(400).json({ error: 'Video URL required' });
 
   try {
+    const expectedFolder = `Home/${getRootFolderForBranch(branch)}/videos/`;
+    const publicId = getCloudinaryVideoPublicId(url);
+    if (publicId && !publicId.startsWith(expectedFolder)) {
+      return res.status(400).json({ error: `Video must be uploaded to ${expectedFolder}` });
+    }
+
     const catalog = await catalogController.getCatalogForBranch(branch);
     if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
 
@@ -401,6 +476,7 @@ router.post('/branch-videos', verifyAdmin, async (req, res) => {
       id: `video-${uuidv4()}`,
       url,
       title: title || '',
+      publicId,
     };
     catalog.branchVideos.push(videoEntry);
     await catalogController.saveCatalogForBranch(branch, catalog);
@@ -411,14 +487,41 @@ router.post('/branch-videos', verifyAdmin, async (req, res) => {
   }
 });
 
-router.delete('/branch-videos/:id', verifyAdmin, async (req, res) => {
-  const branch = req.query.branch || 'branch-1';
+router.put('/branch-videos/:id', verifyAdmin, async (req, res) => {
+  const branch = getAdminBranch(req);
+  const { title } = req.body;
+
   try {
     const catalog = await catalogController.getCatalogForBranch(branch);
     if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
-    const index = (catalog.branchVideos || []).findIndex((v) => v.id === req.params.id);
+
+    const videos = normalizeBranchVideos(catalog.branchVideos || []);
+    const index = videos.findIndex((v) => v.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'Video not found' });
-    catalog.branchVideos.splice(index, 1);
+
+    videos[index] = {
+      ...videos[index],
+      title: title || '',
+    };
+
+    catalog.branchVideos = videos;
+    await catalogController.saveCatalogForBranch(branch, catalog);
+    res.json(catalog.branchVideos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update branch video' });
+  }
+});
+
+router.delete('/branch-videos/:id', verifyAdmin, async (req, res) => {
+  const branch = getAdminBranch(req);
+  try {
+    const catalog = await catalogController.getCatalogForBranch(branch);
+    if (!catalog) return res.status(400).json({ error: 'Invalid branch' });
+    const videos = normalizeBranchVideos(catalog.branchVideos || []);
+    const index = videos.findIndex((v) => v.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Video not found' });
+    videos.splice(index, 1);
+    catalog.branchVideos = videos;
     await catalogController.saveCatalogForBranch(branch, catalog);
     res.json(catalog.branchVideos);
   } catch (err) {

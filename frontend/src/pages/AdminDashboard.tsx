@@ -98,7 +98,7 @@ const BranchVideoPreview = ({ branch }: { branch: string }) => {
     <div className="grid gap-4 md:grid-cols-2">
       {videos.map((vid) => (
         <div key={vid.id} className="rounded-xl border border-border bg-muted/30 overflow-hidden">
-          <video src={vid.url} controls className="w-full aspect-video bg-black" />
+          <video src={vid.url} controls className="w-full aspect-[4/5] bg-black object-cover" />
           <div className="p-3">
             <p className="text-sm font-medium text-foreground">{vid.title || "Branch Video"}</p>
           </div>
@@ -169,6 +169,8 @@ const AdminDashboard = () => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [editingVideoTitle, setEditingVideoTitle] = useState("");
   const [previewBranch, setPreviewBranch] = useState<"branch-1" | "branch-2">("branch-1");
   const [manualAvailableSlots, setManualAvailableSlots] = useState<string[]>([]);
   const [manualBookedSlots, setManualBookedSlots] = useState<string[]>([]);
@@ -851,6 +853,7 @@ const AdminDashboard = () => {
       const updated = await api.saveBranchVideo(token, selectedBranch, videoUrl, newVideoTitle || undefined);
       setNewVideoTitle("");
       setBranchVideos(updated);
+      setPreviewBranch(selectedBranch);
     } catch (error) {
       console.error("Error uploading video:", error);
       setError("Failed to upload video. Please try again.");
@@ -860,11 +863,34 @@ const AdminDashboard = () => {
     }
   };
 
+  const startEditingVideo = (video: { id: string; title: string }) => {
+    setEditingVideoId(video.id);
+    setEditingVideoTitle(video.title || "");
+  };
+
+  const cancelEditingVideo = () => {
+    setEditingVideoId(null);
+    setEditingVideoTitle("");
+  };
+
+  const handleUpdateVideo = async (id: string) => {
+    if (!token) return;
+    try {
+      const updated = await api.updateBranchVideo(token, selectedBranch, id, editingVideoTitle.trim());
+      setBranchVideos(updated);
+      cancelEditingVideo();
+    } catch (error) {
+      console.error("Error updating video:", error);
+      setError("Failed to update video");
+    }
+  };
+
   const handleDeleteVideo = async (id: string) => {
     if (!token) return;
     try {
       const updated = await api.deleteBranchVideo(token, selectedBranch, id);
       setBranchVideos(updated);
+      if (editingVideoId === id) cancelEditingVideo();
     } catch (error) {
       console.error("Error deleting video:", error);
       setError("Failed to delete video");
@@ -2464,15 +2490,55 @@ const AdminDashboard = () => {
                     <video
                       src={vid.url}
                       controls
-                      className="w-full rounded-lg aspect-video bg-black"
+                      className="w-full rounded-lg aspect-[4/5] bg-black object-cover"
                     />
-                    <p className="text-sm font-medium text-foreground truncate">{vid.title || "Branch Video"}</p>
-                    <button
-                      onClick={() => handleDeleteVideo(vid.id)}
-                      className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 transition-colors"
-                    >
-                      Delete
-                    </button>
+                    {editingVideoId === vid.id ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editingVideoTitle}
+                          onChange={(e) => setEditingVideoTitle(e.target.value)}
+                          placeholder="Video title"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => handleUpdateVideo(vid.id)}
+                            className="inline-flex items-center gap-1 rounded border border-green-300 px-3 py-1 text-sm text-green-700 transition-colors hover:bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEditingVideo}
+                            className="inline-flex items-center gap-1 rounded border border-border px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            <X className="h-4 w-4" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 text-sm font-medium text-foreground truncate">{vid.title || "Branch Video"}</p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <button
+                            onClick={() => startEditingVideo(vid)}
+                            aria-label="Edit video title"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVideo(vid.id)}
+                            aria-label="Delete video"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded border border-red-300 text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -90,9 +90,9 @@ const GalleryPage = () => {
 
         {/* Content */}
         {loading ? (
-          <div className="text-center text-muted-foreground py-16">Loading gallery...</div>
+          <div className="text-center text-muted-foreground py-8">Loading gallery...</div>
         ) : galleryImages.length === 0 ? (
-          <div className="text-center text-muted-foreground py-16">No images uploaded yet for this branch.</div>
+          <div className="text-center text-muted-foreground py-8">No images uploaded yet for this branch.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {galleryImages.map((image, index) => (
