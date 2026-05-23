@@ -579,7 +579,7 @@ const BookingPage = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Sparkles className="h-4 w-4" />
                   </div>
-                  <span className="font-display text-sm font-bold text-foreground">2nd Anniversary offer</span>
+                  <span className="font-display text-sm font-bold text-foreground">2nd Anniversary offer on Bhimavaram Branch</span>
                 </div>
                 <p className="text-xs text-muted-foreground font-body">Discount On Premium Pack</p>
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary border border-primary/20">
