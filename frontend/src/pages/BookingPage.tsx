@@ -1034,15 +1034,7 @@ const BookingPage = () => {
                       {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()} Now`}
                     </button>
 
-                    {!import.meta.env.PROD && (
-                      <button
-                        onClick={() => handlePayment('mock')}
-                        disabled={paymentLoading}
-                        className="w-full rounded-xl border border-border py-2 text-xs font-bold text-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
-                      >
-                        (Dev Mode) Test Payment
-                      </button>
-                    )}
+                    {/* Dev test payment buttons removed */}
 
                     <button
                       onClick={() => {

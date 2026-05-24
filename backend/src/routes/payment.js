@@ -97,6 +97,7 @@ router.post('/razorpay/callback', async (req, res) => {
       
       // Fetch the order from Razorpay to get the receipt (which holds our bookingId)
       let bookingId = null;
+      let paidAmount = null;
       try {
         const orderRes = await fetch(`${RAZORPAY_BASE_URL}/orders/${razorpay_order_id}`, {
           method: 'GET',
@@ -108,19 +109,18 @@ router.post('/razorpay/callback', async (req, res) => {
         const orderData = await orderRes.json();
         // receipt is set to bookingId during order creation
         bookingId = orderData.receipt || null;
+        paidAmount = orderData?.amount ? orderData.amount / 100 : null;
         console.log(`📋 Resolved bookingId from Razorpay receipt: ${bookingId}`);
       } catch (fetchErr) {
         console.error('⚠️ Could not fetch Razorpay order details:', fetchErr.message);
       }
       
       if (bookingId) {
-        console.log(`📝 Updating booking ${bookingId} to PAID status`);
-        
-        // Update booking status to PAID
-        const booking = await updateBookingPayment(bookingId, null, 'razorpay');
+        // Update booking using the actual paid amount so advance payments stay partial
+        const booking = await updateBookingPayment(bookingId, paidAmount, undefined, 'razorpay');
         
         if (booking) {
-          console.log(`✅ Booking ${bookingId} marked as PAID`);
+          console.log(`✅ Booking ${bookingId} updated from Razorpay amount ₹${paidAmount ?? 0}`);
           return res.json({ success: true, message: 'Payment verified and booking updated', booking });
         }
       }
@@ -156,12 +156,12 @@ router.post('/razorpay/status', async (req, res) => {
       const bookingId = data.receipt || null;
       
       // If payment status is paid, update booking
-      if (data.status === 'paid' && bookingId) {
+        if (data.status === 'paid' && bookingId) {
         console.log(`💳 Payment status PAID for order ${orderId}, updating booking ${bookingId}`);
         
         // Get payment details to know the amount paid
         const amount = data.amount / 100; // Convert from paise to rupees
-        await updateBookingPayment(bookingId, amount, 'razorpay');
+        await updateBookingPayment(bookingId, amount, undefined, 'razorpay');
       }
       
       res.json({ 
@@ -181,8 +181,11 @@ router.post('/razorpay/status', async (req, res) => {
 });
 
 // Helper to find and update booking across any storage
-const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
+const updateBookingPayment = async (bookingId, amountPaid, paymentType, paymentMode) => {
   let amt = Number(amountPaid) || 0;
+  const resolvedPaymentType = paymentType === 'full' || paymentType === 'advance'
+    ? paymentType
+    : undefined;
   
   // Try MongoDB branches
   const branchIds = ['branch-1', 'branch-2'];
@@ -202,7 +205,8 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
         booking.paymentStatus = newStatus;
         booking.amountPaid = amt;
         booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
-        booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
+        booking.paymentType = resolvedPaymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
+        if (paymentMode) booking.paymentMode = paymentMode;
         booking.updatedAt = new Date();
         await booking.save();
         
@@ -239,7 +243,8 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
       booking.paymentStatus = newStatus;
       booking.amountPaid = amt;
       booking.balanceAmount = Math.max(0, booking.totalPrice - amt);
-      booking.paymentType = paymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
+      booking.paymentType = resolvedPaymentType || (amt >= booking.totalPrice ? 'full' : 'advance');
+      if (paymentMode) booking.paymentMode = paymentMode;
       booking.updatedAt = new Date();
       await saveBookings(branchDbs);
       
@@ -266,7 +271,8 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType) => {
 router.post('/process', async (req, res) => {
   const { bookingId, amountPaid, paymentType } = req.body;
   try {
-    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType);
+    const paymentMode = req.body.paymentMode;
+    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType, paymentMode);
     if (booking) {
       return res.json({ success: true, message: 'Payment processed', booking });
     }
@@ -280,7 +286,8 @@ router.post('/process', async (req, res) => {
 router.post('/mock', async (req, res) => {
   const { bookingId, amountPaid, paymentType } = req.body;
   try {
-    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType);
+    const paymentMode = req.body.paymentMode || 'mock';
+    const booking = await updateBookingPayment(bookingId, amountPaid, paymentType, paymentMode);
     if (booking) {
       return res.json({ success: true, message: 'Mock payment processed', booking });
     }

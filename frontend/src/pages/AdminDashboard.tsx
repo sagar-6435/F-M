@@ -78,6 +78,22 @@ const getPriceValue = (price: any): number => {
   return 0;
 };
 
+const getPaymentPlan = (booking: Pick<Booking, 'paymentType' | 'paymentStatus' | 'amountPaid' | 'balanceAmount' | 'totalPrice'>) => {
+  if (booking.paymentType === 'full' || booking.paymentType === 'advance') {
+    return booking.paymentType;
+  }
+
+  if ((booking.balanceAmount || 0) > 0 || booking.paymentStatus === 'partially-paid') {
+    return 'advance';
+  }
+
+  if ((booking.amountPaid || 0) >= (booking.totalPrice || 0) && (booking.totalPrice || 0) > 0) {
+    return 'full';
+  }
+
+  return 'full';
+};
+
 // Small helper: fetches and previews videos for a given branch
 const BranchVideoPreview = ({ branch }: { branch: string }) => {
   const [videos, setVideos] = useState<{ id: string; url: string; title: string }[]>([]);
@@ -566,6 +582,7 @@ const AdminDashboard = () => {
         ...manualBooking,
         phone: `+91 ${manualBooking.phone}`,
         paymentStatus: paymentStatus,
+        paymentMode: 'manual',
         balanceAmount: balanceAmount,
         notes: manualBooking.notes,
         cakeRequired: manualBooking.cakeRequired,
@@ -1287,9 +1304,9 @@ const AdminDashboard = () => {
                           className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                         />
                       </th>
-                      {["ID", "Name", "Service", "Date", "Time", "Status", "Payment", "Paid", "Balance", "Total", "Booked At", ""].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
-                      ))}
+                      {["ID", "Name", "Service", "Date", "Time", "Status", "Mode", "Payment", "Paid", "Balance", "Total", "Booked At", ""].map((h) => (
+                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -1314,7 +1331,8 @@ const AdminDashboard = () => {
                             {b.paymentStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{b.paymentType || 'N/A'}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{b.paymentMode ? String(b.paymentMode).replace('-', ' ') : '—'}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{getPaymentPlan(b)}</td>
                         <td className="px-4 py-3 font-semibold text-green-600">₹{(["paid", "partially-paid"].includes(b.paymentStatus)) ? getPriceValue(b.amountPaid || 0).toLocaleString() : "0"}</td>
                         <td className="px-4 py-3 font-semibold text-red-600">₹{(["paid", "partially-paid"].includes(b.paymentStatus)) ? getPriceValue(b.balanceAmount || 0).toLocaleString() : "0"}</td>
                         <td className="px-4 py-3 font-semibold text-foreground">₹{getPriceValue(b.totalPrice).toLocaleString()}</td>
@@ -1495,8 +1513,12 @@ const AdminDashboard = () => {
                           ) : null}
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Payment Type</p>
-                          <p className="text-sm font-semibold capitalize">{selectedBooking.paymentType}</p>
+                          <p className="text-xs text-muted-foreground">Payment Plan</p>
+                          <p className="text-sm font-semibold capitalize">{getPaymentPlan(selectedBooking)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Payment Mode</p>
+                          <p className="text-sm font-semibold">{selectedBooking.paymentMode ? String(selectedBooking.paymentMode).replace('-', ' ') : '—'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Amount Paid</p>
