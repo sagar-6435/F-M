@@ -45,8 +45,8 @@ const Maintanace = () => {
 										<Mail className="h-4 w-4" />
 										<span className="text-xs font-bold uppercase tracking-[0.25em]">Email</span>
 									</div>
-									<a href="mailto:info@friendsandmemories.in" className="text-sm text-slate-200 transition-colors hover:text-amber-200">
-										info@friendsandmemories.in
+									<a href="mailto:friendsandmovies@gmail.com" className="text-sm text-slate-200 transition-colors hover:text-amber-200">
+										friendsandmemories
 									</a>
 								</div>
 							</div>
