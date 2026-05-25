@@ -26,7 +26,7 @@ const BookingConfirmed = () => {
   useEffect(() => {
     const checkPaymentStatus = async () => {
       try {
-        const orderId = searchParams.get("orderId");
+        const orderId = searchParams.get("orderId") || location.state?.orderId;
         
         if (orderId) {
           // Check Razorpay payment status

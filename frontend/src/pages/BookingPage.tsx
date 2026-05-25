@@ -494,9 +494,12 @@ const BookingPage = () => {
                   method: 'POST',
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
+                    bookingId: createdBooking.id,
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature
+                    razorpay_signature: response.razorpay_signature,
+                    amountPaid: amountToPay,
+                    paymentType: paymentType
                   })
                 });
               })
@@ -519,9 +522,20 @@ const BookingPage = () => {
             setTimeout(() => {
               try {
                 console.log("📍 Executing navigate...");
-                navigate("/booking-confirmed", {
+                const confirmedBooking = {
+                  ...createdBooking,
+                  paymentStatus: amountToPay >= totalPrice ? "paid" : "partially-paid",
+                  paymentType,
+                  amountPaid: amountToPay,
+                  balanceAmount: Math.max(0, totalPrice - amountToPay),
+                  paymentMode: "razorpay",
+                };
+                navigate({
+                  pathname: "/booking-confirmed",
+                  search: `?orderId=${response.razorpay_order_id}`,
+                }, {
                   state: {
-                    booking: createdBooking,
+                    booking: confirmedBooking,
                     orderId: response.razorpay_order_id,
                     paymentId: response.razorpay_payment_id
                   },

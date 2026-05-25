@@ -44,6 +44,8 @@ router.post('/razorpay/initiate', async (req, res) => {
         membersCount: bookingDetails?.membersCount || '',
         occasion: bookingDetails?.occasion || '',
         totalPrice: bookingDetails?.totalPrice || amount,
+        paymentType: bookingDetails?.paymentType || '',
+        amountPaid: amount,
         selectedCake: bookingDetails?.selectedCake?.name || 'None',
         extraDecorations: bookingDetails?.extraDecorations?.map(d => d.name).join(', ') || 'None'
       }
@@ -82,7 +84,7 @@ router.post('/razorpay/initiate', async (req, res) => {
 
 // Razorpay Callback (Webhook)
 router.post('/razorpay/callback', async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId: fallbackBookingId, amountPaid: fallbackAmountPaid, paymentType: fallbackPaymentType } = req.body;
   
   try {
     // Verify signature
@@ -96,8 +98,9 @@ router.post('/razorpay/callback', async (req, res) => {
       console.log(`✅ Payment verified for order: ${razorpay_order_id}`);
       
       // Fetch the order from Razorpay to get the receipt (which holds our bookingId)
-      let bookingId = null;
-      let paidAmount = null;
+      let bookingId = fallbackBookingId || null;
+      let paidAmount = Number(fallbackAmountPaid) || null;
+      let paymentType = fallbackPaymentType || undefined;
       try {
         const orderRes = await fetch(`${RAZORPAY_BASE_URL}/orders/${razorpay_order_id}`, {
           method: 'GET',
@@ -108,8 +111,9 @@ router.post('/razorpay/callback', async (req, res) => {
         });
         const orderData = await orderRes.json();
         // receipt is set to bookingId during order creation
-        bookingId = orderData.receipt || null;
-        paidAmount = orderData?.amount ? orderData.amount / 100 : null;
+        bookingId = orderData.receipt || orderData?.notes?.bookingId || bookingId;
+        paidAmount = orderData?.amount ? orderData.amount / 100 : paidAmount;
+        paymentType = orderData?.notes?.paymentType || paymentType;
         console.log(`📋 Resolved bookingId from Razorpay receipt: ${bookingId}`);
       } catch (fetchErr) {
         console.error('⚠️ Could not fetch Razorpay order details:', fetchErr.message);
@@ -117,7 +121,7 @@ router.post('/razorpay/callback', async (req, res) => {
       
       if (bookingId) {
         // Update booking using the actual paid amount so advance payments stay partial
-        const booking = await updateBookingPayment(bookingId, paidAmount, undefined, 'razorpay');
+        const booking = await updateBookingPayment(bookingId, paidAmount, paymentType, 'razorpay');
         
         if (booking) {
           console.log(`✅ Booking ${bookingId} updated from Razorpay amount ₹${paidAmount ?? 0}`);
@@ -194,9 +198,9 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType, paymentM
     if (models) {
       const booking = await models.Booking.findOne({ id: bookingId });
       if (booking) {
-        // If no amount provided, assume full payment of total price
+        // For Razorpay, never assume the full amount if the paid amount is unavailable.
         if (amountPaid === null || amountPaid === undefined) {
-          amt = booking.totalPrice;
+          amt = paymentMode === 'razorpay' ? (Number(booking.amountPaid) || 0) : booking.totalPrice;
         }
         
         const prevStatus = booking.paymentStatus;
@@ -232,9 +236,9 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType, paymentM
   for (const branchId in branchDbs) {
     const booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
     if (booking) {
-      // If no amount provided, assume full payment of total price
+      // For Razorpay, never assume the full amount if the paid amount is unavailable.
       if (amountPaid === null || amountPaid === undefined) {
-        amt = booking.totalPrice;
+        amt = paymentMode === 'razorpay' ? (Number(booking.amountPaid) || 0) : booking.totalPrice;
       }
       
       const prevStatus = booking.paymentStatus;
