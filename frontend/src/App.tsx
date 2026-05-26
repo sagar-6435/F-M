@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,7 +9,7 @@ import { fetchBranches } from "@/lib/booking-data";
 import Loader from "@/components/Loader";
 
 // Eagerly load the home page (first page users see)
-import Maintanace from "./pages/maintanace";
+import Index from "./pages/Index";
 
 // Lazy load all other pages — they are only downloaded when the user navigates to them
 const BookingPage = lazy(() => import("./pages/BookingPage"));
@@ -40,7 +40,7 @@ const pingServer = () => {
 
 const AppShell = () => {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/" || location.pathname === "/maintenance";
+  const hideNavbar = location.pathname === "/maintenance";
 
   return (
     <div className="min-h-screen">
@@ -52,7 +52,7 @@ const AppShell = () => {
         </div>
       }>
         <Routes>
-          <Route path="/" element={<Maintanace />} />
+          <Route path="/" element={<Index />} />
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/reels" element={<Reels />} />
           <Route path="/booking" element={<BookingPage />} />
@@ -65,7 +65,7 @@ const AppShell = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/refund-cancellation" element={<RefundPolicy />} />
           <Route path="/shipping-delivery" element={<ShippingPolicy />} />
-          <Route path="/maintenance" element={<Maintanace />} />
+          <Route path="/maintenance" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

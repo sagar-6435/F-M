@@ -43,6 +43,8 @@ MONGODB_URI_BRANCH2=your_mongodb_uri
 CHATMITRA_API_URL=your_chat_mitra_endpoint
 CHATMITRA_API_KEY=your_chat_mitra_api_key
 CHATMITRA_AUTH_TOKEN=optional_bearer_token
+ADMIN_PHONE_1=branch_1_admin_whatsapp_number
+ADMIN_PHONE_2=branch_2_admin_whatsapp_number
 ```
 
 ### Running Locally
@@ -148,6 +150,8 @@ git push heroku main
 - `CHATMITRA_API_URL` - Chat Mitra WhatsApp send-message endpoint
 - `CHATMITRA_API_KEY` - Optional Chat Mitra API key header value
 - `CHATMITRA_AUTH_TOKEN` - Optional bearer token for Chat Mitra
+- `ADMIN_PHONE_1` - Branch 1 admin WhatsApp number used for booking notifications
+- `ADMIN_PHONE_2` - Branch 2 admin WhatsApp number used for booking notifications
 
 ## Database
 
