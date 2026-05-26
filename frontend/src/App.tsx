@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "@/components/Navbar";
 import { fetchBranches } from "@/lib/booking-data";
 import Loader from "@/components/Loader";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Eagerly load the home page (first page users see)
 import Index from "./pages/Index";
@@ -101,6 +102,7 @@ const App = () => {
         <div className="min-h-screen">
           <Toaster />
           <Sonner />
+          <SpeedInsights />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AppShell />
           </BrowserRouter>
