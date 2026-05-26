@@ -93,40 +93,7 @@ const buildAdminMessage = (booking) => {
   ].join('\n');
 };
 
-const buildTemplateComponents = (templateData = {}) => {
-  const values = [
-    templateData.customer_name,
-    templateData.booking_id,
-    templateData.branch,
-    templateData.service,
-    templateData.date,
-    templateData.time_slot,
-    templateData.duration,
-    templateData.members_count,
-    templateData.total_price,
-    templateData.amount_paid,
-    templateData.balance_amount,
-    templateData.payment_status,
-    templateData.payment_type,
-    templateData.occasion,
-  ].filter((value) => value !== undefined && value !== null && value !== '');
-
-  if (!values.length) {
-    return [];
-  }
-
-  return [
-    {
-      type: 'body',
-      parameters: values.map((value) => ({
-        type: 'text',
-        text: String(value),
-      })),
-    },
-  ];
-};
-
-const sendChatMitraMessage = async ({ to, templateName, templateData, customerName }) => {
+const sendChatMitraMessage = async ({ to, message }) => {
   const recipient = normalizePhoneNumber(to);
 
   if (!recipient) {
@@ -143,29 +110,21 @@ const sendChatMitraMessage = async ({ to, templateName, templateData, customerNa
     'Content-Type': 'application/json',
   };
 
-  if (CHATMITRA_API_KEY && CHATMITRA_AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${CHATMITRA_API_KEY}:${CHATMITRA_AUTH_TOKEN}`;
+  if (CHATMITRA_API_KEY) {
+    headers['x-api-key'] = CHATMITRA_API_KEY;
   }
 
-  const resolvedTemplateName = templateName || '';
-  const resolvedCustomerName = customerName || templateData?.customer_name || '';
+  if (CHATMITRA_AUTH_TOKEN) {
+    headers.Authorization = `Bearer ${CHATMITRA_AUTH_TOKEN}`;
+  }
 
   const response = await fetch(CHATMITRA_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      recipient_mobile_number: recipient,
-      messages: [
-        {
-          kind: 'template',
-          template: {
-            name: resolvedTemplateName,
-            language: 'en',
-            components: buildTemplateComponents(templateData),
-          },
-        },
-      ],
-      customer_name: resolvedCustomerName,
+      to: recipient,
+      message,
+      channel: 'whatsapp',
     }),
   });
 
@@ -210,26 +169,6 @@ const resolveBranchContact = async (branchId) => {
   };
 };
 
-const isPremiumBooking = (booking) => String(booking?.service || '').toLowerCase() === 'premium-pack';
-
-const buildTemplateVariables = (booking) => ({
-  booking_id: booking.id || '',
-  customer_name: booking.name || '',
-  customer_phone: booking.phone || '',
-  branch: booking.branchName || formatBranchDisplayName(booking.branch),
-  service: booking.service || '',
-  date: booking.date || '',
-  time_slot: booking.timeSlot || '',
-  duration: booking.duration || '',
-  members_count: booking.membersCount ?? '',
-  total_price: booking.totalPrice ?? '',
-  amount_paid: booking.amountPaid ?? '',
-  balance_amount: booking.balanceAmount ?? '',
-  payment_status: booking.paymentStatus || '',
-  payment_type: booking.paymentType || '',
-  occasion: booking.occasion === 'Other' && booking.customOccasion ? booking.customOccasion : (booking.occasion || ''),
-});
-
 export const sendBookingWhatsAppNotifications = async (booking) => {
   const branchContext = await resolveBranchContact(booking.branch);
   const branchAdmin = resolveBranchAdminWhatsApp(booking.branch);
@@ -241,20 +180,13 @@ export const sendBookingWhatsAppNotifications = async (booking) => {
     branchContact: branchContext.branchContact,
   };
 
-  const customerTemplateName = 'slot_confirmation_user_20260525000235';
-  const adminTemplateId = isPremiumBooking(enrichedBooking)
-    ? 'premium_booking_admin_20260524235632'
-    : 'standard_booking_admin_20260524235438';
-
   const tasks = [];
 
   if (branchAdmin?.adminWhatsApp) {
     tasks.push(
       sendChatMitraMessage({
         to: branchAdmin.adminWhatsApp,
-        templateName: adminTemplateId,
-        templateData: buildTemplateVariables(enrichedBooking),
-        customerName: enrichedBooking.name || '',
+        message: buildAdminMessage(enrichedBooking),
       })
     );
   } else {
@@ -265,9 +197,7 @@ export const sendBookingWhatsAppNotifications = async (booking) => {
     tasks.push(
       sendChatMitraMessage({
         to: customerWhatsApp,
-        templateName: customerTemplateName,
-        templateData: buildTemplateVariables(enrichedBooking),
-        customerName: enrichedBooking.name || '',
+        message: buildCustomerMessage(enrichedBooking),
       })
     );
   } else {

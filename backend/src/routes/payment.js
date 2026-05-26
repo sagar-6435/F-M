@@ -15,6 +15,12 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const RAZORPAY_BASE_URL = 'https://api.razorpay.com/v1';
 
+const sendPaymentNotifications = (booking) => {
+  sendBookingWhatsAppNotifications(booking).catch((err) =>
+    console.error('✗ WhatsApp notification failed:', err)
+  );
+};
+
 // Helper to get Razorpay auth header
 const getRazorpayAuth = () => {
   const credentials = `${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`;
@@ -216,15 +222,12 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType, paymentM
         
         console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
         
-        // Send WhatsApp whenever status becomes paid or partially-paid,
-        // but skip if status hasn't changed (duplicate call guard)
-        const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
-        if (shouldSendSms) {
-          sendBookingWhatsAppNotifications(booking).catch(err =>
-            console.error('✗ WhatsApp notification failed:', err)
-          );
+        // Send customer/admin notifications when the payment first reaches advance or full status.
+        const shouldSendNotifications = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
+        if (shouldSendNotifications) {
+          sendPaymentNotifications(booking);
         } else {
-          console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate WhatsApp notification`);
+          console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate payment notification`);
         }
         
         return booking;
@@ -254,15 +257,12 @@ const updateBookingPayment = async (bookingId, amountPaid, paymentType, paymentM
       
       console.log(`✅ Updated booking ${bookingId}: Status=${booking.paymentStatus}, Amount=₹${amt}/${booking.totalPrice}`);
       
-      // Send WhatsApp whenever status becomes paid or partially-paid,
-      // but skip if status hasn't changed (duplicate call guard)
-      const shouldSendSms = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
-      if (shouldSendSms) {
-        sendBookingWhatsAppNotifications(booking).catch(err =>
-          console.error('✗ WhatsApp notification failed:', err)
-        );
+      // Send customer/admin notifications when the payment first reaches advance or full status.
+      const shouldSendNotifications = (newStatus === 'paid' || newStatus === 'partially-paid') && newStatus !== prevStatus;
+      if (shouldSendNotifications) {
+        sendPaymentNotifications(booking);
       } else {
-        console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate WhatsApp notification`);
+        console.log(`ℹ️ Booking ${bookingId} status unchanged (${prevStatus}) — skipping duplicate payment notification`);
       }
       
       return booking;
