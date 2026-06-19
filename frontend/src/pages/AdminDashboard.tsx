@@ -198,6 +198,8 @@ const AdminDashboard = () => {
   const [branchEditData, setBranchEditData] = useState({ name: "", address: "", phone: "", mapLink: "" });
   const [socialEditData, setSocialEditData] = useState({ instagram: "", facebook: "", whatsapp: "" });
   const [savingBranch, setSavingBranch] = useState(false);
+  const [bookingsEnabled, setBookingsEnabled] = useState(true);
+  const [togglingBookings, setTogglingBookings] = useState(false);
   const [branchList, setBranchList] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletingMultiple, setDeletingMultiple] = useState(false);
@@ -478,6 +480,7 @@ const AdminDashboard = () => {
             phone: currentBranch.phone,
             mapLink: currentBranch.mapLink || ""
           });
+          setBookingsEnabled(currentBranch.bookingsEnabled !== false);
         }
       }
     } catch (error) {
@@ -485,8 +488,21 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSaveBranchDetails = async () => {
+  const handleToggleBookings = async (enabled: boolean) => {
     if (!token) return;
+    try {
+      setTogglingBookings(true);
+      await api.toggleBranchBookings(token, selectedBranch, enabled);
+      setBookingsEnabled(enabled);
+    } catch (error) {
+      console.error("Error toggling bookings:", error);
+      setError("Failed to update bookings status");
+    } finally {
+      setTogglingBookings(false);
+    }
+  };
+
+  const handleSaveBranchDetails = async () => {    if (!token) return;
     try {
       setSavingBranch(true);
       await Promise.all([
@@ -2802,99 +2818,139 @@ const AdminDashboard = () => {
 
         {/* Settings Tab */}
         {activeTab === "settings" && (
-          <div className="max-w-2xl rounded-2xl border border-border bg-card p-8 space-y-6">
-            <h2 className="font-display text-2xl font-bold text-foreground">
-              Settings for {branchList.find((b) => b.id === selectedBranch)?.name || "Branch"}
-            </h2>
-            <p className="text-sm text-muted-foreground font-body">
-              Update the contact information, address, and social handles for this specific location.
-            </p>
+          <div className="max-w-2xl space-y-6">
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Branch Name</label>
-                <input
-                  type="text"
-                  value={branchEditData.name}
-                  onChange={(e) => setBranchEditData({ ...branchEditData, name: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                />
+            {/* Bookings Toggle Card */}
+            <div className={`rounded-2xl border-2 p-6 transition-all ${bookingsEnabled ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-display text-lg font-bold text-foreground">
+                    Bookings — {bookingsEnabled ? "🟢 Open" : "🔴 Paused"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground font-body mt-1">
+                    {bookingsEnabled
+                      ? "Customers can currently book this branch. Toggle off to stop new bookings."
+                      : "New bookings are paused. Customers will see a 'temporarily unavailable' message."}
+                  </p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={bookingsEnabled}
+                  disabled={togglingBookings}
+                  onClick={() => handleToggleBookings(!bookingsEnabled)}
+                  className={`relative shrink-0 inline-flex h-8 w-16 items-center rounded-full border-2 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 ${
+                    bookingsEnabled
+                      ? "border-green-500 bg-green-500 focus:ring-green-500"
+                      : "border-red-400/60 bg-red-400/20 focus:ring-red-400"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                      bookingsEnabled ? "translate-x-8" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
               </div>
+              {togglingBookings && (
+                <p className="mt-3 text-xs text-muted-foreground font-body animate-pulse">Saving...</p>
+              )}
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Contact Phone</label>
-                <input
-                  type="text"
-                  value={branchEditData.phone}
-                  onChange={(e) => setBranchEditData({ ...branchEditData, phone: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                />
-              </div>
+            {/* Branch Details Card */}
+            <div className="rounded-2xl border border-border bg-card p-8 space-y-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                Settings for {branchList.find((b) => b.id === selectedBranch)?.name || "Branch"}
+              </h2>
+              <p className="text-sm text-muted-foreground font-body">
+                Update the contact information, address, and social handles for this specific location.
+              </p>
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Physical Address</label>
-                <textarea
-                  value={branchEditData.address}
-                  onChange={(e) => setBranchEditData({ ...branchEditData, address: e.target.value })}
-                  rows={3}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Branch Name</label>
+                  <input
+                    type="text"
+                    value={branchEditData.name}
+                    onChange={(e) => setBranchEditData({ ...branchEditData, name: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Google Maps Link</label>
-                <input
-                  type="text"
-                  value={branchEditData.mapLink}
-                  onChange={(e) => setBranchEditData({ ...branchEditData, mapLink: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={branchEditData.phone}
+                    onChange={(e) => setBranchEditData({ ...branchEditData, phone: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                </div>
 
-              <div className="pt-4 border-t border-border mt-4">
-                <h3 className="text-sm font-bold text-foreground mb-4 font-display">Social Media Links</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Instagram URL</label>
-                    <input
-                      type="text"
-                      value={socialEditData.instagram}
-                      onChange={(e) => setSocialEditData({ ...socialEditData, instagram: e.target.value })}
-                      placeholder="https://instagram.com/your-profile"
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Facebook URL</label>
-                    <input
-                      type="text"
-                      value={socialEditData.facebook}
-                      onChange={(e) => setSocialEditData({ ...socialEditData, facebook: e.target.value })}
-                      placeholder="https://facebook.com/your-page"
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">WhatsApp Number (Optional)</label>
-                    <input
-                      type="text"
-                      value={socialEditData.whatsapp}
-                      onChange={(e) => setSocialEditData({ ...socialEditData, whatsapp: e.target.value })}
-                      placeholder="99127XXXXX (Leave empty for branch phone)"
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
-                    />
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Physical Address</label>
+                  <textarea
+                    value={branchEditData.address}
+                    onChange={(e) => setBranchEditData({ ...branchEditData, address: e.target.value })}
+                    rows={3}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Google Maps Link</label>
+                  <input
+                    type="text"
+                    value={branchEditData.mapLink}
+                    onChange={(e) => setBranchEditData({ ...branchEditData, mapLink: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-border mt-4">
+                  <h3 className="text-sm font-bold text-foreground mb-4 font-display">Social Media Links</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Instagram URL</label>
+                      <input
+                        type="text"
+                        value={socialEditData.instagram}
+                        onChange={(e) => setSocialEditData({ ...socialEditData, instagram: e.target.value })}
+                        placeholder="https://instagram.com/your-profile"
+                        className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">Facebook URL</label>
+                      <input
+                        type="text"
+                        value={socialEditData.facebook}
+                        onChange={(e) => setSocialEditData({ ...socialEditData, facebook: e.target.value })}
+                        placeholder="https://facebook.com/your-page"
+                        className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">WhatsApp Number (Optional)</label>
+                      <input
+                        type="text"
+                        value={socialEditData.whatsapp}
+                        onChange={(e) => setSocialEditData({ ...socialEditData, whatsapp: e.target.value })}
+                        placeholder="99127XXXXX (Leave empty for branch phone)"
+                        className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <button
-              onClick={handleSaveBranchDetails}
-              disabled={savingBranch}
-              className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50"
-            >
-              {savingBranch ? "Saving Changes..." : "Update Branch Details"}
-            </button>
+              <button
+                onClick={handleSaveBranchDetails}
+                disabled={savingBranch}
+                className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50"
+              >
+                {savingBranch ? "Saving Changes..." : "Update Branch Details"}
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -89,7 +89,8 @@ export const createBranchPricingDb = (branchId) => {
     heroImages: [],
     branchVideos: [],
     galleryVideos: [],
-    socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" }
+    socialLinks: { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" },
+    bookingsEnabled: true, // default open
   };
 };
 
@@ -112,4 +113,5 @@ export const cloneBranchPricingDb = (data = {}) => ({
   branchVideos: JSON.parse(JSON.stringify(data.branchVideos || [])),
   galleryVideos: JSON.parse(JSON.stringify(data.galleryVideos || [])),
   socialLinks: JSON.parse(JSON.stringify(data.socialLinks || { instagram: "https://instagram.com/friends_and_memories_elr", facebook: "https://facebook.com", whatsapp: "" })),
+  bookingsEnabled: data.bookingsEnabled !== false, // preserve false explicitly; default true
 });

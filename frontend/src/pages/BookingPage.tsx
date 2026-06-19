@@ -367,7 +367,12 @@ const BookingPage = () => {
 
   const canNext = (): boolean => {
     switch (step) {
-      case 0: return !!booking.branch && !!booking.service;
+      case 0: {
+        if (!booking.branch || !booking.service) return false;
+        const selectedBranch = branches.find(b => b.id === booking.branch);
+        if (selectedBranch?.bookingsEnabled === false) return false;
+        return true;
+      }
       case 1:
         const isBhimavaram = booking.branch === "branch-2" || branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
         const isCountOk = isBhimavaram ? booking.membersCount <= 10 : true;
@@ -649,26 +654,49 @@ const BookingPage = () => {
                   <div>
                     <label className="mb-3 block text-sm font-medium text-foreground font-body">Select Branch</label>
                     <div className="grid gap-4 md:grid-cols-2">
-                      {branches.map((b) => (
-                        <button
-                          key={b.id}
-                          onClick={() => update({ branch: b.id })}
-                          className={`rounded-2xl border-2 p-6 text-left transition-all ${booking.branch === b.id ? "border-primary glow-gold bg-muted shadow-lg" : "border-border hover:border-primary hover:shadow-md"
+                      {branches.map((b) => {
+                        const isPaused = b.bookingsEnabled === false;
+                        return (
+                          <button
+                            key={b.id}
+                            onClick={() => !isPaused && update({ branch: b.id })}
+                            disabled={isPaused}
+                            className={`rounded-2xl border-2 p-6 text-left transition-all relative ${
+                              isPaused
+                                ? "border-red-500/20 opacity-70 cursor-not-allowed bg-red-500/5"
+                                : booking.branch === b.id
+                                  ? "border-primary glow-gold bg-muted shadow-lg"
+                                  : "border-border hover:border-primary hover:shadow-md"
                             }`}
-                        >
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className={`p-2 rounded-lg ${booking.branch === b.id ? "bg-primary/20" : "bg-muted"}`}>
-                              <MapPin className={`h-5 w-5 ${booking.branch === b.id ? "text-primary" : "text-muted-foreground"}`} />
+                          >
+                            {isPaused && (
+                              <span className="absolute top-3 right-3 rounded-full bg-red-500/10 border border-red-500/30 px-2 py-0.5 text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                                Stopped
+                              </span>
+                            )}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className={`p-2 rounded-lg ${booking.branch === b.id && !isPaused ? "bg-primary/20" : "bg-muted"}`}>
+                                <MapPin className={`h-5 w-5 ${booking.branch === b.id && !isPaused ? "text-primary" : "text-muted-foreground"}`} />
+                              </div>
+                              <div>
+                                <p className="font-bold text-foreground text-base font-body">{b.name}</p>
+                                {booking.branch === b.id && !isPaused && (
+                                  <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">Selected ✓</span>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-foreground text-base font-body">{b.name}</p>
-                              {booking.branch === b.id && <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">Selected ✓</span>}
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.address}</p>
-                          {b.phone && <p className="mt-2 text-xs text-primary font-body font-medium">📞 {b.phone}</p>}
-                        </button>
-                      ))}
+                            <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.address}</p>
+                            {b.phone && <p className="mt-2 text-xs text-primary font-body font-medium">📞 {b.phone}</p>}
+                            {isPaused && (
+                              <div className="mt-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2">
+                                <p className="text-xs text-red-500 font-semibold font-body leading-relaxed">
+                                  🚫 Bookings stopped temporarily. For more information contact admin.
+                                </p>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   <div>

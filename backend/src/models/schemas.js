@@ -93,6 +93,7 @@ export const branchCatalogSchema = new mongoose.Schema(
       facebook: "https://facebook.com",
       whatsapp: "" // Default to branch phone
     }},
+    bookingsEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

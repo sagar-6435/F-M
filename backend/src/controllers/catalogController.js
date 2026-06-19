@@ -66,7 +66,11 @@ export const getCatalogForBranch = async (branchId = 'branch-1') => {
       
       doc.pricing = mergedPricing;
       if (doc.markModified) doc.markModified('pricing');
-      await doc.save();
+      // Use updateOne to only touch pricing — never overwrite bookingsEnabled or other fields
+      await models.BranchCatalog.updateOne(
+        { branch: branchId },
+        { $set: { pricing: mergedPricing } }
+      );
     }
     
     const catalogObj = doc.toObject();
@@ -129,6 +133,7 @@ export const saveCatalogForBranch = async (branchId, catalog) => {
       if (catalog.branchVideos !== undefined) updateData.branchVideos = catalog.branchVideos;
       if (catalog.galleryVideos !== undefined) updateData.galleryVideos = catalog.galleryVideos;
       if (catalog.socialLinks !== undefined) updateData.socialLinks = catalog.socialLinks;
+      if (catalog.bookingsEnabled !== undefined) updateData.bookingsEnabled = catalog.bookingsEnabled;
 
       await models.BranchCatalog.findOneAndUpdate(
         { branch: branchId },

@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const branches = [];
-    const branchIds = Object.keys(branchDbs); // Get all branch IDs
+    const branchIds = Object.keys(branchDbs);
     
     for (const bId of branchIds) {
       const catalog = await catalogController.getCatalogForBranch(bId);
@@ -20,7 +20,8 @@ router.get('/', async (req, res) => {
           name: catalog.name || (globalDb.branches.find(b => b.id === bId)?.name) || bId,
           address: catalog.address || (globalDb.branches.find(b => b.id === bId)?.address) || '',
           phone: catalog.phone || (globalDb.branches.find(b => b.id === bId)?.phone) || '',
-          mapLink: catalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || ''
+          mapLink: catalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || '',
+          bookingsEnabled: catalog.bookingsEnabled !== false, // default true
         });
       }
     }
@@ -73,6 +74,42 @@ router.put('/:id', verifyAdmin, async (req, res) => {
     res.json({ id, name, address, phone, mapLink });
   } catch (error) {
     console.error('Error updating branch:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Toggle bookings on/off for a branch — persists directly to MongoDB
+router.put('/:id/bookings-toggle', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { bookingsEnabled } = req.body;
+
+  if (typeof bookingsEnabled !== 'boolean') {
+    return res.status(400).json({ error: 'bookingsEnabled must be a boolean' });
+  }
+
+  try {
+    const { getBranchModels } = await import('../config/mongo.js');
+    const models = getBranchModels(id);
+
+    if (models) {
+      // Atomic update — cannot be lost by any concurrent save
+      await models.BranchCatalog.findOneAndUpdate(
+        { branch: id },
+        { $set: { bookingsEnabled } },
+        { upsert: true, new: true }
+      );
+    }
+
+    // Also keep in-memory cache in sync so restarts read from DB
+    if (branchPricingDbs[id]) {
+      branchPricingDbs[id].bookingsEnabled = bookingsEnabled;
+      await saveBranchPricingData(); // persist to file fallback too
+    }
+
+    console.log(`[BOOKINGS-TOGGLE] Branch ${id} bookings ${bookingsEnabled ? 'ENABLED ✅' : 'DISABLED 🔴'}`);
+    res.json({ id, bookingsEnabled });
+  } catch (error) {
+    console.error('Error toggling bookings:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

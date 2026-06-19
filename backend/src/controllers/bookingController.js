@@ -4,7 +4,7 @@ import { branchDbs, globalDb, defaultPricing, defaultCakes, defaultDecorations }
 import { canFitBookingInOperatingHours, getBlockedSlotsForBooking, parse12HourTime, isOverlappingWithBuffer, getAvailableStartSlots, calculateBookingTimes } from '../utils/timeUtils.js';
 import { saveBookings, saveTimeSlots } from '../utils/persistence.js';
 import { getCatalogForBranch } from './catalogController.js';
-import { sendBookingWhatsAppNotifications } from '../utils/whatsapp.js';
+import { sendAdminSmsNotification } from '../utils/sms.js';
 
 export const createBooking = async (req, res) => {
   const { branch } = req.body;
@@ -17,6 +17,14 @@ export const createBooking = async (req, res) => {
   }
 
   console.log(`📝 Processing booking for branch: ${branch} (Using ${models ? 'MongoDB' : 'Local File'})`);
+
+  // Check if bookings are enabled for this branch
+  const catalog = await getCatalogForBranch(branch).catch(() => null);
+  if (catalog && catalog.bookingsEnabled === false) {
+    console.warn(`⛔ Bookings are disabled for branch: ${branch}`);
+    return res.status(403).json({ error: 'Bookings are currently paused for this branch. Please try again later.' });
+  }
+
   const { timeSlot, duration, membersCount } = req.body;
   if (branch === 'branch-2' && membersCount > 10) {
     return res.status(400).json({ error: 'Maximum 10 persons allowed for Bhimavaram branch' });
@@ -518,7 +526,8 @@ export const getBookingInit = async (req, res) => {
           name: bCatalog.name || (globalDb.branches.find(b => b.id === bId)?.name) || bId,
           address: bCatalog.address || (globalDb.branches.find(b => b.id === bId)?.address) || '',
           phone: bCatalog.phone || (globalDb.branches.find(b => b.id === bId)?.phone) || '',
-          mapLink: bCatalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || ''
+          mapLink: bCatalog.mapLink || (globalDb.branches.find(b => b.id === bId)?.mapLink) || '',
+          bookingsEnabled: bCatalog.bookingsEnabled !== false,
         });
       }
     }

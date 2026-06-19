@@ -8,6 +8,7 @@ export interface Branch {
   address: string;
   phone: string;
   mapLink?: string;
+  bookingsEnabled?: boolean;
 }
 
 export interface CakeOption {
@@ -629,5 +630,17 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to delete branch video");
     return normalizeBranchVideos(await res.json());
+  },
+
+  async toggleBranchBookings(token: string, branch: string, enabled: boolean): Promise<void> {
+    const res = await fetch(`${API_BASE}/branches/${branch}/bookings-toggle`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ bookingsEnabled: enabled }),
+    });
+    if (!res.ok) throw new Error("Failed to toggle branch bookings");
   },
 };
