@@ -643,4 +643,33 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to toggle branch bookings");
   },
+
+  // ── Chunked step loaders ──────────────────────────────────────────────────
+  async getStepBranchService(branchId: string): Promise<{
+    branches: Branch[];
+    pricing: Record<string, Record<any, any>>;
+    decorationPrice: number;
+  }> {
+    const res = await fetch(`${API_BASE}/bookings/step/branch-service/${branchId}?t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to load branch/service data");
+    return res.json();
+  },
+
+  async getStepOccasions(): Promise<{ occasions: string[] }> {
+    const res = await fetch(`${API_BASE}/bookings/step/occasions`);
+    if (!res.ok) throw new Error("Failed to load occasions");
+    return res.json();
+  },
+
+  async getStepCakes(branchId: string): Promise<{ cakes: CakeOption[] }> {
+    const res = await fetch(`${API_BASE}/bookings/step/cakes/${branchId}?t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to load cakes");
+    return res.json();
+  },
+
+  async getStepDecorations(branchId: string): Promise<{ decorations: ExtraDecoration[]; decorationPrice: number }> {
+    const res = await fetch(`${API_BASE}/bookings/step/decorations/${branchId}?t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to load decorations");
+    return res.json();
+  },
 };

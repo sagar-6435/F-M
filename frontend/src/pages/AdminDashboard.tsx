@@ -18,7 +18,7 @@ interface Booking {
   occasion: string;
   totalPrice: number;
   paymentStatus: "pending" | "paid" | "partially-paid" | "cancelled";
-  paymentType?: "full" | "advance";
+  paymentType?: "advance";
   amountPaid?: number;
   balanceAmount?: number;
   notes?: string;
@@ -47,7 +47,7 @@ interface ManualBookingForm {
   phone: string;
   occasion: string;
   totalPrice: number;
-  paymentType: "full" | "advance";
+  paymentType: "advance";
   amountPaid: number;
   notes?: string;
   cakeRequired?: boolean;
@@ -79,19 +79,11 @@ const getPriceValue = (price: any): number => {
 };
 
 const getPaymentPlan = (booking: Pick<Booking, 'paymentType' | 'paymentStatus' | 'amountPaid' | 'balanceAmount' | 'totalPrice'>) => {
-  if (booking.paymentType === 'full' || booking.paymentType === 'advance') {
-    return booking.paymentType;
+  // All new bookings are advance-only. Legacy full-payment bookings still show correctly.
+  if ((booking.balanceAmount || 0) === 0 && (booking.amountPaid || 0) >= (booking.totalPrice || 1) && (booking.totalPrice || 0) > 0) {
+    return 'full (legacy)';
   }
-
-  if ((booking.balanceAmount || 0) > 0 || booking.paymentStatus === 'partially-paid') {
-    return 'advance';
-  }
-
-  if ((booking.amountPaid || 0) >= (booking.totalPrice || 0) && (booking.totalPrice || 0) > 0) {
-    return 'full';
-  }
-
-  return 'full';
+  return 'advance';
 };
 
 // Small helper: fetches and previews videos for a given branch
@@ -144,8 +136,10 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "tomorrow" | "specific" | "all">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "tomorrow" | "specific" | "range" | "all">("all");
   const [customDate, setCustomDate] = useState<string>("");
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"bookings" | "manual" | "pricing" | "gallery" | "videos" | "settings">("bookings");
   const [manualBooking, setManualBooking] = useState<ManualBookingForm>({
     branch: "branch-1",
@@ -157,7 +151,7 @@ const AdminDashboard = () => {
     phone: "",
     occasion: "Birthday",
     totalPrice: 0,
-    paymentType: "full",
+    paymentType: "advance",
     amountPaid: 0,
     notes: "",
     cakeRequired: false,
@@ -257,7 +251,7 @@ const AdminDashboard = () => {
       setManualBooking(prev => ({ 
         ...prev, 
         totalPrice: price,
-        amountPaid: prev.paymentType === 'full' ? price : prev.amountPaid 
+        amountPaid: prev.paymentType === 'advance' ? prev.amountPaid : price
       }));
     }
   }, [
@@ -352,7 +346,7 @@ const AdminDashboard = () => {
     if (isLoggedIn && token) {
       fetchData();
     }
-  }, [isLoggedIn, token, selectedBranch, filter, dateFilter, customDate]);
+  }, [isLoggedIn, token, selectedBranch, filter, dateFilter, customDate, rangeStart, rangeEnd]);
 
   useEffect(() => {
     setManualBooking(prev => ({ ...prev, branch: selectedBranch }));
@@ -423,6 +417,9 @@ const AdminDashboard = () => {
       } else if (dateFilter === "specific" && customDate) {
         startDate = customDate;
         endDate = customDate;
+      } else if (dateFilter === "range" && rangeStart && rangeEnd) {
+        startDate = rangeStart;
+        endDate = rangeEnd;
       }
 
       const [bookingsData, statsData] = await Promise.all([
@@ -588,11 +585,8 @@ const AdminDashboard = () => {
       setSubmitting(true);
       setError(null);
 
-      const balanceAmount = manualBooking.paymentType === 'full' 
-        ? 0 
-        : Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid);
-
-      const paymentStatus = manualBooking.paymentType === 'full' ? 'paid' : 'partially-paid';
+      const balanceAmount = Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid);
+      const paymentStatus = manualBooking.amountPaid >= manualBooking.totalPrice ? 'paid' : 'partially-paid';
 
       const bookingData = {
         ...manualBooking,
@@ -620,7 +614,7 @@ const AdminDashboard = () => {
         phone: "",
         occasion: "Birthday",
         totalPrice: 0,
-        paymentType: "full",
+        paymentType: "advance",
         amountPaid: 0,
         notes: "",
         cakeRequired: false,
@@ -1254,37 +1248,32 @@ const AdminDashboard = () => {
             <div className="mb-4 flex flex-wrap gap-2">
               <button
                 onClick={() => setDateFilter("all")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
               >
                 All Time
               </button>
               <button
                 onClick={() => setDateFilter("today")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "today" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "today" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
               >
                 Today
               </button>
               <button
                 onClick={() => setDateFilter("yesterday")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "yesterday" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "yesterday" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
               >
                 Yesterday
               </button>
               <button
                 onClick={() => setDateFilter("tomorrow")}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "tomorrow" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "tomorrow" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
               >
                 Tomorrow
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setDateFilter("specific")}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "specific" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "specific" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                 >
                   Specific Date
                 </button>
@@ -1295,6 +1284,42 @@ const AdminDashboard = () => {
                     onChange={(e) => setCustomDate(e.target.value)}
                     className="rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary"
                   />
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setDateFilter("range")}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${dateFilter === "range" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                >
+                  Date Range
+                </button>
+                {dateFilter === "range" && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs text-muted-foreground font-body whitespace-nowrap">From</label>
+                      <input
+                        type="date"
+                        value={rangeStart}
+                        onChange={(e) => setRangeStart(e.target.value)}
+                        className="rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs text-muted-foreground font-body whitespace-nowrap">To</label>
+                      <input
+                        type="date"
+                        value={rangeEnd}
+                        min={rangeStart}
+                        onChange={(e) => setRangeEnd(e.target.value)}
+                        className="rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    {rangeStart && rangeEnd && (
+                      <span className="text-xs text-muted-foreground font-body">
+                        {Math.round((new Date(rangeEnd).getTime() - new Date(rangeStart).getTime()) / 86400000) + 1} days
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -1897,7 +1922,7 @@ const AdminDashboard = () => {
                     setManualBooking({ 
                       ...manualBooking, 
                       totalPrice: price,
-                      amountPaid: manualBooking.paymentType === 'full' ? price : manualBooking.amountPaid
+                      amountPaid: manualBooking.amountPaid // keep existing advance amount
                     });
                   }}
                   required
@@ -1907,35 +1932,11 @@ const AdminDashboard = () => {
                 />
               </div>
 
-              {/* Payment Plan */}
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-foreground font-body">Payment Plan</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setManualBooking({ 
-                      ...manualBooking, 
-                      paymentType: 'advance',
-                      amountPaid: manualBooking.totalPrice < 3000 ? 1011 : 1511
-                    })}
-                    className={`rounded-xl border p-4 text-left transition-all ${manualBooking.paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
-                  >
-                    <p className="font-bold text-sm">Advance</p>
-                    <p className="text-[10px] text-muted-foreground">Partial payment</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManualBooking({ 
-                      ...manualBooking, 
-                      paymentType: 'full',
-                      amountPaid: manualBooking.totalPrice
-                    })}
-                    className={`rounded-xl border p-4 text-left transition-all ${manualBooking.paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
-                  >
-                    <p className="font-bold text-sm">Full Payment</p>
-                    <p className="text-[10px] text-muted-foreground">100% upfront</p>
-                  </button>
-                </div>
+              {/* Payment Plan — advance only */}
+              <div className="rounded-xl border border-primary bg-primary/5 p-4">
+                <p className="font-bold text-sm text-foreground">Advance Payment</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Partial payment — balance collected at venue</p>
+              </div>
 
                 <div>
                   <label htmlFor="manual-amountPaid" className="mb-2 block text-sm font-medium text-foreground font-body">Amount Paid (₹)</label>
@@ -1951,13 +1952,10 @@ const AdminDashboard = () => {
                     className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground font-body focus:border-primary focus:outline-none"
                     placeholder="Enter amount paid"
                   />
-                  {manualBooking.paymentType === 'advance' && (
-                    <p className="mt-2 text-xs text-muted-foreground font-body">
-                      Balance to be paid: <span className="font-bold text-red-600">₹{Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid).toLocaleString()}</span>
-                    </p>
-                  )}
+                  <p className="mt-2 text-xs text-muted-foreground font-body">
+                    Balance to be paid at venue: <span className="font-bold text-red-600">₹{Math.max(0, manualBooking.totalPrice - manualBooking.amountPaid).toLocaleString()}</span>
+                  </p>
                 </div>
-              </div>
 
               {/* Notes Field */}
               <div className="space-y-2">

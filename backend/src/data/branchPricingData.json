@@ -158,7 +158,8 @@
       "instagram": "https://www.instagram.com/friendsandmemories_eluru?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
       "facebook": "https://facebook.com",
       "whatsapp": "7680006662"
-    }
+    },
+    "bookingsEnabled": true
   },
   "branch-2": {
     "name": "Friends & Memories - Bhimavaram",
@@ -298,12 +299,20 @@
     "decorationPrice": 0,
     "testimonials": [],
     "heroImages": [],
-    "branchVideos": [],
+    "branchVideos": [
+      {
+        "id": "video-0ac00207-cfdb-4e16-a12b-22a4c755da5c",
+        "url": "https://res.cloudinary.com/dzgz1epov/video/upload/v1779525955/Home/f-m-bvrm/videos/hayuvrngpbegbd9yyqcw.mp4",
+        "title": "Branch Video",
+        "publicId": "Home/f-m-bvrm/videos/hayuvrngpbegbd9yyqcw"
+      }
+    ],
     "galleryVideos": [],
     "socialLinks": {
       "instagram": "https://www.instagram.com/friendsandmemories_theatre?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
       "facebook": "https://facebook.com",
       "whatsapp": "9912710932"
-    }
+    },
+    "bookingsEnabled": false
   }
 }

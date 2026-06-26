@@ -4,7 +4,7 @@ import { branchDbs, globalDb, defaultPricing, defaultCakes, defaultDecorations }
 import { canFitBookingInOperatingHours, getBlockedSlotsForBooking, parse12HourTime, isOverlappingWithBuffer, getAvailableStartSlots, calculateBookingTimes } from '../utils/timeUtils.js';
 import { saveBookings, saveTimeSlots } from '../utils/persistence.js';
 import { getCatalogForBranch } from './catalogController.js';
-import { sendAdminSmsNotification } from '../utils/sms.js';
+import { sendBookingWhatsAppNotifications } from '../utils/whatsapp.js';
 
 export const createBooking = async (req, res) => {
   const { branch } = req.body;
@@ -23,6 +23,12 @@ export const createBooking = async (req, res) => {
   if (catalog && catalog.bookingsEnabled === false) {
     console.warn(`⛔ Bookings are disabled for branch: ${branch}`);
     return res.status(403).json({ error: 'Bookings are currently paused for this branch. Please try again later.' });
+  }
+
+  // Block bookings for past dates
+  const today = new Date().toISOString().split('T')[0];
+  if (req.body.date < today) {
+    return res.status(400).json({ error: 'Cannot create a booking for a past date.' });
   }
 
   const { timeSlot, duration, membersCount } = req.body;
@@ -135,7 +141,7 @@ export const createBooking = async (req, res) => {
     
     // Send WhatsApp notifications if payment is already confirmed (e.g. manual booking)
     if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'partially-paid') {
-      sendBookingWhatsAppNotifications(booking).catch(err => 
+      sendBookingWhatsAppNotifications(booking).catch(err =>
         console.error('✗ WhatsApp notification failed:', err)
       );
     }
@@ -449,6 +455,12 @@ export const getAvailability = async (req, res) => {
   const models = getBranchModels(branchId);
   
   if (!branchDb && !models) return res.status(404).json({ error: 'Branch not found' });
+
+  // Block availability checks for past dates
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (date < todayStr) {
+    return res.status(400).json({ availableSlots: [], bookedSlots: [], error: 'Date is in the past' });
+  }
   
   try {
     let bookings = [];

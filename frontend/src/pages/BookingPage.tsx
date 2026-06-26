@@ -134,13 +134,9 @@ const BookingPage = () => {
   const reloadPricingData = async () => {
     try {
       const branch = booking.branch || "branch-1";
-      const data = await api.getBookingInit(branch);
-      console.log("Pricing data refreshed:", data.pricing);
+      const data = await api.getStepBranchService(branch);
       setPricing(data.pricing);
       setDecorationPrice(data.decorationPrice);
-      // Also refresh cakes/decorations if already loaded
-      if (cakesLoaded) setCakes(data.cakes);
-      if (decorationsLoaded) setDecorations(data.decorations);
     } catch (error) {
       console.error("Failed to refresh pricing data:", error);
     }
@@ -155,20 +151,18 @@ const BookingPage = () => {
     return () => clearInterval(refreshInterval);
   }, [booking.branch]);
 
-  // On mount: only load branches + pricing (fast initial load for Step 0)
+  // Step 0 init: branches + pricing only — fastest possible load
   useEffect(() => {
     const initBooking = async () => {
       try {
         const initialBranch = booking.branch || "branch-1";
-        const data = await api.getBookingInit(initialBranch);
-        console.log("Booking init data received - pricing:", data.pricing);
+        const data = await api.getStepBranchService(initialBranch);
 
         setBranches(data.branches);
         setPricing(data.pricing);
         setDecorationPrice(data.decorationPrice);
         setLastFetchedBranch(initialBranch);
 
-        // Auto-select first service if only one
         const services = Object.keys(data.pricing);
         if (services.length === 1 && !booking.service) {
           setBooking(prev => ({ ...prev, service: services[0] as any, branch: initialBranch }));
@@ -182,33 +176,33 @@ const BookingPage = () => {
     initBooking();
   }, []);
 
+  // Branch change: reload pricing + reset already-loaded step data
   useEffect(() => {
     if (!loading && booking.branch && booking.branch !== lastFetchedBranch) {
       const loadBranchData = async () => {
         try {
-          const data = await api.getBookingInit(booking.branch);
+          const data = await api.getStepBranchService(booking.branch);
           setPricing(data.pricing);
           setDecorationPrice(data.decorationPrice);
-          // Refresh already-loaded step data for the new branch
-          if (occasionsLoaded) setOccasions(data.occasions);
-          if (cakesLoaded) setCakes(data.cakes);
-          if (decorationsLoaded) setDecorations(data.decorations);
           setLastFetchedBranch(booking.branch);
 
+          // Invalidate step caches so they reload for the new branch
+          setCakesLoaded(false);
+          setDecorationsLoaded(false);
+          setOccasionsLoaded(false);
+
           const services = Object.keys(data.pricing);
-          const isBhimavaram = booking.branch === "branch-2" || data.branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
+          const isBhimavaram = booking.branch === "branch-2" ||
+            data.branches.find(b => b.id === booking.branch)?.name.toLowerCase().includes("bhimavaram");
 
           if (services.length === 1) {
             setBooking(prev => ({
               ...prev,
               service: services[0] as any,
-              membersCount: (isBhimavaram && prev.membersCount > 10) ? 10 : prev.membersCount
+              membersCount: (isBhimavaram && prev.membersCount > 10) ? 10 : prev.membersCount,
             }));
           } else if (isBhimavaram) {
-            setBooking(prev => {
-              if (prev.membersCount > 10) return { ...prev, membersCount: 10 };
-              return prev;
-            });
+            setBooking(prev => prev.membersCount > 10 ? { ...prev, membersCount: 10 } : prev);
           }
         } catch (error) {
           console.error("Failed to update branch data:", error);
@@ -233,14 +227,13 @@ const BookingPage = () => {
     }
   }, [booking.branch, booking.date, booking.service, booking.duration]);
 
-  // Lazy-load occasions when entering Step 2
+  // Step 2: occasions — tiny payload, cached after first load
   useEffect(() => {
     if (step === 2 && !occasionsLoaded) {
       const loadOccasions = async () => {
         setStepLoading(true);
         try {
-          const branch = booking.branch || "branch-1";
-          const data = await api.getBookingInit(branch);
+          const data = await api.getStepOccasions();
           setOccasions(data.occasions);
           setOccasionsLoaded(true);
         } catch (error) {
@@ -253,14 +246,14 @@ const BookingPage = () => {
     }
   }, [step, occasionsLoaded]);
 
-  // Lazy-load cakes when entering Step 3
+  // Step 3: cakes for selected branch only
   useEffect(() => {
     if (step === 3 && !cakesLoaded) {
       const loadCakes = async () => {
         setStepLoading(true);
         try {
           const branch = booking.branch || "branch-1";
-          const data = await api.getBookingInit(branch);
+          const data = await api.getStepCakes(branch);
           setCakes(data.cakes);
           setCakesLoaded(true);
         } catch (error) {
@@ -273,15 +266,16 @@ const BookingPage = () => {
     }
   }, [step, cakesLoaded]);
 
-  // Lazy-load decorations when entering Step 4
+  // Step 4: decorations for selected branch only
   useEffect(() => {
     if (step === 4 && !decorationsLoaded) {
       const loadDecorations = async () => {
         setStepLoading(true);
         try {
           const branch = booking.branch || "branch-1";
-          const data = await api.getBookingInit(branch);
+          const data = await api.getStepDecorations(branch);
           setDecorations(data.decorations);
+          setDecorationPrice(data.decorationPrice);
           setDecorationsLoaded(true);
         } catch (error) {
           console.error("Failed to load decorations:", error);
@@ -382,7 +376,7 @@ const BookingPage = () => {
     }
   };
 
-  const [paymentType, setPaymentType] = useState<'full' | 'advance'>('advance');
+  const [paymentType] = useState<'advance'>('advance'); // advance only
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -404,7 +398,7 @@ const BookingPage = () => {
       setPaymentLoading(true);
 
       const extraCharge = (booking.branch === "branch-1" && booking.membersCount > 10) ? (booking.membersCount - 10) * 150 : 0;
-      const amountToPay = paymentType === 'full' ? totalPrice : advanceAmount;
+      const amountToPay = advanceAmount; // always advance
 
       const bookingData = {
         ...booking,
@@ -746,7 +740,13 @@ const BookingPage = () => {
                         type="date"
                         value={booking.date}
                         min={new Date().toISOString().split("T")[0]}
-                        onChange={(e) => update({ date: e.target.value, timeSlot: "" })}
+                        max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split("T")[0]; })()}
+                        onChange={(e) => {
+                          const selected = e.target.value;
+                          const today = new Date().toISOString().split("T")[0];
+                          if (selected < today) return; // block past dates
+                          update({ date: selected, timeSlot: "" });
+                        }}
                         className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground font-body focus:border-primary focus:outline-none"
                       />
                     </div>
@@ -1027,43 +1027,25 @@ const BookingPage = () => {
                       <CreditCard className="h-6 w-6 text-primary" />
                     </div>
                     <h3 className="font-display text-xl font-bold">Secure Payment</h3>
-                    <p className="text-xs text-muted-foreground">Select your preferred payment plan</p>
+                    <p className="text-xs text-muted-foreground">Pay advance to confirm your booking</p>
                   </div>
 
-                  <div className="grid gap-3">
-                    <button
-                      onClick={() => setPaymentType('advance')}
-                      className={`flex items-center justify-between rounded-xl border p-5 transition-all ${paymentType === 'advance' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                        }`}
-                    >
+                  <div className="rounded-2xl border border-primary bg-primary/5 ring-1 ring-primary p-5">
+                    <div className="flex items-center justify-between">
                       <div className="text-left">
-                        <p className="font-bold text-sm text-foreground">Advance</p>
-                        <p className="text-[10px] text-muted-foreground">Confirm your booking now</p>
+                        <p className="font-bold text-sm text-foreground">Advance Payment</p>
+                        <p className="text-[10px] text-muted-foreground">Remaining ₹{balanceAmount.toLocaleString()} to be paid at venue</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-primary">₹{advanceAmount.toLocaleString()}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase">Bal: ₹{balanceAmount.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-primary font-display">₹{advanceAmount.toLocaleString()}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">of ₹{totalPrice.toLocaleString()} total</p>
                       </div>
-                    </button>
-
-                    <button
-                      onClick={() => setPaymentType('full')}
-                      className={`flex items-center justify-between rounded-xl border p-5 transition-all ${paymentType === 'full' ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                        }`}
-                    >
-                      <div className="text-left">
-                        <p className="font-bold text-sm text-foreground">100% Full Payment</p>
-                        <p className="text-[10px] text-muted-foreground">No balance to pay later</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-primary">₹{totalPrice.toLocaleString()}</p>
-                      </div>
-                    </button>
+                    </div>
                   </div>
 
                   <div className="rounded-lg bg-orange-50 p-3 border border-orange-100">
                     <p className="text-[10px] text-orange-800 text-center font-medium italic">
-                      * Note: Advance amount is non-refundable
+                      * Advance amount is non-refundable. Balance to be paid at venue.
                     </p>
                   </div>
 
@@ -1073,7 +1055,7 @@ const BookingPage = () => {
                       disabled={paymentLoading}
                       className="w-full rounded-xl bg-gradient-gold py-4 text-sm font-bold text-primary-foreground transition-all hover:scale-[1.02] disabled:opacity-50 font-body"
                     >
-                      {paymentLoading ? "Connecting..." : `Pay ₹${(paymentType === 'full' ? totalPrice : advanceAmount).toLocaleString()} Now`}
+                      {paymentLoading ? "Connecting..." : `Pay ₹${advanceAmount.toLocaleString()} Now`}
                     </button>
 
                     {/* Dev test payment buttons removed */}

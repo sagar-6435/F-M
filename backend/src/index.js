@@ -7,7 +7,7 @@ import { loadBookings, loadTimeSlots } from './utils/persistence.js';
 import { loadBranchPricingData } from './controllers/catalogController.js';
 
 // Route Imports
-import adminRoutes from './routes/admin.js';
+import adminRoutes from './routes/admin/index.js';
 import bookingRoutes from './routes/bookings.js';
 import catalogRoutes from './routes/catalog.js';
 import branchRoutes from './routes/branch.js';
