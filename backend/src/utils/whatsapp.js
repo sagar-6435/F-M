@@ -32,21 +32,31 @@ const sendWhatsAppMessage = async (phone, message) => {
 
   const normalizedPhone = normalizePhone(phone);
 
-  // ChatMitra expects api_key + auth_token in the request body
+  // ChatMitra uses a custom 'AuthToken' header + api_key in body
   const payload = {
     api_key: CHATMITRA_API_KEY,
-    auth_token: CHATMITRA_AUTH_TOKEN,
     phone_number: normalizedPhone,
     message,
   };
+
+  console.log(`📲 ChatMitra request to ${CHATMITRA_API_URL}`);
+  console.log(`   phone: ${normalizedPhone}, api_key length: ${CHATMITRA_API_KEY?.length}, token length: ${CHATMITRA_AUTH_TOKEN?.length}`);
 
   const response = await fetch(CHATMITRA_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'AuthToken': CHATMITRA_AUTH_TOKEN,
     },
     body: JSON.stringify(payload),
   });
+
+  const data = await response.json().catch(() => ({}));
+  console.log(`   response ${response.status}:`, JSON.stringify(data));
+
+  if (!response.ok) {
+    throw new Error(`ChatMitra API error ${response.status}: ${JSON.stringify(data)}`);
+  }
 
   const data = await response.json().catch(() => ({}));
 
