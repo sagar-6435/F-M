@@ -57,6 +57,7 @@ const sendTemplateMessage = async (phone, templateName, components) => {
 
   const payload = {
     recipient_mobile_number: normalizedPhone,
+    customer_name: components[0] || '',  // first param is always the customer name
     messages: [
       {
         kind: 'template',
@@ -83,7 +84,7 @@ const sendTemplateMessage = async (phone, templateName, components) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CHATMITRA_AUTH_TOKEN.trim()}`,
+      'Authorization': `Bearer ${CHATMITRA_API_KEY}:${CHATMITRA_AUTH_TOKEN.trim()}`,
     },
     body: JSON.stringify(payload),
   });
