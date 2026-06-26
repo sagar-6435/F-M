@@ -9,8 +9,46 @@ import { branchDbs } from '../../config/constants.js';
 import galleryRouter from './gallery.js';
 import videosRouter from './videos.js';
 import mediaRouter from './media.js';
+import { getBranchModels as _getBranchModels } from '../../config/mongo.js';
+import { sendBookingWhatsAppNotifications } from '../../utils/whatsapp.js';
 
 const router = express.Router();
+
+// ── Manual WhatsApp resend for a specific booking ────────────────────────────
+router.post('/notify-booking', verifyAdmin, async (req, res) => {
+  const { bookingId } = req.body;
+  if (!bookingId) return res.status(400).json({ error: 'bookingId is required' });
+
+  try {
+    let booking = null;
+
+    // Search MongoDB branches
+    for (const branchId of ['branch-1', 'branch-2']) {
+      const models = _getBranchModels(branchId);
+      if (models) {
+        booking = await models.Booking.findOne({ id: bookingId });
+        if (booking) { booking = booking.toObject(); break; }
+      }
+    }
+
+    // Fallback to file-based
+    if (!booking) {
+      for (const branchId in branchDbs) {
+        booking = branchDbs[branchId].bookings.find(b => b.id === bookingId);
+        if (booking) break;
+      }
+    }
+
+    if (!booking) return res.status(404).json({ error: `Booking ${bookingId} not found` });
+
+    await sendBookingWhatsAppNotifications(booking);
+    console.log(`📲 Manual WhatsApp resent for booking ${bookingId}`);
+    res.json({ success: true, message: `WhatsApp notifications sent for booking ${bookingId}` });
+  } catch (err) {
+    console.error('notify-booking error:', err);
+    res.status(500).json({ error: 'Failed to send WhatsApp notification', details: err.message });
+  }
+});
 
 // Auth
 router.post('/login', adminController.login);

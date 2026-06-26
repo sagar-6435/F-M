@@ -126,6 +126,7 @@ const AdminDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [slotEditDate, setSlotEditDate] = useState("");
   const [slotEditTime, setSlotEditTime] = useState("");
   const [slotEditAvailableSlots, setSlotEditAvailableSlots] = useState<string[]>([]);
@@ -1600,7 +1601,32 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
+                      {/* WhatsApp resend */}
+                      <button
+                        onClick={async () => {
+                          if (!token || !selectedBooking) return;
+                          try {
+                            setSendingWhatsApp(true);
+                            const res = await fetch(`${API_BASE}/admin/notify-booking`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ bookingId: selectedBooking.id }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) alert(`✅ WhatsApp sent to ${selectedBooking.phone}`);
+                            else alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+                          } catch (err) {
+                            alert('❌ Failed to send WhatsApp');
+                          } finally {
+                            setSendingWhatsApp(false);
+                          }
+                        }}
+                        disabled={sendingWhatsApp}
+                        className="flex-1 rounded-xl border border-green-500 text-green-600 px-4 py-3 font-semibold transition-all hover:bg-green-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {sendingWhatsApp ? "Sending..." : "📲 Send WhatsApp"}
+                      </button>
                       <button
                         onClick={() => setSelectedBooking(null)}
                         className="flex-1 rounded-xl border border-border px-4 py-3 font-semibold text-foreground transition-all hover:bg-muted"
