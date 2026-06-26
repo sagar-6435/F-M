@@ -286,7 +286,8 @@ const AdminDashboard = () => {
           selectedBooking.branch,
           slotEditDate,
           selectedBooking.service,
-          selectedBooking.duration
+          selectedBooking.duration,
+          true // admin — bypass past date restriction
         );
 
         const options = [...data.availableSlots];
@@ -366,7 +367,8 @@ const AdminDashboard = () => {
         manualBooking.branch,
         manualBooking.date,
         manualBooking.service,
-        manualBooking.duration
+        manualBooking.duration,
+        true // admin — bypass past date restriction
       );
       setManualAvailableSlots(data.availableSlots);
       setManualBookedSlots(data.bookedSlots);
@@ -594,6 +596,7 @@ const AdminDashboard = () => {
         phone: `+91 ${manualBooking.phone}`,
         paymentStatus: paymentStatus,
         paymentMode: 'manual',
+        isAdminBooking: true,
         balanceAmount: balanceAmount,
         notes: manualBooking.notes,
         cakeRequired: manualBooking.cakeRequired,

@@ -25,9 +25,9 @@ export const createBooking = async (req, res) => {
     return res.status(403).json({ error: 'Bookings are currently paused for this branch. Please try again later.' });
   }
 
-  // Block bookings for past dates
+  // Block bookings for past dates — admin manual bookings are exempt
   const today = new Date().toISOString().split('T')[0];
-  if (req.body.date < today) {
+  if (req.body.date < today && !req.body.isAdminBooking) {
     return res.status(400).json({ error: 'Cannot create a booking for a past date.' });
   }
 
@@ -456,9 +456,9 @@ export const getAvailability = async (req, res) => {
   
   if (!branchDb && !models) return res.status(404).json({ error: 'Branch not found' });
 
-  // Block availability checks for past dates
+  // Block availability checks for past dates — skip for admin
   const todayStr = new Date().toISOString().split('T')[0];
-  if (date < todayStr) {
+  if (date < todayStr && req.query.admin !== 'true') {
     return res.status(400).json({ availableSlots: [], bookedSlots: [], error: 'Date is in the past' });
   }
   

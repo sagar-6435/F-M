@@ -171,7 +171,8 @@ router.post('/razorpay/status', async (req, res) => {
         
         // Get payment details to know the amount paid
         const amount = data.amount / 100; // Convert from paise to rupees
-        await updateBookingPayment(bookingId, amount, undefined, 'razorpay');
+        const paymentType = data?.notes?.paymentType || undefined;
+        await updateBookingPayment(bookingId, amount, paymentType, 'razorpay');
       }
       
       res.json({ 

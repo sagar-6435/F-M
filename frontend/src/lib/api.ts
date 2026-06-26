@@ -326,8 +326,10 @@ export const api = {
     return res.json();
   },
 
-  async getAvailableSlots(branchId: string, date: string, service: string, duration: number): Promise<{ availableSlots: string[], bookedSlots: string[] }> {
-    const res = await fetch(`${API_BASE}/bookings/availability/${branchId}/${date}/${service}?duration=${duration}`);
+  async getAvailableSlots(branchId: string, date: string, service: string, duration: number, isAdmin = false): Promise<{ availableSlots: string[], bookedSlots: string[] }> {
+    const params = new URLSearchParams({ duration: String(duration) });
+    if (isAdmin) params.set('admin', 'true');
+    const res = await fetch(`${API_BASE}/bookings/availability/${branchId}/${date}/${service}?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch available slots");
     const data = await res.json();
     return { availableSlots: data.availableSlots, bookedSlots: data.bookedSlots };
