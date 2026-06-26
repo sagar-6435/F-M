@@ -32,8 +32,10 @@ const sendWhatsAppMessage = async (phone, message) => {
 
   const normalizedPhone = normalizePhone(phone);
 
+  // ChatMitra expects api_key + auth_token in the request body
   const payload = {
     api_key: CHATMITRA_API_KEY,
+    auth_token: CHATMITRA_AUTH_TOKEN,
     phone_number: normalizedPhone,
     message,
   };
@@ -42,7 +44,6 @@ const sendWhatsAppMessage = async (phone, message) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CHATMITRA_AUTH_TOKEN}`,
     },
     body: JSON.stringify(payload),
   });
