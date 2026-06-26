@@ -63,7 +63,7 @@ const sendTemplateMessage = async (phone, templateName, components) => {
         kind: 'template',
         template: {
           name: templateName,
-          language: 'en',
+          language: 'en_US',
           components: [
             {
               type: 'body',
