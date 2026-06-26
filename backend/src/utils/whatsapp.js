@@ -1,52 +1,89 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const CHATMITRA_API_URL  = process.env.CHATMITRA_API_URL;
-const CHATMITRA_API_KEY  = process.env.CHATMITRA_API_KEY;
+const CHATMITRA_API_URL    = process.env.CHATMITRA_API_URL;
+const CHATMITRA_API_KEY    = process.env.CHATMITRA_API_KEY;
 const CHATMITRA_AUTH_TOKEN = process.env.CHATMITRA_AUTH_TOKEN;
 
-const ADMIN_PHONE_1 = process.env.ADMIN_PHONE_1; // e.g. +917680006662
+const ADMIN_PHONE_1 = process.env.ADMIN_PHONE_1;
 const ADMIN_PHONE_2 = process.env.ADMIN_PHONE_2;
 
-/**
- * Normalize a phone number to 10-digit Indian format (no country code, no spaces)
- * ChatMitra expects numbers without + or country code for Indian numbers.
- */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Strip to 10-digit Indian number */
 const normalizePhone = (phone = '') => {
-  const digits = phone.replace(/\D/g, ''); // strip non-digits
-  if (digits.startsWith('91') && digits.length === 12) return digits.slice(2); // 91XXXXXXXXXX → XXXXXXXXXX
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length === 12) return digits.slice(2);
   if (digits.length === 10) return digits;
   return digits;
 };
 
+/** Format duration nicely */
+const fmtDuration = (d) => `${d} hr${d > 1 ? 's' : ''}`;
+
+/** Format service name */
+const fmtService = (s = '') => {
+  if (s === 'private-theatre-party-hall') return 'Standard Pack';
+  if (s === 'premium-pack') return 'Premium Pack';
+  return s.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+};
+
+/** Format extra add-ons list */
+const fmtAddons = (booking) => {
+  const parts = [];
+  if (booking.selectedCake?.name) parts.push(`Cake: ${booking.selectedCake.name}`);
+  if (booking.decorationRequired) parts.push('Basic Decoration');
+  if (Array.isArray(booking.extraDecorations) && booking.extraDecorations.length > 0) {
+    parts.push(...booking.extraDecorations.map(d => d.name));
+  }
+  return parts.length > 0 ? parts.join(', ') : 'None';
+};
+
+// ── Core send function ────────────────────────────────────────────────────────
+
 /**
- * Send a single WhatsApp message via ChatMitra API
- * @param {string} phone - recipient phone (any format)
- * @param {string} message - plain text message body
+ * Send a WhatsApp template message via ChatMitra
+ * @param {string} phone - recipient phone number
+ * @param {string} templateName - approved template name
+ * @param {string[]} components - ordered variable values [{1}, {2}, ...]
  */
-const sendWhatsAppMessage = async (phone, message) => {
+const sendTemplateMessage = async (phone, templateName, components) => {
   if (!CHATMITRA_API_URL || !CHATMITRA_API_KEY || !CHATMITRA_AUTH_TOKEN) {
-    console.warn('⚠️  ChatMitra credentials not configured. Skipping WhatsApp notification.');
+    console.warn('⚠️  ChatMitra credentials missing — skipping WhatsApp.');
     return;
   }
 
   const normalizedPhone = normalizePhone(phone);
 
-  // ChatMitra uses a custom 'AuthToken' header + api_key in body
   const payload = {
-    api_key: CHATMITRA_API_KEY,
-    phone_number: normalizedPhone,
-    message,
+    recipient_mobile_number: normalizedPhone,
+    messages: [
+      {
+        kind: 'template',
+        template: {
+          name: templateName,
+          language: 'en',
+          components: [
+            {
+              type: 'body',
+              parameters: components.map(value => ({
+                type: 'text',
+                text: String(value ?? ''),
+              })),
+            },
+          ],
+        },
+      },
+    ],
   };
 
-  console.log(`📲 ChatMitra request to ${CHATMITRA_API_URL}`);
-  console.log(`   phone: ${normalizedPhone}, api_key length: ${CHATMITRA_API_KEY?.length}, token length: ${CHATMITRA_AUTH_TOKEN?.length}`);
+  console.log(`📲 ChatMitra → ${normalizedPhone} | template: ${templateName}`);
 
   const response = await fetch(CHATMITRA_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'AuthToken': CHATMITRA_AUTH_TOKEN,
+      'Authorization': `Bearer ${CHATMITRA_AUTH_TOKEN.trim()}`,
     },
     body: JSON.stringify(payload),
   });
@@ -55,81 +92,17 @@ const sendWhatsAppMessage = async (phone, message) => {
   console.log(`   response ${response.status}:`, JSON.stringify(data));
 
   if (!response.ok) {
-    throw new Error(`ChatMitra API error ${response.status}: ${JSON.stringify(data)}`);
+    throw new Error(`ChatMitra ${response.status}: ${JSON.stringify(data)}`);
   }
 
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(`ChatMitra API error ${response.status}: ${JSON.stringify(data)}`);
-  }
-
-  console.log(`✅ WhatsApp sent to ${normalizedPhone}:`, data);
   return data;
 };
 
-/**
- * Build the customer confirmation message
- */
-const buildCustomerMessage = (booking) => {
-  const branchName = booking.branch === 'branch-2' ? 'Bhimavaram' : 'Eluru';
-  const occasion = booking.occasion === 'Other' && booking.customOccasion
-    ? booking.customOccasion
-    : (booking.occasion || 'Celebration');
-
-  const paymentInfo = booking.paymentType === 'advance'
-    ? `Advance Paid: ₹${booking.amountPaid}\nBalance at Venue: ₹${booking.balanceAmount}`
-    : `Amount Paid: ₹${booking.amountPaid}`;
-
-  return `🎉 Booking Confirmed! — Friends & Memories
-
-Hi ${booking.name},
-
-Your booking is confirmed ✅
-
-📍 Branch: ${branchName}
-🎭 Service: ${booking.service}
-📅 Date: ${booking.date}
-🕐 Time: ${booking.timeSlot} (${booking.duration} hr)
-🎊 Occasion: ${occasion}
-👥 Members: ${booking.membersCount || 1}
-💰 Total: ₹${booking.totalPrice}
-${paymentInfo}
-🆔 Booking ID: ${booking.id}
-
-For queries, contact us on WhatsApp.
-Thank you for choosing Friends & Memories! 🌟`;
-};
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Build the admin notification message
- */
-const buildAdminMessage = (booking) => {
-  const branchName = booking.branch === 'branch-2' ? 'Bhimavaram' : 'Eluru';
-  const occasion = booking.occasion === 'Other' && booking.customOccasion
-    ? booking.customOccasion
-    : (booking.occasion || 'N/A');
-
-  const paymentInfo = booking.paymentType === 'advance'
-    ? `ADVANCE | Paid: ₹${booking.amountPaid} | Bal: ₹${booking.balanceAmount}`
-    : `FULL | Paid: ₹${booking.amountPaid}`;
-
-  return `🔔 NEW BOOKING — ${branchName}
-
-ID: ${booking.id}
-Customer: ${booking.name} (${booking.phone})
-Date: ${booking.date}
-Time: ${booking.timeSlot} (${booking.duration}hr)
-Service: ${booking.service}
-Occasion: ${occasion}
-Members: ${booking.membersCount || 1}
-Total: ₹${booking.totalPrice}
-Payment: ${paymentInfo}`;
-};
-
-/**
- * Send WhatsApp notifications to both customer and branch admin on booking success.
- * Fires silently — errors are logged but never crash the booking flow.
+ * Send booking confirmation WhatsApp messages to customer + branch admin.
+ * Uses approved ChatMitra templates.
  */
 export const sendBookingWhatsAppNotifications = async (booking) => {
   if (!CHATMITRA_API_URL || !CHATMITRA_API_KEY || !CHATMITRA_AUTH_TOKEN) {
@@ -138,23 +111,73 @@ export const sendBookingWhatsAppNotifications = async (booking) => {
   }
 
   const adminPhone = booking.branch === 'branch-2' ? ADMIN_PHONE_2 : ADMIN_PHONE_1;
+  const isPremium  = booking.service === 'premium-pack';
+  const occasion   = booking.occasion === 'Other' && booking.customOccasion
+    ? booking.customOccasion
+    : (booking.occasion || 'Celebration');
 
-  const results = await Promise.allSettled([
-    // 1. Customer confirmation
-    booking.phone
-      ? sendWhatsAppMessage(booking.phone, buildCustomerMessage(booking))
-      : Promise.resolve(),
+  const promises = [];
 
-    // 2. Admin notification
-    adminPhone
-      ? sendWhatsAppMessage(adminPhone, buildAdminMessage(booking))
-      : Promise.resolve(),
-  ]);
+  // ── 1. Customer — payment confirmation ──────────────────────────────────────
+  // Template: payment_confirmation_20260525081147
+  // {1}=name {2}=date {3}=time {4}=duration {5}=package {6}=bookingId
+  if (booking.phone) {
+    promises.push(
+      sendTemplateMessage(
+        booking.phone,
+        'payment_confirmation_20260525081147',
+        [
+          booking.name,
+          booking.date,
+          booking.timeSlot,
+          fmtDuration(booking.duration),
+          fmtService(booking.service),
+          booking.id,
+        ]
+      ).catch(err => console.error('✗ WhatsApp customer notification failed:', err.message))
+    );
+  }
 
-  results.forEach((result, i) => {
-    const target = i === 0 ? 'customer' : 'admin';
-    if (result.status === 'rejected') {
-      console.error(`✗ WhatsApp ${target} notification failed:`, result.reason?.message);
+  // ── 2. Admin notification ────────────────────────────────────────────────────
+  if (adminPhone) {
+    if (isPremium) {
+      // Template: premium_booking_admin_20260524235632
+      // {1}=customer {2}=phone {3}=date {4}=slot {5}=duration {6}=amount
+      promises.push(
+        sendTemplateMessage(
+          adminPhone,
+          'premium_booking_admin_20260524235632',
+          [
+            booking.name,
+            booking.phone,
+            booking.date,
+            booking.timeSlot,
+            fmtDuration(booking.duration),
+            `₹${booking.totalPrice}`,
+          ]
+        ).catch(err => console.error('✗ WhatsApp admin (premium) notification failed:', err.message))
+      );
+    } else {
+      // Template: standard_booking_admin_20260524235438
+      // {1}=customer {2}=phone {3}=date {4}=slot {5}=duration {6}=addons {7}=occasion {8}=amount
+      promises.push(
+        sendTemplateMessage(
+          adminPhone,
+          'standard_booking_admin_20260524235438',
+          [
+            booking.name,
+            booking.phone,
+            booking.date,
+            booking.timeSlot,
+            fmtDuration(booking.duration),
+            fmtAddons(booking),
+            occasion,
+            `₹${booking.totalPrice}`,
+          ]
+        ).catch(err => console.error('✗ WhatsApp admin (standard) notification failed:', err.message))
+      );
     }
-  });
+  }
+
+  await Promise.all(promises);
 };
